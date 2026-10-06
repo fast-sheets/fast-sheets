@@ -1,0 +1,9 @@
+{
+  "name": "fast-sheets",
+  "version": "0.0.1",
+  "description": "",
+  "type": "module",
+  "keywords": [],
+  "author": "Dmitrii Savchenkov <topratecoder@gmail.com>",
+  "license": "MIT"
+}
