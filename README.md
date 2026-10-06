@@ -6,4 +6,4 @@ Render over million cells instantly!
 
 [MIT](https://opensource.org/licenses/MIT)
 
-Copyright (c) 2026-present, Dmitrii Savchenkov
+Copyright (c) 2026-present, Dmitry Savchenkov
