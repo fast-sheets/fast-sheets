@@ -1,16 +1,10 @@
 {
-  "name": "fast-sheets",
-  "version": "0.0.4",
-  "description": "",
-  "type": "module",
-  "keywords": [],
-  "author": "Dmitrii Savchenkov <topratecoder@gmail.com>",
-  "license": "MIT",
-  "repository": "https://github.com/fast-sheets/fast-sheets",
   "private": true,
   "version": "1.0.0",
-  "packageManager": "pnpm@10.26.1",
   "type": "module",
+  "author": "Dmitry Savchenkov <topratecoder@gmail.com>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.26.1",
   "scripts": {
     "dev:lib": "pnpm --filter fast-sheets run dev",
     "dev:react-demo": "pnpm run dev:lib & pnpm --filter react-demo run dev",
@@ -53,5 +47,4 @@
     "prettier": "^3.7.4",
     "typescript-eslint": "^8.50.0"
   }
-
 }

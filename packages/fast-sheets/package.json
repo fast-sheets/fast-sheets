@@ -1,7 +1,7 @@
 {
   "name": "fast-sheets",
   "version": "1.0.0",
-  "description": "Fast sheets core",
+  "description": "Blazing-fast spreadsheet rendering engine",
   "main": "./dist/fast-sheets-core.umd.cjs",
   "module": "./dist/fast-sheets-core.es.js",
   "types": "./dist/lib/core/index.d.ts",
@@ -28,9 +28,21 @@
     "build": "vite build",
     "types:check": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "Dmitrii Savchenkov <ds@notagency.ru>",
+  "keywords": [
+    "fast-sheets",
+    "fastsheets",
+    "spreadsheets",
+    "grid"
+  ],
+  "author": "Dmitry Savchenkov <topratecoder@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fast-sheets/fast-sheets.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fast-sheets/fast-sheets/issues"
+  },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.55.2",
     "unplugin-dts": "1.0.0-beta.6"
