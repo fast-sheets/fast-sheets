@@ -6,6 +6,9 @@
   "module": "./dist/fast-sheets-core.es.js",
   "types": "./dist/lib/core/index.d.ts",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/lib/core/index.d.ts",
