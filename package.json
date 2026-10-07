@@ -6,5 +6,52 @@
   "keywords": [],
   "author": "Dmitrii Savchenkov <topratecoder@gmail.com>",
   "license": "MIT",
-  "repository": "https://github.com/fast-sheets/fast-sheets"
+  "repository": "https://github.com/fast-sheets/fast-sheets",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@10.26.1",
+  "type": "module",
+  "scripts": {
+    "dev:lib": "pnpm --filter fast-sheets run dev",
+    "dev:react-demo": "pnpm run dev:lib & pnpm --filter react-demo run dev",
+    "dev:vanilla-js-demo": "pnpm run dev:lib & pnpm --filter vanilla-js-demo run dev",
+    "dev:vanilla-ts-demo": "pnpm run dev:lib & pnpm --filter vanilla-ts-demo run dev",
+    "dev:vue-demo": "pnpm run dev:lib & pnpm --filter vue-demo run dev",
+    "build:lib": "pnpm --filter fast-sheets run build",
+    "build:demo": "pnpm --filter='./apps/**' --parallel run build",
+    "build": "pnpm run build:lib & pnpm run build:demo",
+    "lint": "yarn lint:scripts",
+    "lint:fix": "yarn lint:scripts:fix",
+    "lint:scripts": "eslint --ext ts ./packages/*/src",
+    "lint:scripts:fix": "yarn lint:scripts --fix",
+    "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged && pnpm types:check",
+    "commit-msg": "node scripts/verify-commit.js"
+  },
+  "lint-staged": {
+    "packages/**/*.{js,ts,json}": [
+      "pnpm lint:fix"
+    ]
+  },
+  "engines": {
+    "node": ">=18.12.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.3",
+    "@types/node": "^25.0.2",
+    "jiti": "^2.6.1",
+    "lint-staged": "^16.2.7",
+    "picocolors": "^1.1.1",
+    "simple-git-hooks": "^2.13.1"
+  },
+  "peerDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.7.4",
+    "typescript-eslint": "^8.50.0"
+  }
+
 }

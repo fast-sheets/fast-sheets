@@ -1,0 +1,363 @@
+import type { FastSheetsPlugin, FastSheetsInstance, Cell } from 'lib/core/types.ts'
+import type { ModifiedCell, Options, RawOptions } from './types.ts'
+import { DEFAULT_SELECTION_COLOR } from './constants.ts'
+import { BORDER_STYLE } from 'lib/core/constants.ts'
+import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
+import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
+import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
+import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
+import { InputController } from './controllers/InputController.ts'
+
+const DEFAULT_OPTIONS = {
+  selectionColor: DEFAULT_SELECTION_COLOR,
+}
+
+export class FastSheetsEditablePlugin implements FastSheetsPlugin {
+  name = 'editable'
+
+  options: Options
+
+  instance!: FastSheetsInstance
+
+  elEditableContainerFront?: HTMLDivElement
+  elEditableContainerBack?: HTMLDivElement
+  selectedRange?: InstanceType<typeof HighlightedRange>
+  copiedRange?: InstanceType<typeof HighlightedRange>
+  rangeSelectionController?: InstanceType<typeof RangeSelectionController>
+  focusedCell?: InstanceType<typeof HighlightedCell>
+  inputController?: InstanceType<typeof InputController>
+
+  isShiftPressed = false
+
+  constructor(options: RawOptions) {
+    this.options = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+    }
+  }
+
+  // noinspection JSUnusedGlobalSymbols
+  setup(instance: FastSheetsInstance) {
+    this.instance = instance
+
+    this.init()
+    this.bindEvents()
+
+    new ResizeObserver(() => {
+      this.inputController?.inputField.hide()
+      this.rangeSelectionController?.selectionEnd()
+      if (this.rangeSelectionController?.selectionRange) {
+        this.selectedRange?.highlight(this.rangeSelectionController.selectionRange)
+      }
+      if (this.focusedCell?.cell) {
+        this.focusedCell.highlight(this.focusedCell.cell)
+      }
+    }).observe(instance.state.options.elCanvasContainer)
+
+    const renderCellOriginal = instance.renderer.renderCell
+    instance.renderer.renderCell = (ctx, cell, fillStyleDefault) => {
+      const fillStyle =
+        this.rangeSelectionController?.isCellSelected(cell) &&
+        this.rangeSelectionController?.selectedCellsCount() > 1
+          ? '#e9f0fe'
+          : fillStyleDefault
+      renderCellOriginal.apply(instance.renderer, [ctx, cell, fillStyle])
+    }
+  }
+
+  destroy() {
+    this.unbindEvents()
+  }
+
+  init() {
+    const selectionColor = this.options.selectionColor
+
+    // elEditableContainerFront should be after scroll
+    this.elEditableContainerFront = document.createElement('div')
+    this.elEditableContainerFront.style = 'position: absolute; top: 0; left: 0; width: 0; height: 0'
+    this.elEditableContainerFront.setAttribute('data-name', 'elEditableContainerFront')
+    this.instance.state.options.elScroll.after(this.elEditableContainerFront)
+
+    // elEditableContainerBack should be before scroll
+    this.elEditableContainerBack = document.createElement('div')
+    this.elEditableContainerBack.style = 'position: absolute; top: 0; left: 0; width: 0; height: 0'
+    this.elEditableContainerBack.setAttribute('data-name', 'elEditableContainerBack')
+    this.instance.state.options.elScroll.before(this.elEditableContainerBack)
+
+    // select
+    this.selectedRange = new HighlightedRange({
+      state: this.instance.state,
+      options: {
+        name: 'elSelectedRange',
+        container: this.elEditableContainerBack,
+        color: selectionColor,
+      },
+    })
+    this.rangeSelectionController = new RangeSelectionController()
+
+    // focus
+    this.focusedCell = new HighlightedCell({
+      state: this.instance.state,
+      options: {
+        name: 'elFocusedCell',
+        container: this.elEditableContainerBack,
+        color: selectionColor,
+        borderWidth: 2,
+      },
+    })
+
+    // copy
+    this.copiedRange = new HighlightedRange({
+      state: this.instance.state,
+      options: {
+        name: 'elCopiedRange',
+        container: this.elEditableContainerBack,
+        color: selectionColor,
+        borderWidth: 2,
+        borderStyle: BORDER_STYLE.DASHED,
+      },
+    })
+
+    // input
+    this.inputController = new InputController({
+      state: this.instance.state,
+      options: {
+        name: 'elInput',
+        container: this.elEditableContainerFront,
+        font: '14px/15px Verdana', // todo
+        onUpdate: (modifiedCell) => {
+          this.onUpdate([modifiedCell])
+        },
+      },
+    })
+  }
+
+  bindEvents() {
+    window.addEventListener('dblclick', this.onDoubleClick.bind(this))
+    window.addEventListener('mousedown', this.onMouseDown.bind(this))
+    window.addEventListener('mousemove', this.onMouseMove.bind(this))
+    window.addEventListener('keyup', this.onKeyUp.bind(this))
+    window.addEventListener('keydown', this.onKeyDown.bind(this))
+    window.addEventListener('copy', this.onCopy.bind(this))
+    window.addEventListener('paste', this.onPaste.bind(this))
+    window.addEventListener('mouseup', this.onMouseUp.bind(this))
+  }
+
+  unbindEvents() {
+    window.removeEventListener('dblclick', this.onDoubleClick.bind(this))
+    window.removeEventListener('mousedown', this.onMouseDown.bind(this))
+    window.removeEventListener('mousemove', this.onMouseMove.bind(this))
+    window.removeEventListener('keyup', this.onKeyUp.bind(this))
+    window.removeEventListener('keydown', this.onKeyDown.bind(this))
+    window.removeEventListener('copy', this.onCopy.bind(this))
+    window.removeEventListener('paste', this.onPaste.bind(this))
+    window.removeEventListener('mouseup', this.onMouseUp.bind(this))
+  }
+
+  public render() {
+    this.updateContainerPosition()
+  }
+
+  public onUpdate(modifiedCells: ModifiedCell[]) {
+    let modifiedCellsPrepared = [...modifiedCells]
+    if (this.instance.state.options.isRowNumberVisible) {
+      modifiedCellsPrepared = modifiedCellsPrepared.map((modifiedCell) => ({
+        ...modifiedCell,
+        columnIndex: (modifiedCell.columnIndex -= 1),
+      }))
+    }
+    if (this.instance.state.hasColumnNames) {
+      modifiedCellsPrepared = modifiedCellsPrepared.map((modifiedCell) => ({
+        ...modifiedCell,
+        rowIndex: (modifiedCell.rowIndex -= 1),
+      }))
+    }
+    this.options.onUpdate(modifiedCellsPrepared)
+    this.instance?.renderer.render()
+  }
+
+  private onDoubleClick(e: MouseEvent) {
+    const cell = this.instance.renderer.findCellByMouseEvent(e)
+    if (cell) {
+      this.inputController?.showInput(cell)
+    }
+  }
+
+  private onMouseDown(e: MouseEvent) {
+    if (!isLeftMouseButton(e)) {
+      return
+    }
+    this.selectedRange?.reset()
+    this.rangeSelectionController?.reset()
+    this.focusedCell?.reset()
+    this.copiedRange?.reset()
+    const cell = this.instance.renderer.findCellByMouseEvent(e)
+    if (cell) {
+      this.focusedCell?.highlight(cell)
+      this.startSelection(cell)
+    }
+    this.instance.renderer.render()
+  }
+
+  private onMouseMove(e: MouseEvent) {
+    const cell = this.instance.renderer.findCellByMouseEvent(e)
+    if (cell && this.updateSelection(cell)) {
+      this.instance.renderer.render()
+    }
+  }
+
+  private onMouseUp() {
+    this.endSelection()
+  }
+
+  private async onCopy() {
+    if (this.selectedRange?.range) {
+      const { rowStart, rowEnd, columnStart, columnEnd } = this.selectedRange.range
+      this.copiedRange?.highlight(this.selectedRange.range)
+      let data = this.instance.state.options.data.slice(rowStart, rowEnd + 1)
+      data = data.map((row) => row.slice(columnStart, columnEnd + 1).join('\t'))
+      await navigator.clipboard.writeText(data.join('\n'))
+    }
+  }
+
+  private onPaste(e: ClipboardEvent) {
+    e.preventDefault()
+    this.copiedRange?.reset()
+    const paste = e.clipboardData?.getData('text')
+    const focusedCell = this.focusedCell?.cell
+    if (paste && focusedCell) {
+      let escapedPaste = paste
+      const matches = paste.matchAll(/"([\w\n]+)"/g)
+      for (const match of matches) {
+        const substr = match[1]
+        if (!substr) {
+          continue
+        }
+        const replacement = substr.replace('\n', '/n')
+        escapedPaste = escapedPaste.replace(match[0], replacement)
+      }
+
+      const modifiedCells: ModifiedCell[] = []
+      escapedPaste.split('\n').forEach((row, rowIndex) => {
+        row.split('\t').forEach((cell, columnIndex) => {
+          modifiedCells.push({
+            rowIndex: focusedCell.rowIndex + rowIndex,
+            columnIndex: focusedCell.columnIndex + columnIndex,
+            value: cell.replace('/n', '\n'),
+          })
+        })
+      })
+      this.onUpdate(modifiedCells)
+    }
+  }
+
+  private onKeyUp(e: KeyboardEvent) {
+    switch (e.key) {
+      case 'Shift':
+        this.endSelection()
+        this.isShiftPressed = false
+        break
+    }
+  }
+
+  private onKeyDown(e: KeyboardEvent) {
+    if (
+      this.focusedCell?.cell &&
+      !(this.inputController && this.inputController.isInputFieldVisible())
+    ) {
+      const newFocusedCell: Cell = {
+        rowIndex: this.focusedCell.cell.rowIndex,
+        columnIndex: this.focusedCell.cell.columnIndex,
+      }
+
+      let hasSelectionJustStarted = false
+      let isArrowKey = false
+
+      console.log(e)
+
+      switch (e.key) {
+        case 'ArrowUp':
+          newFocusedCell.rowIndex = Math.max(0, newFocusedCell.rowIndex - 1)
+          isArrowKey = true
+          break
+        case 'ArrowDown':
+          newFocusedCell.rowIndex++
+          isArrowKey = true
+          break
+        case 'ArrowLeft':
+          newFocusedCell.columnIndex = Math.max(0, newFocusedCell.columnIndex - 1)
+          isArrowKey = true
+          break
+        case 'ArrowRight':
+          newFocusedCell.columnIndex++
+          isArrowKey = true
+          break
+        case 'Shift':
+          this.isShiftPressed = true
+          hasSelectionJustStarted = true
+          this.selectedRange?.reset()
+          this.rangeSelectionController?.reset()
+          this.instance.renderer.render()
+          this.startSelection(newFocusedCell)
+          break
+      }
+
+      if (
+        !(
+          e.metaKey ||
+          e.altKey ||
+          e.ctrlKey ||
+          isArrowKey ||
+          e.key === 'Escape' ||
+          this.isShiftPressed
+        )
+      ) {
+        // show input
+        this.inputController?.showInput(newFocusedCell)
+      }
+
+      if (
+        newFocusedCell.rowIndex !== this.focusedCell.cell.rowIndex ||
+        newFocusedCell.columnIndex !== this.focusedCell.cell.columnIndex
+      ) {
+        this.focusedCell.highlight(newFocusedCell)
+      }
+
+      if (this.isShiftPressed) {
+        if (!hasSelectionJustStarted && this.updateSelection(newFocusedCell)) {
+          this.instance.renderer.render()
+        }
+      } else {
+        this.selectedRange?.reset()
+        this.rangeSelectionController?.reset()
+        this.instance.renderer.render()
+      }
+    }
+  }
+
+  private updateContainerPosition() {
+    if (this.elEditableContainerFront) {
+      this.elEditableContainerFront.style.top = `-${this.instance.state.options.elScroll.scrollTop || 0}px`
+      this.elEditableContainerFront.style.left = `-${this.instance.state.options.elScroll.scrollLeft || 0}px`
+    }
+    if (this.elEditableContainerBack) {
+      this.elEditableContainerBack.style.top = `-${this.instance.state.options.elScroll.scrollTop || 0}px`
+      this.elEditableContainerBack.style.left = `-${this.instance.state.options.elScroll.scrollLeft || 0}px`
+    }
+  }
+
+  private startSelection(cell: Cell) {
+    this.rangeSelectionController?.selectionStart(cell)
+  }
+
+  private updateSelection(cell: Cell) {
+    return this.rangeSelectionController?.selectionUpdate(cell)
+  }
+
+  private endSelection() {
+    this.rangeSelectionController?.selectionEnd()
+    if (this.rangeSelectionController?.selectionRange) {
+      this.selectedRange?.highlight(this.rangeSelectionController.selectionRange)
+    }
+  }
+}

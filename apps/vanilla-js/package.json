@@ -1,0 +1,15 @@
+{
+  "name": "vanilla-js-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "fast-sheets": "workspace:*",
+    "vite": "^8.3.0"
+  }
+}
