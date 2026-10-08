@@ -9,6 +9,7 @@ export default tsESLint.config(eslint.configs.recommended, tsESLint.configs.reco
   rules: {
     camelcase: 'error',
     'no-cond-assign': 'error',
+    'no-console': 'error',
     'no-inner-declarations': 'error',
     'no-lonely-if': 'error',
     'no-shadow-restricted-names': 'error',
