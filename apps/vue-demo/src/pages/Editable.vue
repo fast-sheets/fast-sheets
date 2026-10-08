@@ -39,6 +39,7 @@ onMounted(() => {
       elContainer: elContainer.value,
       data,
       columns,
+      isRowNumberVisible: true,
     })
 
     const editablePlugin = new FastSheetsEditablePlugin({
