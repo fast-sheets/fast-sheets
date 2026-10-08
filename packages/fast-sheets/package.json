@@ -1,6 +1,6 @@
 {
   "name": "fast-sheets",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Blazing-fast spreadsheet rendering engine",
   "main": "./dist/fast-sheets-core.umd.cjs",
   "module": "./dist/fast-sheets-core.es.js",
@@ -46,11 +46,9 @@
   "bugs": {
     "url": "https://github.com/fast-sheets/fast-sheets/issues"
   },
+  "homepage": "https://fastsheets.io",
   "devDependencies": {
     "@microsoft/api-extractor": "^7.55.2",
     "unplugin-dts": "1.0.0-beta.6"
-  },
-  "peerDependencies": {
-    "vite": "^7.3.0"
   }
 }
