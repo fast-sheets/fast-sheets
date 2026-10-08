@@ -12,6 +12,10 @@ export class FastSheets {
   public state: InstanceType<typeof State>
   public renderer: InstanceType<typeof Renderer>
 
+  boundWheel: (e: WheelEvent) => void
+  boundRender: () => void
+  resizeObserver: ResizeObserver
+
   constructor(options: RawOptions) {
     const elContainer = options.elContainer
     let elCanvasContainer = options.elCanvasContainer
@@ -94,6 +98,12 @@ export class FastSheets {
     }
     this.renderer = new Renderer(this.state)
 
+    this.boundWheel = this.onWheel.bind(this)
+    this.boundRender = this.renderer.render.bind(this.renderer)
+    this.resizeObserver = new ResizeObserver(() => {
+      this.onResize()
+    })
+
     this.bindEvents()
   }
 
@@ -115,20 +125,18 @@ export class FastSheets {
   public bindEvents = () => {
     const { elContainer, elScroll, elCanvasContainer } = this.state.options
 
-    elContainer.addEventListener('wheel', this.onWheel.bind(this), { passive: true })
-    elScroll.addEventListener('scroll', this.renderer.render.bind(this.renderer))
+    elContainer.addEventListener('wheel', this.boundWheel, { passive: true })
+    elScroll.addEventListener('scroll', this.boundRender)
 
-    new ResizeObserver(() => {
-      this.renderer.init()
-      this.renderer.renderImmediate()
-    }).observe(elCanvasContainer)
+    this.resizeObserver.observe(elCanvasContainer)
   }
 
   public unbindEvents = () => {
     const { elContainer, elScroll } = this.state.options
 
-    elContainer.removeEventListener('wheel', this.onWheel.bind(this))
-    elScroll.removeEventListener('scroll', this.renderer.render)
+    this.resizeObserver.disconnect()
+    elContainer.removeEventListener('wheel', this.boundWheel)
+    elScroll.removeEventListener('scroll', this.boundRender)
   }
 
   private onWheel(e: WheelEvent) {
@@ -139,5 +147,10 @@ export class FastSheets {
         left: elScroll.scrollLeft + e.deltaX,
       })
     }
+  }
+
+  private onResize() {
+    this.renderer.init()
+    this.renderer.renderImmediate()
   }
 }
