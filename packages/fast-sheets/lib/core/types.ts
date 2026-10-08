@@ -73,7 +73,6 @@ export interface CellInfo {
   left: number
   width: number
   height: number
-  style: any
   text: string
   padding: Padding
   center: Coordinate
