@@ -178,7 +178,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private onDoubleClick(e: MouseEvent) {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
-    if (cell) {
+    if (cell && this.isEditable(cell)) {
       this.inputController?.showInput(cell)
     }
   }
@@ -261,6 +261,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyDown(e: KeyboardEvent) {
+    e.preventDefault()
     if (
       this.focusedCell?.cell &&
       !(this.inputController && this.inputController.isInputFieldVisible())
@@ -272,8 +273,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
       let hasSelectionJustStarted = false
       let isArrowKey = false
-
-      console.log(e)
 
       switch (e.key) {
         case 'ArrowUp':
@@ -300,6 +299,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           this.instance.renderer.render()
           this.startSelection(newFocusedCell)
           break
+        case 'Backspace':
+          this.onUpdate([{ ...newFocusedCell, value: '' }])
+          break
       }
 
       if (
@@ -309,8 +311,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           e.ctrlKey ||
           isArrowKey ||
           e.key === 'Escape' ||
+          e.key === 'Backspace' ||
           this.isShiftPressed
-        )
+        ) &&
+        this.isEditable(newFocusedCell)
       ) {
         // show input
         this.inputController?.showInput(newFocusedCell)
@@ -333,6 +337,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         this.instance.renderer.render()
       }
     }
+  }
+
+  private isEditable(cell: Cell) {
+    const isColumnName = this.instance.state.hasColumnNames && cell.rowIndex === 0
+    const isRowNumber = !!this.instance.state.options.isRowNumberVisible && cell.columnIndex === 0
+    return !isRowNumber && !isColumnName
   }
 
   private updateContainerPosition() {
