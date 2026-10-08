@@ -9,6 +9,7 @@ export const inputField: Partial<CSSStyleDeclaration> = {
   boxSizing: 'border-box',
   borderRadius: '0',
   background: '#fff',
+  color: '#000',
   overflow: 'auto',
   outline: '2px solid #a8c7fa',
   padding: '0',
