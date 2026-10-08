@@ -37,7 +37,6 @@ export const getCellInfo = ({ cell, state }: { cell: Cell; state: StateInstance 
       x: cellDomRect.width / 2,
       y: cellDomRect.height / 2,
     },
-    style: {}, // todo
     text: getCellText({ cell, state }),
     padding: DEFAULT_PADDING,
     font: DEFAULT_FONT,

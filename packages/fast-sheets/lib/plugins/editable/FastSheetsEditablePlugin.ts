@@ -29,11 +29,29 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   isShiftPressed = false
 
+  boundDoubleClick: (e: MouseEvent) => void
+  boundMouseDown: (e: MouseEvent) => void
+  boundMouseUp: (e: MouseEvent) => void
+  boundMouseMove: (e: MouseEvent) => void
+  boundKeyDown: (e: KeyboardEvent) => void
+  boundKeyUp: (e: KeyboardEvent) => void
+  boundCopy: () => void
+  boundPaste: (e: ClipboardEvent) => void
+
   constructor(options: RawOptions) {
     this.options = {
       ...DEFAULT_OPTIONS,
       ...options,
     }
+
+    this.boundDoubleClick = this.onDoubleClick.bind(this)
+    this.boundMouseDown = this.onMouseDown.bind(this)
+    this.boundMouseUp = this.onMouseUp.bind(this)
+    this.boundMouseMove = this.onMouseMove.bind(this)
+    this.boundKeyUp = this.onKeyUp.bind(this)
+    this.boundKeyDown = this.onKeyDown.bind(this)
+    this.boundCopy = this.onCopy.bind(this)
+    this.boundPaste = this.onPaste.bind(this)
   }
 
   // noinspection JSUnusedGlobalSymbols
@@ -133,25 +151,25 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   bindEvents() {
-    window.addEventListener('dblclick', this.onDoubleClick.bind(this))
-    window.addEventListener('mousedown', this.onMouseDown.bind(this))
-    window.addEventListener('mousemove', this.onMouseMove.bind(this))
-    window.addEventListener('keyup', this.onKeyUp.bind(this))
-    window.addEventListener('keydown', this.onKeyDown.bind(this))
-    window.addEventListener('copy', this.onCopy.bind(this))
-    window.addEventListener('paste', this.onPaste.bind(this))
-    window.addEventListener('mouseup', this.onMouseUp.bind(this))
+    window.addEventListener('dblclick', this.boundDoubleClick)
+    window.addEventListener('mouseup', this.boundMouseUp)
+    window.addEventListener('mousedown', this.boundMouseDown)
+    window.addEventListener('mousemove', this.boundMouseMove)
+    window.addEventListener('keyup', this.boundKeyUp)
+    window.addEventListener('keydown', this.boundKeyDown)
+    window.addEventListener('copy', this.boundCopy)
+    window.addEventListener('paste', this.boundPaste)
   }
 
   unbindEvents() {
-    window.removeEventListener('dblclick', this.onDoubleClick.bind(this))
-    window.removeEventListener('mousedown', this.onMouseDown.bind(this))
-    window.removeEventListener('mousemove', this.onMouseMove.bind(this))
-    window.removeEventListener('keyup', this.onKeyUp.bind(this))
-    window.removeEventListener('keydown', this.onKeyDown.bind(this))
-    window.removeEventListener('copy', this.onCopy.bind(this))
-    window.removeEventListener('paste', this.onPaste.bind(this))
-    window.removeEventListener('mouseup', this.onMouseUp.bind(this))
+    window.removeEventListener('dblclick', this.boundDoubleClick)
+    window.removeEventListener('mouseup', this.boundMouseUp)
+    window.removeEventListener('mousedown', this.boundMouseDown)
+    window.removeEventListener('mousemove', this.boundMouseMove)
+    window.removeEventListener('keyup', this.boundKeyUp)
+    window.removeEventListener('keydown', this.boundKeyDown)
+    window.removeEventListener('copy', this.boundCopy)
+    window.removeEventListener('paste', this.boundPaste)
   }
 
   public render() {
@@ -261,11 +279,11 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyDown(e: KeyboardEvent) {
-    e.preventDefault()
     if (
       this.focusedCell?.cell &&
       !(this.inputController && this.inputController.isInputFieldVisible())
     ) {
+      e.preventDefault()
       const newFocusedCell: Cell = {
         rowIndex: this.focusedCell.cell.rowIndex,
         columnIndex: this.focusedCell.cell.columnIndex,

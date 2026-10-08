@@ -14,10 +14,10 @@
     "build:lib": "pnpm --filter fast-sheets run build",
     "build:demo": "pnpm --filter='./apps/**' --parallel run build",
     "build": "pnpm run build:lib & pnpm run build:demo",
-    "lint": "yarn lint:scripts",
-    "lint:fix": "yarn lint:scripts:fix",
+    "lint": "pnpm lint:scripts",
+    "lint:fix": "pnpm lint:scripts:fix",
     "lint:scripts": "eslint --ext ts ./packages/*/lib",
-    "lint:scripts:fix": "yarn lint:scripts --fix",
+    "lint:scripts:fix": "pnpm lint:scripts --fix",
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check"
   },
   "simple-git-hooks": {
