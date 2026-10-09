@@ -212,7 +212,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell) {
       this.focusedCell?.highlight(cell)
-      this.startSelection(cell)
+      if (!this.isInputVisible()) {
+        this.startSelection(cell)
+      }
     }
     this.instance.renderer.render()
   }
@@ -279,10 +281,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyDown(e: KeyboardEvent) {
-    if (
-      this.focusedCell?.cell &&
-      !(this.inputController && this.inputController.isInputFieldVisible())
-    ) {
+    if (this.focusedCell?.cell && !this.isInputVisible()) {
       e.preventDefault()
       const newFocusedCell: Cell = {
         rowIndex: this.focusedCell.cell.rowIndex,
@@ -293,18 +292,22 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       let isArrowKey = false
 
       switch (e.key) {
-        case 'ArrowUp':
-          newFocusedCell.rowIndex = Math.max(0, newFocusedCell.rowIndex - 1)
+        case 'ArrowUp': {
+          const minRowIndex = this.instance.state.hasColumnNames ? 1 : 0
+          newFocusedCell.rowIndex = Math.max(minRowIndex, newFocusedCell.rowIndex - 1)
           isArrowKey = true
           break
+        }
         case 'ArrowDown':
           newFocusedCell.rowIndex++
           isArrowKey = true
           break
-        case 'ArrowLeft':
-          newFocusedCell.columnIndex = Math.max(0, newFocusedCell.columnIndex - 1)
+        case 'ArrowLeft': {
+          const minColumnIndex = this.instance.state.options.isRowNumberVisible ? 1 : 0
+          newFocusedCell.columnIndex = Math.max(minColumnIndex, newFocusedCell.columnIndex - 1)
           isArrowKey = true
           break
+        }
         case 'ArrowRight':
           newFocusedCell.columnIndex++
           isArrowKey = true
@@ -361,6 +364,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     const isColumnName = this.instance.state.hasColumnNames && cell.rowIndex === 0
     const isRowNumber = !!this.instance.state.options.isRowNumberVisible && cell.columnIndex === 0
     return !isRowNumber && !isColumnName
+  }
+
+  private isInputVisible() {
+    return this.inputController && this.inputController.isInputFieldVisible()
   }
 
   private updateContainerPosition() {
