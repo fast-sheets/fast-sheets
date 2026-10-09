@@ -232,9 +232,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     if (this.selectedRange?.range) {
       const { rowStart, rowEnd, columnStart, columnEnd } = this.selectedRange.range
       this.copiedRange?.highlight(this.selectedRange.range)
-      let data = this.instance.state.options.data.slice(rowStart, rowEnd + 1)
-      data = data.map((row) => row.slice(columnStart, columnEnd + 1).join('\t'))
-      await navigator.clipboard.writeText(data.join('\n'))
+      const data = this.instance.state.options.data.slice(rowStart, rowEnd + 1)
+      const rows = data.map((row) => row.slice(columnStart, columnEnd + 1).join('\t'))
+      await navigator.clipboard.writeText(rows.join('\n'))
     }
   }
 

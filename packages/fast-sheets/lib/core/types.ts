@@ -8,8 +8,7 @@ export interface RawOptions {
   elScrollInner?: HTMLElement
   elScrollPaneX?: HTMLElement
   elScrollPaneY?: HTMLElement
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any[]
+  data: Data
   borderWidth?: number
   columns?: Column[]
   isRowNumberVisible?: boolean
@@ -25,6 +24,8 @@ export interface Options extends RawOptions {
   borderWidth: number
   columns: Column[]
 }
+
+export type Data = string[][]
 
 export interface Size {
   width: number

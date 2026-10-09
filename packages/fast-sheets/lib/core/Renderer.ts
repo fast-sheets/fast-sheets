@@ -25,20 +25,16 @@ export class Renderer {
   public init() {
     const {
       elCanvas,
-      elScrollInner,
       elCanvasContainer,
       elScrollPaneX,
       elScrollPaneY,
       columns,
-      data,
-      borderWidth,
       isRowNumberVisible,
     } = this.state.options
     const ctx = getContext(elCanvas)
     if (!ctx) {
       return
     }
-    const containerWidth = elScrollInner.offsetWidth - 1
 
     this.state.canvasSize = getCanvasSize(elCanvasContainer)
     elCanvas.style.width = this.state.canvasSize.width
@@ -54,49 +50,12 @@ export class Renderer {
     }
 
     this.state.hasColumnNames = !!columns.find((column) => !!column.name)
-    // if (this.state.hasColumnNames && rows[0]?.id !== 'columnsNames') {
-    //   rows.unshift({
-    //     id: 'columnsNames',
-    //     height: 20,
-    //   })
-    // }
 
-    const rowsLength = data.length
-    const horizontalBordersCount = rowsLength - 1
-    const verticalBordersCount = columns.length - 1
-    this.state.rowHeights = data.map((row, i) => {
-      let rowIndex: number
-      if (this.state.hasColumnNames) {
-        // we will skip the row if it has column names
-        rowIndex = i === 0 ? -1 : i - 1
-      } else {
-        rowIndex = i
-      }
-      const cellsTexts: string[] = this.state.options.data[rowIndex] || []
-      const linesLength = cellsTexts
-        .map((cellText) => cellText.split('\n').length)
-        .filter((value) => value)
-      const maxLinesInRow = linesLength.length ? Math.max(...linesLength) : 1
-      const fontHeight = this.fonts[DEFAULT_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
-      const lineSpacing = roundToPixels(DEFAULT_LINE_SPACING, window.devicePixelRatio)
-      const linesHeight = this.getLinesHeight(maxLinesInRow, fontHeight, lineSpacing)
-      return linesHeight + DEFAULT_PADDING.y * 2
-    })
-    const columnsWithSizeTotalWidth = columns.reduce(
-      (total, { width }) => total + (width ? width + borderWidth : 0),
-      0,
-    )
-    const columnsWithoutWidthLength = columns.filter((column) => !column.width).length
-    const columnWithAutoWidth = Math.max(
-      50,
-      Math.floor((containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength),
-    )
-    this.state.columnWidths = columns.map((column) => column.width || columnWithAutoWidth)
+    this.state.rowHeights = this.getRowHeights()
+    this.state.columnWidths = this.getColumnWidth()
 
-    this.state.totalWidth =
-      this.state.columnWidths.reduce((a, b) => a + b, 0) + verticalBordersCount * borderWidth
-    this.state.totalHeight =
-      this.state.rowHeights.reduce((a, b) => a + b, 0) + horizontalBordersCount * borderWidth
+    this.state.totalWidth = this.getTotalWidth()
+    this.state.totalHeight = this.getTotalHeight()
 
     this.state.horizontalOffsets = this.calculateOffsets(this.state.columnWidths)
     this.state.verticalOffsets = this.calculateOffsets(this.state.rowHeights)
@@ -120,16 +79,69 @@ export class Renderer {
     this.fonts[ROW_HEADING_FONT] = new Font(ROW_HEADING_FONT, ctx)
   }
 
+  public getRowHeights() {
+    const { data } = this.state.options
+    return data.map((_, i) => {
+      let rowIndex: number
+      if (this.state.hasColumnNames) {
+        // we should shift rowIndex if we have to output column names
+        rowIndex = i === 0 ? -1 : i - 1
+      } else {
+        rowIndex = i
+      }
+      const cellsTexts: string[] = this.state.options.data[rowIndex] || []
+      const linesLength = cellsTexts
+        .map((cellText) => cellText.split('\n').length)
+        .filter((value) => value)
+      const maxLinesInRow = linesLength.length ? Math.max(...linesLength) : 1
+      const fontHeight = this.fonts[DEFAULT_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
+      const lineSpacing = roundToPixels(DEFAULT_LINE_SPACING, window.devicePixelRatio)
+      const linesHeight = this.getLinesHeight(maxLinesInRow, fontHeight, lineSpacing)
+      const paddingY =
+        this.state.hasColumnNames && rowIndex === -1 ? DEFAULT_PADDING.y * 4 : DEFAULT_PADDING.y * 2
+      return linesHeight + paddingY
+    })
+  }
+
+  public getColumnWidth() {
+    const { columns, borderWidth, elScrollInner } = this.state.options
+    const containerWidth = elScrollInner.offsetWidth - 1
+    const columnsWithSizeTotalWidth = columns.reduce(
+      (total, { width }) => total + (width ? width + borderWidth : 0),
+      0,
+    )
+    const columnsWithoutWidthLength = columns.filter((column) => !column.width).length
+    const columnWithAutoWidth = Math.max(
+      50,
+      Math.floor((containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength),
+    )
+    return columns.map((column) => column.width || columnWithAutoWidth)
+  }
+
+  public getTotalWidth() {
+    const { columns, borderWidth } = this.state.options
+    const verticalBordersCount = columns.length - 1
+    return this.state.columnWidths.reduce((a, b) => a + b, 0) + verticalBordersCount * borderWidth
+  }
+
+  public getTotalHeight() {
+    const { data, borderWidth } = this.state.options
+    const rowsLength = data.length
+    const horizontalBordersCount = rowsLength - 1
+    return this.state.rowHeights.reduce((a, b) => a + b, 0) + horizontalBordersCount * borderWidth
+  }
+
   public calculateOffsets(widthsOrHeights: number[]) {
+    const { borderWidth } = this.state.options
     return widthsOrHeights.slice(0, -1).reduce(
       (offsets, width, index) => {
         // we will calculate an offset for the next item
-        const currentOffset = offsets[index] || 0
+        const currentOffset = offsets[index] || 1
         const nextOffset = currentOffset + width + this.state.options.borderWidth
         offsets.push(nextOffset)
         return offsets
       },
-      [0], // first element has offset = 0
+      [borderWidth], // first element has offset = borderWidth
     )
   }
 
@@ -187,6 +199,31 @@ export class Renderer {
     return linesLength * (fontHeight + lineSpacing) - lineSpacing
   }
 
+  public renderCellBackground({
+    ctx,
+    fillStyle,
+    width,
+    height,
+    isRowNumber,
+    isColumnName,
+  }: {
+    ctx: CanvasRenderingContext2D
+    fillStyle: string
+    width: number
+    height: number
+    isRowNumber: boolean
+    isColumnName: boolean
+  }) {
+    if (isRowNumber || isColumnName) {
+      // gray background rect for column names and row numbers to render borders
+      ctx.fillStyle = '#ccc'
+      ctx.fillRect(-1, -1, width + 2, height + 2)
+    }
+
+    ctx.fillStyle = fillStyle
+    ctx.fillRect(0, 0, width, height)
+  }
+
   public renderCellText({
     ctx,
     text,
@@ -238,13 +275,14 @@ export class Renderer {
     const cellInfo = getCellInfo({ cell, state: this.state })
     setTransform(this.state.viewport, ctx, cellInfo.left, cellInfo.top)
 
-    if (cellInfo.isRowNumber || cellInfo.isColumnName) {
-      ctx.fillStyle = '#ccc'
-      ctx.fillRect(0, 0, cellInfo.width + 1, cellInfo.height + 1)
-    }
-
-    ctx.fillStyle = fillStyle
-    ctx.fillRect(0, 0, cellInfo.width, cellInfo.height)
+    this.renderCellBackground({
+      ctx,
+      fillStyle,
+      width: cellInfo.width,
+      height: cellInfo.height,
+      isRowNumber: cellInfo.isRowNumber,
+      isColumnName: cellInfo.isColumnName,
+    })
 
     if (cellInfo.text) {
       if (cellInfo.isRowNumber) {
