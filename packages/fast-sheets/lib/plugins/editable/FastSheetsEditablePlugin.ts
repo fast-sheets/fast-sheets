@@ -196,7 +196,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private onDoubleClick(e: MouseEvent) {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
-    if (cell && this.isEditable(cell)) {
+    if (cell && this.isCellEditable(cell)) {
       this.inputController?.showInput(cell)
     }
   }
@@ -335,7 +335,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           e.key === 'Backspace' ||
           this.isShiftPressed
         ) &&
-        this.isEditable(newFocusedCell)
+        this.isCellEditable(newFocusedCell)
       ) {
         // show input
         this.inputController?.showInput(newFocusedCell)
@@ -360,7 +360,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
   }
 
-  private isEditable(cell: Cell) {
+  private isCellEditable(cell: Cell) {
     const isColumnName = this.instance.state.hasColumnNames && cell.rowIndex === 0
     const isRowNumber = !!this.instance.state.options.isRowNumberVisible && cell.columnIndex === 0
     return !isRowNumber && !isColumnName
