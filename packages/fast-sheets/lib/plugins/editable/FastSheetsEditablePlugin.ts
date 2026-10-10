@@ -27,6 +27,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   focusedCell?: InstanceType<typeof HighlightedCell>
   inputController?: InstanceType<typeof InputController>
 
+  resizeObserver: ResizeObserver
+
   isShiftPressed = false
 
   boundDoubleClick: (e: MouseEvent) => void
@@ -52,6 +54,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.boundKeyDown = this.onKeyDown.bind(this)
     this.boundCopy = this.onCopy.bind(this)
     this.boundPaste = this.onPaste.bind(this)
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.onResize()
+    })
   }
 
   // noinspection JSUnusedGlobalSymbols
@@ -60,17 +66,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
     this.init()
     this.bindEvents()
-
-    new ResizeObserver(() => {
-      this.inputController?.inputField.hide()
-      this.rangeSelectionController?.selectionEnd()
-      if (this.rangeSelectionController?.selectionRange) {
-        this.selectedRange?.highlight(this.rangeSelectionController.selectionRange)
-      }
-      if (this.focusedCell?.cell) {
-        this.focusedCell.highlight(this.focusedCell.cell)
-      }
-    }).observe(instance.state.options.elCanvasContainer)
 
     const renderCellOriginal = instance.renderer.renderCell
     instance.renderer.renderCell = (ctx, cell, fillStyleDefault) => {
@@ -159,6 +154,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     window.addEventListener('keydown', this.boundKeyDown)
     window.addEventListener('copy', this.boundCopy)
     window.addEventListener('paste', this.boundPaste)
+    this.resizeObserver.observe(this.instance.state.options.elCanvasContainer)
   }
 
   unbindEvents() {
@@ -170,10 +166,22 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     window.removeEventListener('keydown', this.boundKeyDown)
     window.removeEventListener('copy', this.boundCopy)
     window.removeEventListener('paste', this.boundPaste)
+    this.resizeObserver.disconnect()
   }
 
   public render() {
     this.updateContainerPosition()
+  }
+
+  public onResize() {
+    this.inputController?.inputField.hide()
+    this.rangeSelectionController?.selectionEnd()
+    if (this.rangeSelectionController?.selectionRange) {
+      this.selectedRange?.highlight(this.rangeSelectionController.selectionRange)
+    }
+    if (this.focusedCell?.cell) {
+      this.focusedCell.highlight(this.focusedCell.cell)
+    }
   }
 
   public onUpdate(modifiedCells: ModifiedCell[]) {
