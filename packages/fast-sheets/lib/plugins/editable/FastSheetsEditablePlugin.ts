@@ -220,6 +220,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onMouseMove(e: MouseEvent) {
+    if (!this.rangeSelectionController?.hasStarted) {
+      return
+    }
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell && this.updateSelection(cell)) {
       this.instance.renderer.render()
