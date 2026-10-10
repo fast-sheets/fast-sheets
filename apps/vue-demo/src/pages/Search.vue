@@ -14,11 +14,13 @@ const generateData = () => {
   const rowsCount = 3000
 
   const columns = columnWidths.map((width, i) => ({
-    header: `Column ${i}`,
+    name: `Column ${i + 1}`,
     width,
   }))
 
-  const data = Array.from({ length: rowsCount }, (_, i) => columns.map((_, j) => `${j} : ${i}`))
+  const data = Array.from({ length: rowsCount }, (_, i) =>
+    columns.map((_, j) => `${j + 1} : ${i + 1}`),
+  )
 
   return { columns, data }
 }
@@ -27,7 +29,12 @@ const init = () => {
   if (elContainer.value) {
     const { data, columns } = generateData()
     generatedData = data
-    fastSheets = new FastSheets({ elContainer: elContainer.value, data, columns })
+    fastSheets = new FastSheets({
+      elContainer: elContainer.value,
+      data,
+      columns,
+      isRowNumberVisible: true,
+    })
     searchPlugin = new FastSheetsSearchPlugin()
     fastSheets.use(searchPlugin)
   }

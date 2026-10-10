@@ -13,11 +13,13 @@ const generateData = () => {
   const rowsCount = 10000
 
   const columns = columnWidths.map((width, i) => ({
-    header: `Column ${i}`,
+    header: `Column ${i + 1}`,
     width,
   }))
 
-  const data = Array.from({ length: rowsCount }, (_, i) => columns.map((_, j) => `${j} : ${i}`))
+  const data = Array.from({ length: rowsCount }, (_, i) =>
+    columns.map((_, j) => `${j + 1} : ${i + 1}`),
+  )
 
   return { columns, data }
 }

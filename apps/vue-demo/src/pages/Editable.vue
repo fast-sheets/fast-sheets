@@ -13,18 +13,18 @@ const generateData = () => {
   const columnWidths = [100, 100, undefined, undefined, 100]
 
   const columns = columnWidths.map((width, i) => ({
-    name: `Column ${i}`,
+    name: `Column ${i + 1}`,
     width,
   }))
 
   const data = Array.from({ length: rowsCount }, (_, rowIndex) =>
     columns.map((_, columnIndex) => {
       if (rowIndex === 0 && columnIndex === 2) {
-        return `${columnIndex} : ${rowIndex}\nwith new line`
+        return `${columnIndex + 1} : ${rowIndex + 1}\nwith new line`
       } else if (rowIndex === 0 && columnIndex === 3) {
-        return `${columnIndex} : ${rowIndex}\nwith new line\nand another line`
+        return `${columnIndex + 1} : ${rowIndex + 1}\nwith new line\nand another line`
       }
-      return `${columnIndex} : ${rowIndex}`
+      return `${columnIndex + 1} : ${rowIndex + 1}`
     }),
   )
 
