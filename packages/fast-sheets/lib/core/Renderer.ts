@@ -23,20 +23,14 @@ export class Renderer {
   }
 
   public init() {
-    const {
-      elCanvas,
-      elCanvasContainer,
-      elScrollPaneX,
-      elScrollPaneY,
-      columns,
-      isRowNumberVisible,
-    } = this.state.options
+    const { elCanvas, elScrollInner, elScrollPaneX, elScrollPaneY, columns, isRowNumberVisible } =
+      this.state.options
     const ctx = getContext(elCanvas)
     if (!ctx) {
       return
     }
 
-    this.state.canvasSize = getCanvasSize(elCanvasContainer)
+    this.state.canvasSize = getCanvasSize(elScrollInner)
     elCanvas.style.width = this.state.canvasSize.width
     elCanvas.style.height = this.state.canvasSize.height
 
@@ -66,8 +60,8 @@ export class Renderer {
     }
 
     this.state.containerSize = {
-      width: elCanvasContainer.getBoundingClientRect().width,
-      height: elCanvasContainer.getBoundingClientRect().height,
+      width: elScrollInner.getBoundingClientRect().width,
+      height: elScrollInner.getBoundingClientRect().height,
     }
 
     elScrollPaneX.style.width = `${this.state.totalWidth}px`
@@ -104,7 +98,7 @@ export class Renderer {
 
   public getColumnWidth() {
     const { columns, borderWidth, elScrollInner } = this.state.options
-    const containerWidth = elScrollInner.offsetWidth - 1
+    const containerWidth = elScrollInner.offsetWidth - borderWidth * 2
     const columnsWithSizeTotalWidth = columns.reduce(
       (total, { width }) => total + (width ? width + borderWidth : 0),
       0,
@@ -127,7 +121,11 @@ export class Renderer {
     const { data, borderWidth } = this.state.options
     const rowsLength = data.length
     const horizontalBordersCount = rowsLength - 1
-    return this.state.rowHeights.reduce((a, b) => a + b, 0) + horizontalBordersCount * borderWidth
+    return (
+      this.state.rowHeights.reduce((a, b) => a + b, 0) +
+      horizontalBordersCount * borderWidth +
+      borderWidth
+    )
   }
 
   public calculateOffsets(widthsOrHeights: number[]) {
@@ -144,11 +142,21 @@ export class Renderer {
     )
   }
 
-  public findColumnIndex = (offsetX: number) =>
-    this.state.horizontalOffsets.findLastIndex((offset) => offset <= offsetX)
+  public findColumnIndex = (offsetX: number) => {
+    const maxX = this.state.viewport.right
+    if (offsetX > maxX) {
+      return -1
+    }
+    return this.state.horizontalOffsets.findLastIndex((offset) => offset <= offsetX)
+  }
 
-  public findRowIndex = (offsetY: number) =>
-    this.state.verticalOffsets.findLastIndex((offset) => offset <= offsetY)
+  public findRowIndex = (offsetY: number) => {
+    const maxY = this.state.viewport.bottom
+    if (offsetY > maxY) {
+      return -1
+    }
+    return this.state.verticalOffsets.findLastIndex((offset) => offset <= offsetY)
+  }
 
   public findCellByMouseEvent(e: MouseEvent) {
     const { elScrollInner } = this.state.options
