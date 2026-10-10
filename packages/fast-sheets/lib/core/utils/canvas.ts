@@ -1,5 +1,5 @@
-import type { CanvasSize, Viewport } from '../../core/types.ts'
-import { DEFAULT_BORDER_COLOR } from '../constants.ts'
+import type { CanvasSize, Viewport } from 'lib/core'
+import { DEFAULT_BORDER_COLOR } from 'lib/core/constants.ts'
 
 export const getCanvasSize = (elCanvasContainer: HTMLElement): CanvasSize => {
   const containerWidth = elCanvasContainer.offsetWidth
