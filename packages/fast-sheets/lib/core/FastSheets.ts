@@ -82,7 +82,7 @@ export class FastSheets {
       elScrollPaneY.style.width = '1px'
     }
 
-    const columns = options.columns || options.data[0]?.map(() => ({ width: 100 }))
+    const columns = options.columns || options.data[0]?.map(() => ({ width: 100 })) || []
 
     this.state = new State()
     this.state.options = {
