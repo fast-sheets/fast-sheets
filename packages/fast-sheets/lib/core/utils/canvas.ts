@@ -1,9 +1,10 @@
 import type { CanvasSize, Viewport } from 'lib/core'
 import { DEFAULT_BORDER_COLOR } from 'lib/core/constants.ts'
 
-export const getCanvasSize = (elCanvasContainer: HTMLElement): CanvasSize => {
-  const containerWidth = elCanvasContainer.offsetWidth
-  const containerHeight = elCanvasContainer.offsetHeight
+export const getCanvasSize = ({
+  offsetWidth: containerWidth,
+  offsetHeight: containerHeight,
+}: HTMLElement): CanvasSize => {
   return {
     widthWithPixelRatio: Math.round(containerWidth * window.devicePixelRatio),
     heightWithPixelRatio: Math.round(containerHeight * window.devicePixelRatio),
