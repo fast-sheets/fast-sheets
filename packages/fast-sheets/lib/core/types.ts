@@ -71,6 +71,7 @@ export interface CellsMap {
 }
 
 export interface CellInfo {
+  cell: Cell
   top: number
   left: number
   width: number
@@ -102,8 +103,8 @@ export type FastSheetsInstance = InstanceType<typeof FastSheets>
 export interface FastSheetsPlugin {
   name: string
   setup(instance: FastSheetsInstance): void
-  render(): void
-  destroy(): void
+  render?(): void
+  destroy?(): void
 }
 
 export interface DomRect {

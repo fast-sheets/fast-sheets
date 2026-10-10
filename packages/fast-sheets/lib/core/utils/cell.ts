@@ -32,6 +32,7 @@ export const getCellInfo = ({ cell, state }: { cell: Cell; state: StateInstance 
   const cellDomRect = getCellDomRect({ cell, state })
 
   return {
+    cell,
     ...cellDomRect,
     center: {
       x: cellDomRect.width / 2,

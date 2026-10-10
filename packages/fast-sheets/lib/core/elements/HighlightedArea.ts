@@ -63,12 +63,18 @@ export class HighlightedArea {
     this.container.style.top = `${domRect.top}px`
     this.container.style.left = `${domRect.left}px`
 
-    this.borderTop.style.width = `${domRect.width}px`
-    this.borderBottom.style.width = `${domRect.width}px`
-    this.borderBottom.style.top = `${(domRect.height || 0) - 1}px`
-    this.borderLeft.style.height = `${domRect.height}px`
-    this.borderRight.style.left = `${(domRect.width || 0) - 1}px`
-    this.borderRight.style.height = `${(domRect.height || 0) + 2}px`
+    this.borderTop.style.top = '-1px'
+    this.borderTop.style.left = '-1px'
+    this.borderTop.style.width = `${domRect.width + 2}px`
+    this.borderBottom.style.top = `${domRect.height - 1}px`
+    this.borderBottom.style.left = '-1px'
+    this.borderBottom.style.width = `${domRect.width + 2}px`
+    this.borderLeft.style.top = '-1px'
+    this.borderLeft.style.left = '-1px'
+    this.borderLeft.style.height = `${domRect.height + 2}px`
+    this.borderRight.style.top = '-1px'
+    this.borderRight.style.left = `${domRect.width - 1}px`
+    this.borderRight.style.height = `${domRect.height + 2}px`
   }
 
   public destroy() {

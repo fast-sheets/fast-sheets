@@ -8,7 +8,7 @@ import {
   DEFAULT_PADDING,
   ROW_HEADING_FONT,
 } from 'lib/core/constants.ts'
-import type { Cell, CellsMap, CellsRange } from 'lib/core/types.ts'
+import type { Cell, CellInfo, CellsMap, CellsRange } from 'lib/core/types.ts'
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
 import { getCellInfo, getCellKey } from 'lib/core/utils/cell.ts'
 import type { StateInstance } from 'lib/core/State.ts'
@@ -137,7 +137,7 @@ export class Renderer {
       (offsets, width, index) => {
         // we will calculate an offset for the next item
         const currentOffset = offsets[index] || 1
-        const nextOffset = currentOffset + width + this.state.options.borderWidth
+        const nextOffset = currentOffset + width + borderWidth
         offsets.push(nextOffset)
         return offsets
       },
@@ -212,42 +212,38 @@ export class Renderer {
   public renderCellBackground({
     ctx,
     fillStyle,
-    width,
-    height,
-    isRowNumber,
-    isColumnName,
+    cellInfo,
   }: {
     ctx: CanvasRenderingContext2D
     fillStyle: string
-    width: number
-    height: number
-    isRowNumber: boolean
-    isColumnName: boolean
+    cellInfo: CellInfo
   }) {
-    if (isRowNumber || isColumnName) {
+    if (cellInfo.isRowNumber || cellInfo.isColumnName) {
       // gray background rect for column names and row numbers to render borders
       ctx.fillStyle = '#ccc'
-      ctx.fillRect(-1, -1, width + 2, height + 2)
+      ctx.fillRect(-1, -1, cellInfo.width + 2, cellInfo.height + 2)
     }
 
     ctx.fillStyle = fillStyle
-    ctx.fillRect(0, 0, width, height)
+    ctx.fillRect(0, 0, cellInfo.width, cellInfo.height)
   }
 
   public renderCellText({
     ctx,
-    text,
-    x,
-    y,
+    cellInfo,
+    // text,
+    // x,
+    // y,
     font,
     fill = '#000',
     textAlign = 'left',
     verticalAlign = 'middle',
   }: {
     ctx: CanvasRenderingContext2D
-    text: string
-    x: number
-    y: number
+    cellInfo: CellInfo
+    // text: string
+    // x: number
+    // y: number
     font?: InstanceType<typeof Font>
     fill?: string
     textAlign: CanvasTextAlign
@@ -255,19 +251,19 @@ export class Renderer {
   }) {
     const lineSpacing = DEFAULT_LINE_SPACING
     const fontHeight = font?.fontHeight || DEFAULT_FONT_HEIGHT
-    const lines = text.split('\n')
+    const lines = cellInfo.text.split('\n')
     ctx.font = font?.font || DEFAULT_FONT
     ctx.fillStyle = fill
     ctx.textAlign = textAlign
 
     // make sure that values are rounded using devicePixelRatio
-    const textX = x
+    const textX = textAlign === 'center' ? cellInfo.center.x : cellInfo.padding.x
     let textY: number
     if (verticalAlign === 'middle') {
       const linesHeight = this.getLinesHeight(lines.length, fontHeight, lineSpacing)
-      textY = y + fontHeight - linesHeight * 0.5 // align text top to the center of a cell, and then lift text up on its half height
+      textY = cellInfo.center.y + fontHeight - linesHeight * 0.5 // align text top to the center of a cell, and then lift text up on its half height
     } else {
-      textY = y
+      textY = cellInfo.center.y
     }
 
     ctx.save()
@@ -288,10 +284,7 @@ export class Renderer {
     this.renderCellBackground({
       ctx,
       fillStyle,
-      width: cellInfo.width,
-      height: cellInfo.height,
-      isRowNumber: cellInfo.isRowNumber,
-      isColumnName: cellInfo.isColumnName,
+      cellInfo,
     })
 
     if (cellInfo.text) {
@@ -299,9 +292,7 @@ export class Renderer {
         const font = this.fonts[ROW_HEADING_FONT]
         this.renderCellText({
           ctx,
-          text: cellInfo.text,
-          x: cellInfo.center.x,
-          y: cellInfo.center.y,
+          cellInfo,
           font,
           textAlign: 'center',
           verticalAlign: 'middle',
@@ -310,9 +301,7 @@ export class Renderer {
         const font = this.fonts[COLUMN_HEADING_FONT]
         this.renderCellText({
           ctx,
-          text: cellInfo.text,
-          x: cellInfo.padding.x,
-          y: cellInfo.center.y,
+          cellInfo,
           font,
           textAlign: 'left',
           verticalAlign: 'middle',
@@ -321,9 +310,7 @@ export class Renderer {
         const font = this.fonts[DEFAULT_FONT]
         this.renderCellText({
           ctx,
-          text: cellInfo.text,
-          x: cellInfo.padding.x,
-          y: cellInfo.center.y,
+          cellInfo,
           font,
           textAlign: 'left',
           verticalAlign: 'middle',
@@ -378,7 +365,9 @@ export class Renderer {
       this.renderImmediate()
 
       Object.values(this.state.plugins).forEach((plugin) => {
-        plugin.render()
+        if (typeof plugin.render === 'function') {
+          plugin.render()
+        }
       })
     })
   }
