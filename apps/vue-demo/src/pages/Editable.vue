@@ -1,22 +1,38 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { FastSheets } from 'fast-sheets'
+import { FastSheets, type Column } from 'fast-sheets'
 import { FastSheetsEditablePlugin } from 'fast-sheets/editable'
 
 let fastSheets: InstanceType<typeof FastSheets>
 const elContainer = ref<HTMLDivElement | null>(null)
 
 const generateData = () => {
+  const columns: Column[] = [
+    {
+      name: 'Column 1',
+      width: 100,
+    },
+    {
+      name: 'Column 2',
+      width: 100,
+    },
+    {
+      name: 'Column 3',
+      minWidth: 100,
+    },
+    {
+      name: 'Column 4',
+      minWidth: 100,
+    },
+    {
+      name: 'Column 5',
+      width: 100,
+    },
+  ]
+
   // const rowsCount = 100
   const rowsCount = 3000
   // const rowsCount = 1000000 // max height of an element in Chrome is ~1.6m px
-  const columnWidths = [100, 100, undefined, undefined, 100]
-
-  const columns = columnWidths.map((width, i) => ({
-    name: `Column ${i + 1}`,
-    width,
-  }))
-
   const data = Array.from({ length: rowsCount }, (_, rowIndex) =>
     columns.map((_, columnIndex) => {
       if (rowIndex === 0 && columnIndex === 2) {

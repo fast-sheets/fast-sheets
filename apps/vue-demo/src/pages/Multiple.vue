@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FastSheets } from 'fast-sheets'
+import { FastSheets, type Column } from 'fast-sheets'
 import { onMounted, onUnmounted, ref } from 'vue'
 
 let fastSheetsPlan: InstanceType<typeof FastSheets>
@@ -9,14 +9,22 @@ const elContainerPlan = ref<HTMLDivElement | null>(null)
 const elContainerFact = ref<HTMLDivElement | null>(null)
 
 const generateData = () => {
-  const columnWidths = [100, undefined, 100]
+  const columns: Column[] = [
+    {
+      name: 'Column 1',
+      width: 100,
+    },
+    {
+      name: 'Column 2',
+      minWidth: 100,
+    },
+    {
+      name: 'Column 3',
+      width: 100,
+    },
+  ]
+
   const rowsCount = 10000
-
-  const columns = columnWidths.map((width, i) => ({
-    header: `Column ${i + 1}`,
-    width,
-  }))
-
   const data = Array.from({ length: rowsCount }, (_, i) =>
     columns.map((_, j) => `${j + 1} : ${i + 1}`),
   )

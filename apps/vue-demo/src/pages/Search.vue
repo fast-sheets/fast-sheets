@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FastSheets, type Cell } from 'fast-sheets'
+import { FastSheets, type Cell, type Column } from 'fast-sheets'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { FastSheetsSearchPlugin } from 'fast-sheets/search'
 
@@ -10,14 +10,30 @@ const searchQuery = defineModel<string>()
 const elContainer = ref<HTMLDivElement | null>(null)
 
 const generateData = () => {
-  const columnWidths = [100, 100, undefined, undefined, 100]
+  const columns: Column[] = [
+    {
+      name: 'Column 1',
+      width: 100,
+    },
+    {
+      name: 'Column 2',
+      width: 100,
+    },
+    {
+      name: 'Column 3',
+      minWidth: 100,
+    },
+    {
+      name: 'Column 4',
+      minWidth: 100,
+    },
+    {
+      name: 'Column 5',
+      width: 100,
+    },
+  ]
+
   const rowsCount = 3000
-
-  const columns = columnWidths.map((width, i) => ({
-    name: `Column ${i + 1}`,
-    width,
-  }))
-
   const data = Array.from({ length: rowsCount }, (_, i) =>
     columns.map((_, j) => `${j + 1} : ${i + 1}`),
   )

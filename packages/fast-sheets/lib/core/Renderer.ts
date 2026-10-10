@@ -1,6 +1,7 @@
 import { roundToPixels } from 'lib/core/utils/round-to-pixels.ts'
 import {
   COLUMN_HEADING_FONT,
+  DEFAULT_COLUMN_MIN_WIDTH,
   DEFAULT_FONT,
   DEFAULT_FONT_HEIGHT,
   DEFAULT_LINE_SPACING,
@@ -104,11 +105,13 @@ export class Renderer {
       0,
     )
     const columnsWithoutWidthLength = columns.filter((column) => !column.width).length
-    const columnWithAutoWidth = Math.max(
-      50,
-      roundToPixels((containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength),
+    const columnWithAutoWidth = roundToPixels(
+      (containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength,
     )
-    return columns.map((column) => column.width || columnWithAutoWidth)
+    return columns.map(
+      (column) =>
+        column.width || Math.max(columnWithAutoWidth, column.minWidth || DEFAULT_COLUMN_MIN_WIDTH),
+    )
   }
 
   public getTotalWidth() {

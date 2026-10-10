@@ -52,6 +52,7 @@ export interface Coordinate {
 export interface Column {
   name?: string
   width?: number
+  minWidth?: number
   isRowsNumbers?: boolean
 }
 

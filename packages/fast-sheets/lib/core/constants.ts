@@ -12,6 +12,8 @@ export const DEFAULT_PADDING = { x: 2, y: 5 }
 
 export const DEFAULT_BORDER_COLOR = '#E9E9E9'
 
+export const DEFAULT_COLUMN_MIN_WIDTH = 50
+
 export enum BORDER_STYLE {
   SOLID = 'solid',
   DASHED = 'dashed',
