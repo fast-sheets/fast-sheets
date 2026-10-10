@@ -309,20 +309,29 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           isArrowKey = true
           break
         }
-        case 'ArrowDown':
+        case 'ArrowDown': {
+          const maxRowIndex = (this.instance.state.options.data.length || 2) - 1
           newFocusedCell.rowIndex++
+          newFocusedCell.rowIndex = Math.min(maxRowIndex, newFocusedCell.rowIndex)
           isArrowKey = true
           break
+        }
         case 'ArrowLeft': {
           const minColumnIndex = this.instance.state.options.isRowNumberVisible ? 1 : 0
           newFocusedCell.columnIndex = Math.max(minColumnIndex, newFocusedCell.columnIndex - 1)
           isArrowKey = true
           break
         }
-        case 'ArrowRight':
+        case 'ArrowRight': {
+          let maxColumnIndex = (this.instance.state.options.data[0]?.length || 2) - 1
+          if (this.instance.state.options.isRowNumberVisible) {
+            maxColumnIndex++
+          }
           newFocusedCell.columnIndex++
+          newFocusedCell.columnIndex = Math.min(maxColumnIndex, newFocusedCell.columnIndex)
           isArrowKey = true
           break
+        }
         case 'Shift':
           this.isShiftPressed = true
           hasSelectionJustStarted = true
