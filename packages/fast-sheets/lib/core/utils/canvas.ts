@@ -1,13 +1,16 @@
 import type { CanvasSize, Viewport } from 'lib/core'
 import { DEFAULT_BORDER_COLOR } from 'lib/core/constants.ts'
 
+export const getDevicePixelRatio = () => Math.max(window.devicePixelRatio, 1)
+
 export const getCanvasSize = ({
   offsetWidth: containerWidth,
   offsetHeight: containerHeight,
 }: HTMLElement): CanvasSize => {
+  const devicePixelRatio = getDevicePixelRatio()
   return {
-    widthWithPixelRatio: Math.round(containerWidth * window.devicePixelRatio),
-    heightWithPixelRatio: Math.round(containerHeight * window.devicePixelRatio),
+    widthWithPixelRatio: Math.round(containerWidth * devicePixelRatio),
+    heightWithPixelRatio: Math.round(containerHeight * devicePixelRatio),
     width: `${containerWidth}px`,
     height: `${containerHeight}px`,
   }
@@ -26,12 +29,13 @@ export const setTransform = (
   x: number,
   y: number,
 ) => {
+  const devicePixelRatio = getDevicePixelRatio()
   ctx.setTransform(
-    window.devicePixelRatio,
+    devicePixelRatio,
     0,
     0,
-    window.devicePixelRatio,
-    (x - viewport.left) * window.devicePixelRatio,
-    (y - viewport.top) * window.devicePixelRatio,
+    devicePixelRatio,
+    (x - viewport.left) * devicePixelRatio,
+    (y - viewport.top) * devicePixelRatio,
   )
 }

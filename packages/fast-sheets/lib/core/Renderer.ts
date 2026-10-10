@@ -95,11 +95,10 @@ export class Renderer {
         .filter((value) => value)
       const maxLinesInRow = linesLength.length ? Math.max(...linesLength) : 1
       const fontHeight = this.fonts[DEFAULT_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
-      const lineSpacing = roundToPixels(DEFAULT_LINE_SPACING, window.devicePixelRatio)
-      const linesHeight = this.getLinesHeight(maxLinesInRow, fontHeight, lineSpacing)
+      const linesHeight = this.getLinesHeight(maxLinesInRow, fontHeight, DEFAULT_LINE_SPACING)
       const paddingY =
         this.state.hasColumnNames && rowIndex === -1 ? DEFAULT_PADDING.y * 4 : DEFAULT_PADDING.y * 2
-      return linesHeight + paddingY
+      return roundToPixels(linesHeight + paddingY)
     })
   }
 
@@ -113,7 +112,7 @@ export class Renderer {
     const columnsWithoutWidthLength = columns.filter((column) => !column.width).length
     const columnWithAutoWidth = Math.max(
       50,
-      Math.floor((containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength),
+      roundToPixels((containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength),
     )
     return columns.map((column) => column.width || columnWithAutoWidth)
   }
@@ -243,18 +242,15 @@ export class Renderer {
     textAlign: CanvasTextAlign
     verticalAlign: 'top' | 'middle' | 'bottom'
   }) {
-    const lineSpacing = roundToPixels(DEFAULT_LINE_SPACING, window.devicePixelRatio)
-    const fontHeight = roundToPixels(
-      font?.fontHeight || DEFAULT_FONT_HEIGHT,
-      window.devicePixelRatio,
-    )
+    const lineSpacing = DEFAULT_LINE_SPACING
+    const fontHeight = font?.fontHeight || DEFAULT_FONT_HEIGHT
     const lines = text.split('\n')
     ctx.font = font?.font || DEFAULT_FONT
     ctx.fillStyle = fill
     ctx.textAlign = textAlign
 
     // make sure that values are rounded using devicePixelRatio
-    const textX = roundToPixels(x, window.devicePixelRatio)
+    const textX = x
     let textY: number
     if (verticalAlign === 'middle') {
       const linesHeight = this.getLinesHeight(lines.length, fontHeight, lineSpacing)
@@ -262,11 +258,14 @@ export class Renderer {
     } else {
       textY = y
     }
-    textY = roundToPixels(textY, window.devicePixelRatio)
 
     ctx.save()
     lines.forEach((line, i) => {
-      ctx.fillText(line, textX, textY + i * (fontHeight + lineSpacing))
+      ctx.fillText(
+        line,
+        roundToPixels(textX),
+        roundToPixels(textY + i * (fontHeight + lineSpacing)),
+      )
     })
     ctx.restore()
   }
