@@ -41,12 +41,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div style="display: flex; width: 100vw">
-    <div style="width: 45%; height: 70vh">
+  <div style="display: flex; justify-content: space-between; width: 100%; height: 100%">
+    <div style="width: 45%; height: 70%">
       <h2>Plan</h2>
       <div ref="elContainerPlan" style="width: 100%; height: 100%" />
     </div>
-    <div style="width: 45%; height: 70vh; margin-left: 10%">
+    <div style="width: 45%; height: 70%">
       <h2>Fact</h2>
       <div ref="elContainerFact" style="width: 100%; height: 100%" />
     </div>

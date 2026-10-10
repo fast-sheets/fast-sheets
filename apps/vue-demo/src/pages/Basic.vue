@@ -57,7 +57,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div style="flex-grow: 1">
+  <div style="flex-grow: 1; height: 100%">
     <div style="height: 50px; display: flex; align-items: center">
       <label>
         Amount:
@@ -68,6 +68,6 @@ onUnmounted(() => {
         </select>
       </label>
     </div>
-    <div ref="elContainer" style="height: calc(100dvh - 50px)" />
+    <div ref="elContainer" style="width: 100%; height: calc(100% - 50px)" />
   </div>
 </template>

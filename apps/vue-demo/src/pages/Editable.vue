@@ -62,5 +62,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="elContainer" style="width: 100vw; height: 100vh" />
+  <div ref="elContainer" style="width: 100%; height: calc(100% - 15px); margin-top: 15px" />
 </template>

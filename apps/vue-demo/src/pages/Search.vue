@@ -55,13 +55,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div style="flex-grow: 1">
+  <div style="flex-grow: 1; height: 100%">
     <div style="height: 50px; display: flex; align-items: center; gap: 10px">
       <form @submit.prevent="search">
         <label><input type="text" v-model="searchQuery" /></label>&nbsp;
         <button type="submit">Search</button>
       </form>
     </div>
-    <div ref="elContainer" style="width: 100%; height: calc(100vh - 50px)" />
+    <div ref="elContainer" style="width: 100%; height: calc(100% - 50px)" />
   </div>
 </template>
