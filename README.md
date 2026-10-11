@@ -1,6 +1,7 @@
 # fast-sheets
 
 Render over million cells instantly!
+Fast-sheet uses WebGL to render massive data grids 
 
 
 ## Installation
@@ -28,11 +29,13 @@ if (elContainer) {
 
 📚[Documentation](https://fastsheets.io/docs.html)
 
+
 ## Integrations demo
-[vue](apps/vue-demo)
-[react](apps/react-demo)
-[vanilla-ts](apps/vanilla-ts-demo)
-[vanilla-js](apps/vanilla-js-demo)
+
+- [vue](apps/vue-demo)
+- [react](apps/react-demo)
+- [vanilla-ts](apps/vanilla-ts-demo)
+- [vanilla-js](apps/vanilla-js-demo)
 
 
 ## License
