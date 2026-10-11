@@ -1,6 +1,6 @@
 # fast-sheets
 
-Render over million cells instantly!
+Render over million cells instantly!  
 Fast-sheet uses WebGL to render massive data grids
 
 
