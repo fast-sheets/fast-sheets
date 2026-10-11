@@ -32,10 +32,10 @@ if (elContainer) {
 
 ## Integrations demo
 
-- [vue](apps/vue-demo)
-- [react](apps/react-demo)
-- [vanilla-ts](apps/vanilla-ts-demo)
-- [vanilla-js](apps/vanilla-js-demo)
+- [vue](https://github.com/fast-sheets/fast-sheets/tree/main/apps/vue-demo)
+- [react](https://github.com/fast-sheets/fast-sheets/tree/main/apps/react-demo)
+- [vanilla-ts](https://github.com/fast-sheets/fast-sheets/tree/main/apps/vanilla-ts-demo)
+- [vanilla-js](https://github.com/fast-sheets/fast-sheets/tree/main/apps/vanilla-js-demo)
 
 
 ## License
