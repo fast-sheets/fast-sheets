@@ -1,7 +1,6 @@
 # fast-sheets
 
-Render over million cells instantly!  
-Fast-sheet uses WebGL to render massive data grids 
+A tiny, dependency-free module that uses WebGL to render massive data grids.
 
 
 ## Installation
