@@ -30,6 +30,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   resizeObserver: ResizeObserver
 
   isShiftPressed = false
+  pointerDownTime = 0
+  isDoubleTap = false
 
   boundDoubleClick: (e: MouseEvent) => void
   boundMouseDown: (e: MouseEvent) => void
@@ -39,6 +41,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   boundKeyUp: (e: KeyboardEvent) => void
   boundCopy: () => void
   boundPaste: (e: ClipboardEvent) => void
+  boundPointerDown: (e: PointerEvent) => void
+  boundPointerUp: (e: PointerEvent) => void
 
   constructor(options: RawOptions) {
     this.options = {
@@ -54,6 +58,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.boundKeyDown = this.onKeyDown.bind(this)
     this.boundCopy = this.onCopy.bind(this)
     this.boundPaste = this.onPaste.bind(this)
+    this.boundPointerDown = this.onPointerDown.bind(this)
+    this.boundPointerUp = this.onPointerUp.bind(this)
 
     this.resizeObserver = new ResizeObserver(() => {
       this.onResize()
@@ -146,26 +152,40 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   bindEvents() {
+    // mouse events
     window.addEventListener('dblclick', this.boundDoubleClick)
     window.addEventListener('mouseup', this.boundMouseUp)
     window.addEventListener('mousedown', this.boundMouseDown)
     window.addEventListener('mousemove', this.boundMouseMove)
+    // key events
     window.addEventListener('keyup', this.boundKeyUp)
     window.addEventListener('keydown', this.boundKeyDown)
+    // copy & paste
     window.addEventListener('copy', this.boundCopy)
     window.addEventListener('paste', this.boundPaste)
+    // pointer events
+    window.addEventListener('pointerdown', this.boundPointerDown)
+    window.addEventListener('pointerup', this.boundPointerUp)
+    // observables
     this.resizeObserver.observe(this.instance.state.options.elCanvasContainer)
   }
 
   unbindEvents() {
+    // mouse events
     window.removeEventListener('dblclick', this.boundDoubleClick)
     window.removeEventListener('mouseup', this.boundMouseUp)
     window.removeEventListener('mousedown', this.boundMouseDown)
     window.removeEventListener('mousemove', this.boundMouseMove)
+    // key events
     window.removeEventListener('keyup', this.boundKeyUp)
     window.removeEventListener('keydown', this.boundKeyDown)
+    // copy & paste
     window.removeEventListener('copy', this.boundCopy)
     window.removeEventListener('paste', this.boundPaste)
+    // pointer events
+    window.removeEventListener('pointerdown', this.boundPointerDown)
+    window.removeEventListener('pointerup', this.boundPointerUp)
+    // observables
     this.resizeObserver.disconnect()
   }
 
@@ -377,6 +397,36 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         this.rangeSelectionController?.reset()
         this.instance.renderer.render()
       }
+    }
+  }
+
+  private onPointerDown(e: PointerEvent) {
+    // Only trigger on actual touch taps, ignoring mouse clicks
+    if (e.pointerType === 'touch') {
+      const now = new Date().getTime()
+      this.isDoubleTap = now - this.pointerDownTime < 300
+      this.pointerDownTime = now
+      setTimeout(() => {
+        this.pointerDownTime = 0
+        this.isDoubleTap = false
+      }, 300)
+    }
+  }
+
+  private onPointerUp(e: PointerEvent) {
+    if (e.pointerType === 'touch' && this.pointerDownTime) {
+      this.selectedRange?.reset()
+      this.rangeSelectionController?.reset()
+      this.focusedCell?.reset()
+      this.copiedRange?.reset()
+      const cell = this.instance.renderer.findCellByMouseEvent(e)
+      if (cell) {
+        this.focusedCell?.highlight(cell)
+        if (this.isDoubleTap && this.isCellEditable(cell)) {
+          this.inputController?.showInput(cell)
+        }
+      }
+      this.instance.renderer.render()
     }
   }
 
