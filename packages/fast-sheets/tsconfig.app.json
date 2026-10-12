@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.app.json",
   "include": ["lib/**/*"],
   "compilerOptions": {
-    "baseUrl": ".",
+    "rootDir": ".",
     "paths": {
       "lib/*": ["./lib/*"]
     }
