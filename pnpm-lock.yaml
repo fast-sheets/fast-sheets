@@ -42,43 +42,6 @@ importers:
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
-      simple-git-hooks:
-        specifier: ^2.13.1
-        version: 2.13.1
-
-  apps/react:
-    dependencies:
-      fast-sheets:
-        specifier: workspace:*
-        version: link:../../packages/fast-sheets
-      react:
-        specifier: ^19.2.8
-        version: 19.3.0
-      react-dom:
-        specifier: ^19.2.8
-        version: 19.3.0(react@19.3.0)
-    devDependencies:
-      '@types/node':
-        specifier: ^24.13.3
-        version: 24.13.3
-      '@types/react':
-        specifier: ^19.2.18
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.2.7
-        version: 19.3.0(@types/react@19.3.0)
-      '@vitejs/plugin-react':
-        specifier: ^6.1.1
-        version: 6.1.1(vite@8.3.2(@types/node@24.13.3)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2))
-      oxlint:
-        specifier: ^1.81.0
-        version: 1.86.0
-      typescript:
-        specifier: ~6.0.2
-        version: 6.0.3
-      vite:
-        specifier: ^8.3.0
-        version: 8.3.2(@types/node@24.13.3)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
 
   apps/react-demo:
     dependencies:
@@ -114,32 +77,11 @@ importers:
         specifier: ^8.3.0
         version: 8.3.2(@types/node@24.13.3)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
 
-  apps/vanilla-js:
-    devDependencies:
-      fast-sheets:
-        specifier: workspace:*
-        version: link:../../packages/fast-sheets
-      vite:
-        specifier: ^8.3.0
-        version: 8.3.2(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
-
   apps/vanilla-js-demo:
     devDependencies:
       fast-sheets:
         specifier: workspace:*
         version: link:../../packages/fast-sheets
-      vite:
-        specifier: ^8.3.0
-        version: 8.3.2(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
-
-  apps/vanilla-ts:
-    devDependencies:
-      fast-sheets:
-        specifier: workspace:*
-        version: link:../../packages/fast-sheets
-      typescript:
-        specifier: ~6.0.2
-        version: 6.0.3
       vite:
         specifier: ^8.3.0
         version: 8.3.2(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
@@ -155,46 +97,6 @@ importers:
       vite:
         specifier: ^8.3.0
         version: 8.3.2(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
-
-  apps/vue:
-    dependencies:
-      fast-sheets:
-        specifier: workspace:*
-        version: link:../../packages/fast-sheets
-      vue:
-        specifier: ^3.5.40
-        version: 3.5.42(typescript@6.0.3)
-      vue-router:
-        specifier: ^5.2.0
-        version: 5.3.1(@vue/compiler-sfc@3.5.42)(esbuild@0.27.1)(rolldown@1.2.12)(rollup@4.53.5)(vite@8.3.2(@types/node@24.13.3)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2))(vue@3.5.42(typescript@6.0.3))
-    devDependencies:
-      '@tsconfig/node24':
-        specifier: ^24.0.4
-        version: 24.0.5
-      '@types/node':
-        specifier: ^24.13.3
-        version: 24.13.3
-      '@vitejs/plugin-vue':
-        specifier: ^6.0.8
-        version: 6.0.8(vite@8.3.2(@types/node@24.13.3)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2))(vue@3.5.42(typescript@6.0.3))
-      '@vue/tsconfig':
-        specifier: ^0.9.1
-        version: 0.9.1(typescript@6.0.3)(vue@3.5.42(typescript@6.0.3))
-      npm-run-all2:
-        specifier: ^9.0.2
-        version: 9.0.3
-      typescript:
-        specifier: ~6.0.0
-        version: 6.0.3
-      vite:
-        specifier: ^8.1.5
-        version: 8.3.2(@types/node@24.13.3)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
-      vite-plugin-vue-devtools:
-        specifier: ^8.1.5
-        version: 8.2.1(vite@8.3.2(@types/node@24.13.3)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2))(vue@3.5.42(typescript@6.0.3))
-      vue-tsc:
-        specifier: ^3.3.7
-        version: 3.3.11(typescript@6.0.3)
 
   apps/vue-demo:
     dependencies:
@@ -243,7 +145,10 @@ importers:
         version: 7.55.2(@types/node@25.0.2)
       unplugin-dts:
         specifier: 1.0.0-beta.6
-        version: 1.0.0-beta.6(@microsoft/api-extractor@7.55.2(@types/node@25.0.2))(esbuild@0.27.1)(rolldown@1.2.12)(rollup@4.53.5)(typescript@6.0.3)(vite@8.3.2(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2))
+        version: 1.0.0-beta.6(@microsoft/api-extractor@7.55.2(@types/node@25.0.2))(esbuild@0.27.1)(rolldown@1.2.12)(rollup@4.53.5)(typescript@6.0.3)(vite@8.3.4(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2))
+      vite:
+        specifier: ^8.3.4
+        version: 8.3.4(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
 
 packages:
 
@@ -1881,6 +1786,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@3.3.20:
+    resolution: {integrity: sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==}
+    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -1999,6 +1909,10 @@ packages:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
 
+  postcss@8.5.29:
+    resolution: {integrity: sha512-49cGhUbXj8Qenv0iTMxA1cFBzxXoctpC9Ujd77t1WcbJIr6nF/eI7g/8MgxrYldFRuAXvja7xQRwavoW7kgrxQ==}
+    engines: {node: ^10 || ^12 || >=14}
+
   powershell-utils@0.1.0:
     resolution: {integrity: sha512-dM0jVuXJPsDN6DvRpea484tCUaMiXWjuCn++HGTqUWzGDjv5tZkEZldAJ/UMlqRYGFrD/etByo4/xOuC/snX2A==}
     engines: {node: '>=20'}
@@ -2114,10 +2028,6 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
-  simple-git-hooks@2.13.1:
-    resolution: {integrity: sha512-WszCLXwT4h2k1ufIXAgsbiTOazqqevFCIncOuUBZJ91DdvWcC5+OFkluWRQPrcuSYd8fjq+o2y1QfWqYMoAToQ==}
-    hasBin: true
-
   sirv@3.0.2:
     resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
     engines: {node: '>=18'}
@@ -2128,6 +2038,10 @@ packages:
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
+    engines: {node: '>=0.10.0'}
+
+  source-map-js@1.2.2:
+    resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
     engines: {node: '>=0.10.0'}
 
   source-map@0.6.1:
@@ -2345,6 +2259,49 @@ packages:
 
   vite@8.3.2:
     resolution: {integrity: sha512-SQr1x6W5vVSbROg7vsyXIaxK9b0G7zsT68acdWWRmnBUsgDieLCRG+Rep9WdZgcposvv/GSnr4GUUBqB3vXq6w==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^20.19.0 || >=22.12.0
+      '@vitejs/devtools': ^0.7.1
+      esbuild: ^0.27.0 || ^0.28.0
+      jiti: '>=1.21.0'
+      less: ^4.0.0
+      sass: ^1.70.0
+      sass-embedded: ^1.70.0
+      stylus: '>=0.54.8'
+      sugarss: ^5.0.0
+      terser: ^5.16.0
+      tsx: ^4.8.1
+      yaml: ^2.4.2
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      '@vitejs/devtools':
+        optional: true
+      esbuild:
+        optional: true
+      jiti:
+        optional: true
+      less:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+      tsx:
+        optional: true
+      yaml:
+        optional: true
+
+  vite@8.3.4:
+    resolution: {integrity: sha512-IftLE8phJhdNRIGNEV4JCCvfNScoZQVfcXaN8TQropWGJtOHcu+iAB9pHcuGvmEb/kddw0LBe/jS8ztdC6xdiQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -3965,6 +3922,8 @@ snapshots:
 
   nanoid@3.3.18: {}
 
+  nanoid@3.3.20: {}
+
   natural-compare@1.4.0: {}
 
   node-releases@2.0.54: {}
@@ -4085,6 +4044,12 @@ snapshots:
       nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  postcss@8.5.29:
+    dependencies:
+      nanoid: 3.3.20
+      picocolors: 1.1.1
+      source-map-js: 1.2.2
 
   powershell-utils@0.1.0: {}
 
@@ -4207,8 +4172,6 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  simple-git-hooks@2.13.1: {}
-
   sirv@3.0.2:
     dependencies:
       '@polka/url': 1.0.0-next.29
@@ -4221,6 +4184,8 @@ snapshots:
       is-fullwidth-code-point: 5.1.0
 
   source-map-js@1.2.1: {}
+
+  source-map-js@1.2.2: {}
 
   source-map@0.6.1: {}
 
@@ -4308,7 +4273,7 @@ snapshots:
 
   universalify@2.0.1: {}
 
-  unplugin-dts@1.0.0-beta.6(@microsoft/api-extractor@7.55.2(@types/node@25.0.2))(esbuild@0.27.1)(rolldown@1.2.12)(rollup@4.53.5)(typescript@6.0.3)(vite@8.3.2(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)):
+  unplugin-dts@1.0.0-beta.6(@microsoft/api-extractor@7.55.2(@types/node@25.0.2))(esbuild@0.27.1)(rolldown@1.2.12)(rollup@4.53.5)(typescript@6.0.3)(vite@8.3.4(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)):
     dependencies:
       '@rollup/pluginutils': 5.3.0(rollup@4.53.5)
       '@volar/typescript': 2.4.27
@@ -4324,7 +4289,7 @@ snapshots:
       esbuild: 0.27.1
       rolldown: 1.2.12
       rollup: 4.53.5
-      vite: 8.3.2(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
+      vite: 8.3.4(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -4432,6 +4397,20 @@ snapshots:
       lightningcss: 1.33.0
       picomatch: 4.0.7
       postcss: 8.5.28
+      rolldown: 1.2.12
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 25.0.2
+      esbuild: 0.27.1
+      fsevents: 2.3.3
+      jiti: 2.6.1
+      yaml: 2.8.2
+
+  vite@8.3.4(@types/node@25.0.2)(esbuild@0.27.1)(jiti@2.6.1)(yaml@2.8.2):
+    dependencies:
+      lightningcss: 1.33.0
+      picomatch: 4.0.7
+      postcss: 8.5.29
       rolldown: 1.2.12
       tinyglobby: 0.2.17
     optionalDependencies:
