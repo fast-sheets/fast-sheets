@@ -21,7 +21,10 @@
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check"
   },
   "lint-staged": {
-    "packages/**/*.{js,ts,json}": [
+    "apps/**/*.{js,ts,tsx,vue}": [
+      "pnpm lint:fix"
+    ],
+    "packages/**/*.{js,ts,tsx}": [
       "pnpm lint:fix"
     ]
   },
