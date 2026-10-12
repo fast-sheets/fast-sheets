@@ -4,7 +4,7 @@
   "type": "module",
   "author": "Dmitry Savchenkov <topratecoder@gmail.com>",
   "license": "MIT",
-  "packageManager": "pnpm@10.26.1",
+  "packageManager": "pnpm@12.11.2",
   "scripts": {
     "dev:lib": "pnpm --filter fast-sheets run dev",
     "dev:react-demo": "pnpm run dev:lib & pnpm --filter react-demo run dev",
