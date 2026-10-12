@@ -41,6 +41,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build
+        run: pnpm build:lib
+
       - name: Publish to npm with Provenance
         run: pnpm stage publish --filter=fast-sheets --provenance --access public
         env:
