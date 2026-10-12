@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "types:check": "vue-tsc --build"
+    "types:check": "vue-tsc --build",
+    "lint": "eslint --ext ts,vue ./src --fix",
+    "prettier": "prettier --log-level error --write ./src"
   },
   "dependencies": {
     "fast-sheets": "workspace:*",
@@ -17,9 +19,12 @@
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/tsconfig": "^0.9.1",
+    "eslint-plugin-vue": "^10.11.1",
     "npm-run-all2": "^9.0.2",
     "typescript": "~6.0.0",
+    "typescript-eslint": "^8.71.1",
     "vite": "^8.1.5",
     "vite-plugin-vue-devtools": "^8.1.5",
     "vue-tsc": "^3.3.7"
