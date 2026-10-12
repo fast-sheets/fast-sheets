@@ -7,7 +7,7 @@
 Messages must be matched by the following regex:
 
 ```regexp
-/^(revert: )?(build|ci|docs|feat|fix|perf|refactor|style|test)(\(.+\))?: .{1,50}/
+/^(revert: )?(build|ci|docs|feat|fix|perf|refactor|release|style|test)(\(.+\))?: .{1,50}/
 ```
 
 #### Type
@@ -20,6 +20,7 @@ Must be one of the following:
 - fix: A bug fix
 - perf: A code change that improves performance
 - refactor: A code change that neither fixes a bug nor adds a feature
+- release: Updating version number in package.json before release
 - style: Changes that do not affect the meaning of the code (white-space, formatting, missing semicolons, etc.)
 - test: Adding missing tests or correcting existing tests
 

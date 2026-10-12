@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console, no-undef */
 import pico from 'picocolors'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -6,7 +6,8 @@ import path from 'node:path'
 const msgPath = path.resolve('.git/COMMIT_EDITMSG')
 const msg = readFileSync(msgPath, 'utf-8').trim()
 
-const commitRE = /^(revert: )?(build|ci|docs|feat|fix|perf|refactor|style|test)(\(.+\))?: .{1,50}/
+const commitRE =
+  /^(revert: )?(build|ci|docs|feat|fix|perf|refactor|release|style|test)(\(.+\))?: .{1,50}/
 
 if (!commitRE.test(msg)) {
   console.log()
