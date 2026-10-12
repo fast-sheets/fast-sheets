@@ -39,7 +39,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --no-only-built-dependencies
+        run: pnpm install --frozen-lockfile --config.onlyBuiltDependencies=""
 
       - name: Publish to npm with Provenance
         run: pnpm stage publish --filter=fast-sheets --provenance --access public
