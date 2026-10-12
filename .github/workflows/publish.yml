@@ -45,6 +45,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Publish to npm with Provenance
-        run: npm stage publish --workspace=fast-sheets --provenance --access public
+        run: pnpm stage publish --filter=fast-sheets --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
