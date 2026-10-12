@@ -29,7 +29,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
-    "types:check": "tsc --noEmit"
+    "types:check": "tsc -b"
   },
   "keywords": [
     "fast-sheets",
