@@ -20,10 +20,6 @@
     "lint:scripts:fix": "pnpm lint:scripts --fix",
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check"
   },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged && pnpm types:check",
-    "commit-msg": "node scripts/verify-commit.js"
-  },
   "lint-staged": {
     "packages/**/*.{js,ts,json}": [
       "pnpm lint:fix"
@@ -35,10 +31,10 @@
   "devDependencies": {
     "@tsconfig/node24": "^24.0.3",
     "@types/node": "^25.0.2",
+    "husky": "^9.1.7",
     "jiti": "^2.6.1",
     "lint-staged": "^16.2.7",
-    "picocolors": "^1.1.1",
-    "simple-git-hooks": "^2.13.1"
+    "picocolors": "^1.1.1"
   },
   "peerDependencies": {
     "@eslint/js": "^9.39.2",
