@@ -14,11 +14,6 @@ jobs:
       contents: read
       id-token: write
 
-    # Sets the working directory for all run steps in this job
-    defaults:
-      run:
-        working-directory: ./packages/fast-sheets
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
