@@ -312,7 +312,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyDown(e: KeyboardEvent) {
-    if (this.focusedCell?.cell && !this.isInputVisible()) {
+    const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'
+    if (this.focusedCell?.cell && !this.isInputVisible() && !isPaste) {
       e.preventDefault()
       const newFocusedCell: Cell = {
         rowIndex: this.focusedCell.cell.rowIndex,
