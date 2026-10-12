@@ -14,18 +14,14 @@
     "build:lib": "pnpm --filter fast-sheets run build",
     "build:demo": "pnpm --filter='./apps/**' --parallel run build",
     "build": "pnpm run build:lib & pnpm run build:demo",
-    "lint": "pnpm lint:scripts",
-    "lint:fix": "pnpm lint:scripts:fix",
-    "lint:scripts": "eslint --ext ts ./packages/*/lib",
-    "lint:scripts:fix": "pnpm lint:scripts --fix",
+    "lint:lib": "pnpm eslint --ext ts ./packages/*/lib --fix",
+    "prettier:lib": "prettier --log-level error --write ./packages/*/lib",
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check"
   },
   "lint-staged": {
-    "apps/**/*.{js,ts,tsx,vue}": [
-      "pnpm lint:fix"
-    ],
     "packages/**/*.{js,ts,tsx}": [
-      "pnpm lint:fix"
+      "pnpm lint:lib",
+      "pnpm prettier:lib"
     ]
   },
   "engines": {
