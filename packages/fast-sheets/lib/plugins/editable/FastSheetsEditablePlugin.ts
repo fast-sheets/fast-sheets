@@ -218,7 +218,11 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         rowIndex: (modifiedCell.rowIndex -= 1),
       }))
     }
-    this.options.onUpdate(modifiedCellsPrepared)
+    this.options.onUpdate(modifiedCellsPrepared) // data could be modified after update
+    this.instance?.renderer.init() // init needed to recalculate row heights and all dependent sizes
+    if (this.focusedCell?.cell) {
+      this.focusedCell.highlight(this.focusedCell.cell) // actualizing focused cell border
+    }
     this.instance?.renderer.render()
   }
 
@@ -278,13 +282,14 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     const focusedCell = this.focusedCell?.cell
     if (paste && focusedCell) {
       let escapedPaste = paste
-      const matches = paste.matchAll(/"([\w\n]+)"/g)
-      for (const match of matches) {
-        const substr = match[1]
-        if (!substr) {
-          continue
-        }
-        const replacement = substr.replace('\n', '/n')
+      // identify cells containing quoted text and newlines (e.g., "row1\nrow2")
+      // then, replace newlines with a placeholder to properly parse rows and columns from paste
+      // and finally, restore the newlines in the final values of the modified cells
+      const NEW_LINE_PLACEHOLDER = '/n'
+      const match = paste.match(/"([\w\n]+)"/)
+      const substr = match?.[1] // match in group 1 (text without quotes)
+      if (substr) {
+        const replacement = substr.split('\n').join(NEW_LINE_PLACEHOLDER)
         escapedPaste = escapedPaste.replace(match[0], replacement)
       }
 
@@ -294,7 +299,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           modifiedCells.push({
             rowIndex: focusedCell.rowIndex + rowIndex,
             columnIndex: focusedCell.columnIndex + columnIndex,
-            value: cell.replace('/n', '\n'),
+            value: cell.split(NEW_LINE_PLACEHOLDER).join('\n'),
           })
         })
       })
