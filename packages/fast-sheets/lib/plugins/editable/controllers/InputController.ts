@@ -23,7 +23,6 @@ export class InputController {
   }
 
   bindEvents() {
-    this.inputField.el.addEventListener('input', this.onInput.bind(this))
     this.inputField.el.addEventListener('keypress', this.onInputKeyPress.bind(this))
   }
 
@@ -40,19 +39,16 @@ export class InputController {
     return this.inputField.el.style.display !== 'none'
   }
 
-  onInput(e: Event) {
-    if (this.cell && e.target instanceof HTMLDivElement) {
-      this.onUpdate({
-        rowIndex: this.cell.rowIndex,
-        columnIndex: this.cell.columnIndex,
-        value: e.target.textContent,
-      })
-    }
-  }
-
   onInputKeyPress(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
-      this.inputField.hide()
+    if (!e.shiftKey && e.key === 'Enter') {
+      if (this.cell) {
+        this.onUpdate({
+          rowIndex: this.cell.rowIndex,
+          columnIndex: this.cell.columnIndex,
+          value: this.getValue(),
+        })
+      }
+      this.hideInput()
     }
   }
 
