@@ -18,23 +18,15 @@ export const inputField: Partial<CSSStyleDeclaration> = {
 
 export class InputField {
   readonly el: HTMLDivElement
-  readonly state: StateInstance
   readonly name: string
 
-  constructor({
-    state,
-    options,
-  }: {
-    state: StateInstance
-    options: { name: string; font: string }
-  }) {
+  constructor(options: { name: string; font: string }) {
     this.name = options.name
     this.el = document.createElement('div')
     this.el.setAttribute('data-name', options.name)
     this.el.setAttribute('contenteditable', 'true')
     Object.assign(this.el.style, inputField)
     this.el.style.font = options.font
-    this.state = state
     this.hide()
 
     this.el.addEventListener('blur', this.hide.bind(this))
@@ -48,8 +40,8 @@ export class InputField {
     this.el.innerHTML = value
   }
 
-  show(cell: Cell) {
-    const cellInfo = getCellInfo({ state: this.state, cell })
+  show({ cell, state }: { cell: Cell; state: StateInstance }) {
+    const cellInfo = getCellInfo({ state, cell })
     const borderWidth = 2
     this.el.style.display = 'block'
     this.el.style.border = `${borderWidth}px solid ${DEFAULT_SELECTION_COLOR}`
@@ -57,7 +49,7 @@ export class InputField {
     this.el.style.left = `${cellInfo.left}px`
     this.el.style.minWidth = `${cellInfo.width}px`
     this.el.style.minHeight = `${cellInfo.height}px`
-    const { elScrollInner } = this.state.options
+    const { elScrollInner } = state.options
     const elScrollInnerDomRect = elScrollInner.getBoundingClientRect()
 
     const cellRight = cellInfo.left + cellInfo.width
