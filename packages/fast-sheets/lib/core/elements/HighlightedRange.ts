@@ -19,8 +19,6 @@ interface CellHighlightOptions {
 }
 
 export class HighlightedRange {
-  readonly state: StateInstance
-
   readonly name: string
 
   readonly container: HTMLDivElement
@@ -29,8 +27,7 @@ export class HighlightedRange {
 
   range: CellsRange = { ...EMPTY_RANGE }
 
-  constructor({ state, options }: { state: StateInstance; options: CellHighlightOptions }) {
-    this.state = state
+  constructor(options: CellHighlightOptions) {
     this.name = options.name
     this.container = options.container
     this.borders = new HighlightedArea({
@@ -42,19 +39,19 @@ export class HighlightedRange {
     this.container.appendChild(this.borders.container)
   }
 
-  highlight = (range: CellsRange) => {
+  highlight = ({ range, state }: { range: CellsRange; state: StateInstance }) => {
     this.range.rowStart = range.rowStart
     this.range.rowEnd = range.rowEnd
     this.range.columnStart = range.columnStart
     this.range.columnEnd = range.columnEnd
 
-    const offsetTop = this.state.verticalOffsets[this.range.rowStart] || -1
-    const offsetBottom = this.state.verticalOffsets[this.range.rowEnd] || -1
-    const offsetLeft = this.state.horizontalOffsets[this.range.columnStart] || -1
-    const offsetRight = this.state.horizontalOffsets[this.range.columnEnd] || -1
+    const offsetTop = state.verticalOffsets[this.range.rowStart] || -1
+    const offsetBottom = state.verticalOffsets[this.range.rowEnd] || -1
+    const offsetLeft = state.horizontalOffsets[this.range.columnStart] || -1
+    const offsetRight = state.horizontalOffsets[this.range.columnEnd] || -1
 
-    const widthBottom = this.state.columnWidths[this.range.columnEnd] || -1
-    const heightRight = this.state.rowHeights[this.range.rowEnd] || -1
+    const widthBottom = state.columnWidths[this.range.columnEnd] || -1
+    const heightRight = state.rowHeights[this.range.rowEnd] || -1
 
     const domRect: DomRect = {
       top: offsetTop,

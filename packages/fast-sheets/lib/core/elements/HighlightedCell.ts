@@ -11,8 +11,6 @@ interface CellHighlightOptions {
 }
 
 export class HighlightedCell {
-  readonly state: StateInstance
-
   readonly name: string
 
   readonly container: HTMLElement
@@ -21,8 +19,7 @@ export class HighlightedCell {
 
   cell: Cell | undefined
 
-  constructor({ state, options }: { state: StateInstance; options: CellHighlightOptions }) {
-    this.state = state
+  constructor(options: CellHighlightOptions) {
     this.name = options.name
     this.container = options.container
     const borderWidth = options.borderWidth || 1
@@ -31,9 +28,9 @@ export class HighlightedCell {
     this.container.appendChild(this.borders.container)
   }
 
-  highlight = (cell: Cell) => {
+  highlight = ({ cell, state }: { cell: Cell; state: StateInstance }) => {
     this.cell = cell
-    const cellDomRect = getCellDomRect({ cell, state: this.state })
+    const cellDomRect = getCellDomRect({ cell, state })
     this.borders.show(cellDomRect)
   }
 

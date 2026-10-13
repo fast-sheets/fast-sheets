@@ -55,3 +55,38 @@ export const getCellDomRect = ({ cell, state }: { cell: Cell; state: StateInstan
     height: state.rowHeights[rowIndex] || 0,
   }
 }
+
+export const getAboveCell = ({ cell, state }: { cell: Cell; state: StateInstance }): Cell => {
+  const minRowIndex = state.hasColumnNames ? 1 : 0
+  return {
+    ...cell,
+    rowIndex: Math.max(minRowIndex, cell.rowIndex - 1),
+  }
+}
+
+export const getBelowCell = ({ cell, state }: { cell: Cell; state: StateInstance }): Cell => {
+  const maxRowIndex = (state.options.data.length || 2) - 1
+  return {
+    ...cell,
+    rowIndex: Math.min(maxRowIndex, cell.rowIndex + 1),
+  }
+}
+
+export const getLeftCell = ({ cell, state }: { cell: Cell; state: StateInstance }): Cell => {
+  const minColumnIndex = state.options.isRowNumberVisible ? 1 : 0
+  return {
+    ...cell,
+    columnIndex: Math.max(minColumnIndex, cell.columnIndex - 1),
+  }
+}
+
+export const getRightCell = ({ cell, state }: { cell: Cell; state: StateInstance }): Cell => {
+  let maxColumnIndex = (state.options.data[0]?.length || 2) - 1
+  if (state.options.isRowNumberVisible) {
+    maxColumnIndex++
+  }
+  return {
+    ...cell,
+    columnIndex: Math.min(maxColumnIndex, cell.columnIndex + 1),
+  }
+}

@@ -11,14 +11,12 @@ interface InputControllerOptions {
 }
 
 export class InputController {
-  readonly state: StateInstance
   readonly inputField: InputField
   cell: Cell | null = null
   onUpdate: (modifiedCell: ModifiedCell) => void
 
-  constructor({ state, options }: { state: StateInstance; options: InputControllerOptions }) {
-    this.state = state
-    this.inputField = new InputField({ state, options: { name: options.name, font: options.font } })
+  constructor(options: InputControllerOptions) {
+    this.inputField = new InputField({ name: options.name, font: options.font })
     options.container.appendChild(this.inputField.el)
     this.onUpdate = options.onUpdate
     this.bindEvents()
@@ -29,9 +27,9 @@ export class InputController {
     this.inputField.el.addEventListener('keypress', this.onInputKeyPress.bind(this))
   }
 
-  showInput(cell: Cell) {
+  showInput({ cell, state }: { cell: Cell; state: StateInstance }) {
     this.cell = cell
-    this.inputField.show(cell)
+    this.inputField.show({ cell, state })
   }
 
   hideInput() {
@@ -55,6 +53,22 @@ export class InputController {
   onInputKeyPress(e: KeyboardEvent) {
     if (e.key === 'Enter') {
       this.inputField.hide()
+    }
+  }
+
+  getValue() {
+    return this.inputField.value
+  }
+
+  setValue(value: string) {
+    if (this.cell) {
+      this.inputField.value = value
+      this.inputField.setCaretPosition(value.length)
+      this.onUpdate({
+        rowIndex: this.cell.rowIndex,
+        columnIndex: this.cell.columnIndex,
+        value: value,
+      })
     }
   }
 }

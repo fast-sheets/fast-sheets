@@ -7,6 +7,7 @@ import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionCon
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
 import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
 import { InputController } from './controllers/InputController.ts'
+import { getAboveCell, getBelowCell, getLeftCell, getRightCell } from 'lib/core/utils/cell.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -19,17 +20,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   instance!: FastSheetsInstance
 
-  elEditableContainerFront?: HTMLDivElement
-  elEditableContainerBack?: HTMLDivElement
-  selectedRange?: InstanceType<typeof HighlightedRange>
-  copiedRange?: InstanceType<typeof HighlightedRange>
-  rangeSelectionController?: InstanceType<typeof RangeSelectionController>
-  focusedCell?: InstanceType<typeof HighlightedCell>
-  inputController?: InstanceType<typeof InputController>
+  elEditableContainerFront: HTMLDivElement
+  elEditableContainerBack: HTMLDivElement
+  selectedRange: InstanceType<typeof HighlightedRange>
+  copiedRange: InstanceType<typeof HighlightedRange>
+  rangeSelectionController: InstanceType<typeof RangeSelectionController>
+  focusedCell: InstanceType<typeof HighlightedCell>
+  inputController: InstanceType<typeof InputController>
 
   resizeObserver: ResizeObserver
 
-  isShiftPressed = false
   pointerDownTime = 0
   isDoubleTap = false
 
@@ -64,6 +64,53 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.resizeObserver = new ResizeObserver(() => {
       this.onResize()
     })
+
+    // elEditableContainerFront
+    this.elEditableContainerFront = document.createElement('div')
+    this.elEditableContainerFront.style = 'position: absolute; top: 0; left: 0; width: 0; height: 0'
+    this.elEditableContainerFront.setAttribute('data-name', 'elEditableContainerFront')
+
+    // elEditableContainerBack
+    this.elEditableContainerBack = document.createElement('div')
+    this.elEditableContainerBack.style = 'position: absolute; top: 0; left: 0; width: 0; height: 0'
+    this.elEditableContainerBack.setAttribute('data-name', 'elEditableContainerBack')
+
+    const selectionColor = this.options.selectionColor
+
+    // select highlight
+    this.selectedRange = new HighlightedRange({
+      name: 'elSelectedRange',
+      container: this.elEditableContainerBack,
+      color: selectionColor,
+    })
+    this.rangeSelectionController = new RangeSelectionController()
+
+    // focus highlight
+    this.focusedCell = new HighlightedCell({
+      name: 'elFocusedCell',
+      container: this.elEditableContainerBack,
+      color: selectionColor,
+      borderWidth: 2,
+    })
+
+    // copy highlight
+    this.copiedRange = new HighlightedRange({
+      name: 'elCopiedRange',
+      container: this.elEditableContainerBack,
+      color: selectionColor,
+      borderWidth: 2,
+      borderStyle: BORDER_STYLE.DASHED,
+    })
+
+    // input controller
+    this.inputController = new InputController({
+      name: 'elInput',
+      container: this.elEditableContainerFront,
+      font: '14px/15px Verdana', // todo
+      onUpdate: (modifiedCell) => {
+        this.onUpdate([modifiedCell])
+      },
+    })
   }
 
   // noinspection JSUnusedGlobalSymbols
@@ -76,8 +123,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     const renderCellOriginal = instance.renderer.renderCell
     instance.renderer.renderCell = (ctx, cell, fillStyleDefault) => {
       const fillStyle =
-        this.rangeSelectionController?.isCellSelected(cell) &&
-        this.rangeSelectionController?.selectedCellsCount() > 1
+        this.rangeSelectionController.isCellSelected(cell) &&
+        this.rangeSelectionController.selectedCellsCount() > 1
           ? '#e9f0fe'
           : fillStyleDefault
       renderCellOriginal.apply(instance.renderer, [ctx, cell, fillStyle])
@@ -89,66 +136,11 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   init() {
-    const selectionColor = this.options.selectionColor
-
-    // elEditableContainerFront should be after scroll
-    this.elEditableContainerFront = document.createElement('div')
-    this.elEditableContainerFront.style = 'position: absolute; top: 0; left: 0; width: 0; height: 0'
-    this.elEditableContainerFront.setAttribute('data-name', 'elEditableContainerFront')
-    this.instance.state.options.elScroll.after(this.elEditableContainerFront)
-
     // elEditableContainerBack should be before scroll
-    this.elEditableContainerBack = document.createElement('div')
-    this.elEditableContainerBack.style = 'position: absolute; top: 0; left: 0; width: 0; height: 0'
-    this.elEditableContainerBack.setAttribute('data-name', 'elEditableContainerBack')
     this.instance.state.options.elScroll.before(this.elEditableContainerBack)
 
-    // select
-    this.selectedRange = new HighlightedRange({
-      state: this.instance.state,
-      options: {
-        name: 'elSelectedRange',
-        container: this.elEditableContainerBack,
-        color: selectionColor,
-      },
-    })
-    this.rangeSelectionController = new RangeSelectionController()
-
-    // focus
-    this.focusedCell = new HighlightedCell({
-      state: this.instance.state,
-      options: {
-        name: 'elFocusedCell',
-        container: this.elEditableContainerBack,
-        color: selectionColor,
-        borderWidth: 2,
-      },
-    })
-
-    // copy
-    this.copiedRange = new HighlightedRange({
-      state: this.instance.state,
-      options: {
-        name: 'elCopiedRange',
-        container: this.elEditableContainerBack,
-        color: selectionColor,
-        borderWidth: 2,
-        borderStyle: BORDER_STYLE.DASHED,
-      },
-    })
-
-    // input
-    this.inputController = new InputController({
-      state: this.instance.state,
-      options: {
-        name: 'elInput',
-        container: this.elEditableContainerFront,
-        font: '14px/15px Verdana', // todo
-        onUpdate: (modifiedCell) => {
-          this.onUpdate([modifiedCell])
-        },
-      },
-    })
+    // elEditableContainerFront should be after scroll
+    this.instance.state.options.elScroll.after(this.elEditableContainerFront)
   }
 
   bindEvents() {
@@ -194,13 +186,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   public onResize() {
-    this.inputController?.inputField.hide()
-    this.rangeSelectionController?.selectionEnd()
-    if (this.rangeSelectionController?.selectionRange) {
-      this.selectedRange?.highlight(this.rangeSelectionController.selectionRange)
+    this.inputController.inputField.hide()
+    this.rangeSelectionController.selectionEnd()
+    if (this.rangeSelectionController.selectionRange) {
+      this.selectedRange.highlight({
+        range: this.rangeSelectionController.selectionRange,
+        state: this.instance.state,
+      })
     }
-    if (this.focusedCell?.cell) {
-      this.focusedCell.highlight(this.focusedCell.cell)
+    if (this.focusedCell.cell) {
+      this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state })
     }
   }
 
@@ -219,17 +214,17 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       }))
     }
     this.options.onUpdate(modifiedCellsPrepared) // data could be modified after update
-    this.instance?.renderer.init() // init needed to recalculate row heights and all dependent sizes
-    if (this.focusedCell?.cell) {
-      this.focusedCell.highlight(this.focusedCell.cell) // actualizing focused cell border
+    this.instance.renderer.init() // init needed to recalculate row heights and all dependent sizes
+    if (this.focusedCell.cell) {
+      this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state }) // actualizing focused cell border
     }
-    this.instance?.renderer.render()
+    this.instance.renderer.render()
   }
 
   private onDoubleClick(e: MouseEvent) {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell && this.isCellEditable(cell)) {
-      this.inputController?.showInput(cell)
+      this.inputController.showInput({ cell, state: this.instance.state })
     }
   }
 
@@ -237,13 +232,13 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     if (!isLeftMouseButton(e)) {
       return
     }
-    this.selectedRange?.reset()
-    this.rangeSelectionController?.reset()
-    this.focusedCell?.reset()
-    this.copiedRange?.reset()
+    this.selectedRange.reset()
+    this.rangeSelectionController.reset()
+    this.focusedCell.reset()
+    this.copiedRange.reset()
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell) {
-      this.focusedCell?.highlight(cell)
+      this.focusedCell.highlight({ cell, state: this.instance.state })
       if (!this.isInputVisible()) {
         this.startSelection(cell)
       }
@@ -252,7 +247,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onMouseMove(e: MouseEvent) {
-    if (!this.rangeSelectionController?.hasStarted) {
+    if (!this.rangeSelectionController.hasStarted) {
       return
     }
     const cell = this.instance.renderer.findCellByMouseEvent(e)
@@ -266,31 +261,46 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private async onCopy() {
-    if (this.selectedRange?.range) {
-      const { rowStart, rowEnd, columnStart, columnEnd } = this.selectedRange.range
-      this.copiedRange?.highlight(this.selectedRange.range)
+    if (this.selectedRange.range) {
+      let { rowStart, rowEnd, columnStart, columnEnd } = this.selectedRange.range
+      if (this.instance.state.options.isRowNumberVisible) {
+        columnStart -= 1
+        columnEnd -= 1
+      }
+      if (this.instance.state.hasColumnNames) {
+        rowStart -= 1
+        rowEnd -= 1
+      }
       const data = this.instance.state.options.data.slice(rowStart, rowEnd + 1)
       const rows = data.map((row) => row.slice(columnStart, columnEnd + 1).join('\t'))
-      await navigator.clipboard.writeText(rows.join('\n'))
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(rows.join('\n'))
+        this.copiedRange.highlight({ range: this.selectedRange.range, state: this.instance.state })
+      } else {
+        // eslint-disable-next-line no-console
+        console.error(`Unable to copy, navigator.clipboard is not available`)
+      }
     }
   }
 
   private onPaste(e: ClipboardEvent) {
     e.preventDefault()
-    this.copiedRange?.reset()
+    this.copiedRange.reset()
     const paste = e.clipboardData?.getData('text')
-    const focusedCell = this.focusedCell?.cell
+    const focusedCell = this.focusedCell.cell
     if (paste && focusedCell) {
       let escapedPaste = paste
-      // identify cells containing quoted text and newlines (e.g., "row1\nrow2")
+      // identify all cells containing quoted text and newlines (e.g., "row1\nrow2")
       // then, replace newlines with a placeholder to properly parse rows and columns from paste
       // and finally, restore the newlines in the final values of the modified cells
       const NEW_LINE_PLACEHOLDER = '/n'
-      const match = paste.match(/"([\w\n]+)"/)
-      const substr = match?.[1] // match in group 1 (text without quotes)
-      if (substr) {
-        const replacement = substr.split('\n').join(NEW_LINE_PLACEHOLDER)
-        escapedPaste = escapedPaste.replace(match[0], replacement)
+      const matches = paste.matchAll(/"([\w\n]+)"/g)
+      for (const match of matches) {
+        const substr = match?.[1] // match in group 1 (text without quotes)
+        if (substr) {
+          const replacement = substr.split('\n').join(NEW_LINE_PLACEHOLDER)
+          escapedPaste = escapedPaste.replace(match[0], replacement)
+        }
       }
 
       const modifiedCells: ModifiedCell[] = []
@@ -308,99 +318,115 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyUp(e: KeyboardEvent) {
-    switch (e.key) {
-      case 'Shift':
-        this.endSelection()
-        this.isShiftPressed = false
-        break
+    const isArrowKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+    if (this.rangeSelectionController.hasStarted && !(e.shiftKey && isArrowKey)) {
+      this.endSelection()
     }
   }
 
   private onKeyDown(e: KeyboardEvent) {
+    const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c'
     const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'
-    if (this.focusedCell?.cell && !this.isInputVisible() && !isPaste) {
+    if (this.focusedCell.cell && !this.isInputVisible() && !isPaste && !isCopy) {
       e.preventDefault()
-      const newFocusedCell: Cell = {
+      let newFocusedCell: Cell = {
         rowIndex: this.focusedCell.cell.rowIndex,
         columnIndex: this.focusedCell.cell.columnIndex,
       }
 
-      let hasSelectionJustStarted = false
+      // arrows
       let isArrowKey = false
-
       switch (e.key) {
         case 'ArrowUp': {
-          const minRowIndex = this.instance.state.hasColumnNames ? 1 : 0
-          newFocusedCell.rowIndex = Math.max(minRowIndex, newFocusedCell.rowIndex - 1)
+          // move focus up
+          newFocusedCell = getAboveCell({ cell: this.focusedCell.cell, state: this.instance.state })
           isArrowKey = true
           break
         }
         case 'ArrowDown': {
-          const maxRowIndex = (this.instance.state.options.data.length || 2) - 1
-          newFocusedCell.rowIndex++
-          newFocusedCell.rowIndex = Math.min(maxRowIndex, newFocusedCell.rowIndex)
+          // move focus down
+          newFocusedCell = getBelowCell({ cell: this.focusedCell.cell, state: this.instance.state })
           isArrowKey = true
           break
         }
         case 'ArrowLeft': {
-          const minColumnIndex = this.instance.state.options.isRowNumberVisible ? 1 : 0
-          newFocusedCell.columnIndex = Math.max(minColumnIndex, newFocusedCell.columnIndex - 1)
+          // move focus left
+          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell, state: this.instance.state })
           isArrowKey = true
           break
         }
         case 'ArrowRight': {
-          let maxColumnIndex = (this.instance.state.options.data[0]?.length || 2) - 1
-          if (this.instance.state.options.isRowNumberVisible) {
-            maxColumnIndex++
-          }
-          newFocusedCell.columnIndex++
-          newFocusedCell.columnIndex = Math.min(maxColumnIndex, newFocusedCell.columnIndex)
+          // move focus right
+          newFocusedCell = getRightCell({ cell: this.focusedCell.cell, state: this.instance.state })
           isArrowKey = true
           break
         }
-        case 'Shift':
-          this.isShiftPressed = true
-          hasSelectionJustStarted = true
-          this.selectedRange?.reset()
-          this.rangeSelectionController?.reset()
-          this.instance.renderer.render()
-          this.startSelection(newFocusedCell)
-          break
-        case 'Backspace':
-          this.onUpdate([{ ...newFocusedCell, value: '' }])
-          break
       }
 
+      // backspace
+      if (e.key === 'Backspace') {
+        // clear selected cell
+        this.onUpdate([{ ...newFocusedCell, value: '' }])
+      }
+
+      // tab
+      if (e.key === 'Tab') {
+        if (e.shiftKey) {
+          // same as arrowLeft
+          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell, state: this.instance.state })
+        } else {
+          // same as arrowRight
+          newFocusedCell = getRightCell({ cell: this.focusedCell.cell, state: this.instance.state })
+        }
+      }
+
+      // shift + arrow
+      if (e.shiftKey && isArrowKey && !this.rangeSelectionController.hasStarted) {
+        this.selectedRange.reset()
+        this.rangeSelectionController.reset()
+        this.instance.renderer.render()
+        this.startSelection(this.focusedCell.cell)
+      }
+
+      // any key EXCEPT following
       if (
         !(
           e.metaKey ||
           e.altKey ||
           e.ctrlKey ||
+          e.shiftKey ||
           isArrowKey ||
           e.key === 'Escape' ||
           e.key === 'Backspace' ||
-          this.isShiftPressed
+          e.key === 'Tab'
         ) &&
-        this.isCellEditable(newFocusedCell)
+        this.isCellEditable(newFocusedCell) &&
+        !this.inputController.isInputFieldVisible()
       ) {
         // show input
-        this.inputController?.showInput(newFocusedCell)
+        this.inputController.showInput({ cell: newFocusedCell, state: this.instance.state })
+        if (e.key !== 'Enter') {
+          this.inputController.setValue(this.inputController.getValue() + e.key)
+        }
       }
 
       if (
         newFocusedCell.rowIndex !== this.focusedCell.cell.rowIndex ||
         newFocusedCell.columnIndex !== this.focusedCell.cell.columnIndex
       ) {
-        this.focusedCell.highlight(newFocusedCell)
+        // actualize focused cell
+        this.focusedCell.highlight({ cell: newFocusedCell, state: this.instance.state })
       }
 
-      if (this.isShiftPressed) {
-        if (!hasSelectionJustStarted && this.updateSelection(newFocusedCell)) {
+      if (e.shiftKey) {
+        // update selection
+        if (this.rangeSelectionController.hasStarted && this.updateSelection(newFocusedCell)) {
           this.instance.renderer.render()
         }
-      } else {
-        this.selectedRange?.reset()
-        this.rangeSelectionController?.reset()
+      } else if (!(e.metaKey || e.altKey || e.ctrlKey || e.shiftKey)) {
+        // clear selection
+        this.selectedRange.reset()
+        this.rangeSelectionController.reset()
         this.instance.renderer.render()
       }
     }
@@ -421,15 +447,15 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private onPointerUp(e: PointerEvent) {
     if (e.pointerType === 'touch' && this.pointerDownTime) {
-      this.selectedRange?.reset()
-      this.rangeSelectionController?.reset()
-      this.focusedCell?.reset()
-      this.copiedRange?.reset()
+      this.selectedRange.reset()
+      this.rangeSelectionController.reset()
+      this.focusedCell.reset()
+      this.copiedRange.reset()
       const cell = this.instance.renderer.findCellByMouseEvent(e)
       if (cell) {
-        this.focusedCell?.highlight(cell)
+        this.focusedCell.highlight({ cell, state: this.instance.state })
         if (this.isDoubleTap && this.isCellEditable(cell)) {
-          this.inputController?.showInput(cell)
+          this.inputController.showInput({ cell, state: this.instance.state })
         }
       }
       this.instance.renderer.render()
@@ -458,17 +484,18 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private startSelection(cell: Cell) {
-    this.rangeSelectionController?.selectionStart(cell)
+    this.rangeSelectionController.selectionStart(cell)
   }
 
   private updateSelection(cell: Cell) {
-    return this.rangeSelectionController?.selectionUpdate(cell)
+    return this.rangeSelectionController.selectionUpdate(cell)
   }
 
   private endSelection() {
-    this.rangeSelectionController?.selectionEnd()
-    if (this.rangeSelectionController?.selectionRange) {
-      this.selectedRange?.highlight(this.rangeSelectionController.selectionRange)
-    }
+    this.rangeSelectionController.selectionEnd()
+    this.selectedRange.highlight({
+      range: this.rangeSelectionController.selectionRange,
+      state: this.instance.state,
+    })
   }
 }
