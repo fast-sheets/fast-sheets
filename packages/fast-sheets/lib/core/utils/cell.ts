@@ -2,7 +2,7 @@ import type { Cell, CellInfo, DomRect } from 'lib/core/types.ts'
 import { type StateInstance } from 'lib/core/State.ts'
 import { DEFAULT_FONT, DEFAULT_PADDING } from 'lib/core/constants.ts'
 
-export const getCellKey = (cell: Cell) => `key${cell.rowIndex}${cell.columnIndex}`
+export const getCellKey = (cell: Cell) => `${cell.rowIndex}:${cell.columnIndex}`
 
 export const getCellText = ({ cell, state }: { cell: Cell; state: StateInstance }): string => {
   const isRowNumberVisible = !!state.options.isRowNumberVisible
