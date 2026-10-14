@@ -29,11 +29,11 @@ export class InputField {
   }
 
   get value() {
-    return this.el.innerText
+    return this.el.textContent
   }
 
   set value(value: string) {
-    this.el.innerHTML = value
+    this.el.textContent = value
   }
 
   show({
