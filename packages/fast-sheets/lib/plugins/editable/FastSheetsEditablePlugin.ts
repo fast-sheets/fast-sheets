@@ -7,7 +7,13 @@ import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionCon
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
 import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
 import { InputController } from './controllers/InputController.ts'
-import { getAboveCell, getBelowCell, getLeftCell, getRightCell } from 'lib/core/utils/cell.ts'
+import {
+  getAboveCell,
+  getBelowCell,
+  getCellInfo,
+  getLeftCell,
+  getRightCell,
+} from 'lib/core/utils/cell.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -117,8 +123,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   setup(instance: FastSheetsInstance) {
     this.instance = instance
 
-    this.init()
-    this.bindEvents()
+    this.init(instance)
+    this.bindEvents(instance)
 
     const renderCellOriginal = instance.renderer.renderCell
     instance.renderer.renderCell = (ctx, cell, fillStyleDefault) => {
@@ -132,53 +138,57 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   destroy() {
-    this.unbindEvents()
+    this.unbindEvents(this.instance)
   }
 
-  init() {
+  init(instance: FastSheetsInstance) {
     // elEditableContainerBack should be before scroll
-    this.instance.state.options.elScroll.before(this.elEditableContainerBack)
+    instance.state.options.elScroll.before(this.elEditableContainerBack)
 
     // elEditableContainerFront should be after scroll
-    this.instance.state.options.elScroll.after(this.elEditableContainerFront)
+    instance.state.options.elScroll.after(this.elEditableContainerFront)
   }
 
-  bindEvents() {
+  bindEvents(instance: FastSheetsInstance) {
     // mouse events
-    window.addEventListener('dblclick', this.boundDoubleClick)
+    instance.state.options.elContainer.addEventListener('dblclick', this.boundDoubleClick)
     window.addEventListener('mouseup', this.boundMouseUp)
-    window.addEventListener('mousedown', this.boundMouseDown)
+    this.instance.state.options.elContainer.addEventListener('mousedown', this.boundMouseDown)
     window.addEventListener('mousemove', this.boundMouseMove)
     // key events
-    window.addEventListener('keyup', this.boundKeyUp)
-    window.addEventListener('keydown', this.boundKeyDown)
+    instance.state.options.elContainer.addEventListener('keyup', this.boundKeyUp)
+    instance.state.options.elContainer.addEventListener('keydown', this.boundKeyDown)
     // copy & paste
-    window.addEventListener('copy', this.boundCopy)
-    window.addEventListener('paste', this.boundPaste)
+    instance.state.options.elContainer.addEventListener('copy', this.boundCopy)
+    instance.state.options.elContainer.addEventListener('paste', this.boundPaste)
     // pointer events
-    window.addEventListener('pointerdown', this.boundPointerDown)
+    instance.state.options.elContainer.addEventListener('pointerdown', this.boundPointerDown)
     window.addEventListener('pointerup', this.boundPointerUp)
     // observables
     this.resizeObserver.observe(this.instance.state.options.elCanvasContainer)
+    // input
+    this.inputController.bindEvents(this.instance.state)
   }
 
-  unbindEvents() {
+  unbindEvents(instance: FastSheetsInstance) {
     // mouse events
-    window.removeEventListener('dblclick', this.boundDoubleClick)
+    instance.state.options.elContainer.removeEventListener('dblclick', this.boundDoubleClick)
     window.removeEventListener('mouseup', this.boundMouseUp)
-    window.removeEventListener('mousedown', this.boundMouseDown)
+    instance.state.options.elContainer.removeEventListener('mousedown', this.boundMouseDown)
     window.removeEventListener('mousemove', this.boundMouseMove)
     // key events
-    window.removeEventListener('keyup', this.boundKeyUp)
-    window.removeEventListener('keydown', this.boundKeyDown)
+    instance.state.options.elContainer.removeEventListener('keyup', this.boundKeyUp)
+    instance.state.options.elContainer.removeEventListener('keydown', this.boundKeyDown)
     // copy & paste
-    window.removeEventListener('copy', this.boundCopy)
-    window.removeEventListener('paste', this.boundPaste)
+    instance.state.options.elContainer.removeEventListener('copy', this.boundCopy)
+    instance.state.options.elContainer.removeEventListener('paste', this.boundPaste)
     // pointer events
-    window.removeEventListener('pointerdown', this.boundPointerDown)
+    instance.state.options.elContainer.removeEventListener('pointerdown', this.boundPointerDown)
     window.removeEventListener('pointerup', this.boundPointerUp)
     // observables
     this.resizeObserver.disconnect()
+    // input
+    this.inputController.unbindEvents()
   }
 
   public render() {
@@ -224,7 +234,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   private onDoubleClick(e: MouseEvent) {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell && this.isCellEditable(cell)) {
-      this.inputController.showInput({ cell, state: this.instance.state })
+      const cellInfo = getCellInfo({ cell, state: this.instance.state })
+      this.inputController.showInput(cellInfo)
     }
   }
 
@@ -404,7 +415,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         !this.inputController.isInputFieldVisible()
       ) {
         // show input
-        this.inputController.showInput({ cell: newFocusedCell, state: this.instance.state })
+        const newFocusedCellInfo = getCellInfo({ cell: newFocusedCell, state: this.instance.state })
+        this.inputController.showInput(newFocusedCellInfo)
         if (e.key !== 'Enter') {
           this.inputController.setValue(this.inputController.getValue() + e.key)
         }
@@ -455,7 +467,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       if (cell) {
         this.focusedCell.highlight({ cell, state: this.instance.state })
         if (this.isDoubleTap && this.isCellEditable(cell)) {
-          this.inputController.showInput({ cell, state: this.instance.state })
+          const cellInfo = getCellInfo({ cell, state: this.instance.state })
+          this.inputController.showInput(cellInfo)
         }
       }
       this.instance.renderer.render()

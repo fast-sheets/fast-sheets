@@ -28,6 +28,8 @@ export class FastSheets {
     elContainer.style.position = 'relative'
     elContainer.style.display = 'flex'
     elContainer.style.overflow = 'hidden'
+    elContainer.style.outline = 'none'
+    elContainer.tabIndex = 0
 
     if (!elCanvasContainer) {
       elCanvasContainer = document.createElement('div')

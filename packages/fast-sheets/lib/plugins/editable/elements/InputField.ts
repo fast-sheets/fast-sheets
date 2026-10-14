@@ -1,6 +1,4 @@
-import type { Cell } from 'lib/core/types.ts'
-import { getCellInfo } from 'lib/core/utils/cell.ts'
-import type { StateInstance } from 'lib/core/State.ts'
+import type { CellInfo } from 'lib/core/types.ts'
 import { DEFAULT_SELECTION_COLOR } from 'lib/plugins/editable/constants.ts'
 
 export const inputField: Partial<CSSStyleDeclaration> = {
@@ -28,8 +26,6 @@ export class InputField {
     Object.assign(this.el.style, inputField)
     this.el.style.font = options.font
     this.hide()
-
-    this.el.addEventListener('blur', this.hide.bind(this))
   }
 
   get value() {
@@ -40,8 +36,15 @@ export class InputField {
     this.el.innerHTML = value
   }
 
-  show({ cell, state }: { cell: Cell; state: StateInstance }) {
-    const cellInfo = getCellInfo({ state, cell })
+  show({
+    cellInfo,
+    maxWidth,
+    maxHeight,
+  }: {
+    cellInfo: CellInfo
+    maxWidth?: number
+    maxHeight?: number
+  }) {
     const borderWidth = 2
     this.el.style.display = 'block'
     this.el.style.border = `${borderWidth}px solid ${DEFAULT_SELECTION_COLOR}`
@@ -49,22 +52,13 @@ export class InputField {
     this.el.style.left = `${cellInfo.left}px`
     this.el.style.minWidth = `${cellInfo.width}px`
     this.el.style.minHeight = `${cellInfo.height}px`
-    const { elScrollInner } = state.options
-    const elScrollInnerDomRect = elScrollInner.getBoundingClientRect()
-
-    const cellRight = cellInfo.left + cellInfo.width
-    const elScrollInnerRight = elScrollInnerDomRect.left + elScrollInnerDomRect.width
-    const spaceRight = Math.max(0, elScrollInnerRight - cellRight)
-    this.el.style.maxWidth = `${cellInfo.width + spaceRight}px`
-
-    const cellBottom = cellInfo.top + cellInfo.height
-    const elScrollInnerBottom = elScrollInnerDomRect.top + elScrollInnerDomRect.height
-    const spaceBottom = Math.max(0, elScrollInnerBottom - cellBottom)
-    this.el.style.maxHeight = `${cellInfo.height + spaceBottom}px`
-
+    if (maxWidth) {
+      this.el.style.maxWidth = `${maxWidth}px`
+    }
+    if (maxHeight) {
+      this.el.style.maxHeight = `${maxHeight}px`
+    }
     this.value = cellInfo.text
-    this.el.focus()
-    this.setCaretPosition(cellInfo.text.length)
   }
 
   setCaretPosition(position: number) {
@@ -84,5 +78,9 @@ export class InputField {
 
   hide() {
     this.el.style.display = 'none'
+  }
+
+  focus() {
+    this.el.focus()
   }
 }
