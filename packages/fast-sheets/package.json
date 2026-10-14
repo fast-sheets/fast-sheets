@@ -1,6 +1,6 @@
 {
   "name": "fast-sheets",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Blazing-fast spreadsheet rendering engine",
   "main": "./dist/fast-sheets-core.cjs",
   "module": "./dist/fast-sheets-core.es.js",
