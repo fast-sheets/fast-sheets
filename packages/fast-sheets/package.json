@@ -2,7 +2,7 @@
   "name": "fast-sheets",
   "version": "1.0.13",
   "description": "Blazing-fast spreadsheet rendering engine",
-  "main": "./dist/fast-sheets-core.umd.cjs",
+  "main": "./dist/fast-sheets-core.cjs",
   "module": "./dist/fast-sheets-core.es.js",
   "types": "./dist/lib/core/index.d.ts",
   "type": "module",
@@ -13,17 +13,17 @@
     ".": {
       "types": "./dist/lib/core/index.d.ts",
       "import": "./dist/fast-sheets-core.es.js",
-      "require": "./dist/fast-sheets-core.umd.cjs"
+      "require": "./dist/fast-sheets-core.cjs"
     },
     "./editable": {
       "types": "./dist/lib/plugins/editable/index.d.ts",
       "import": "./dist/fast-sheets-editable.es.js",
-      "require": "./dist/fast-sheets-editable.umd.cjs"
+      "require": "./dist/fast-sheets-editable.cjs"
     },
     "./search": {
       "types": "./dist/lib/plugins/search/index.d.ts",
       "import": "./dist/fast-sheets-search.es.js",
-      "require": "./dist/fast-sheets-search.umd.cjs"
+      "require": "./dist/fast-sheets-search.cjs"
     }
   },
   "scripts": {
