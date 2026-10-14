@@ -33,7 +33,7 @@ export class InputField {
   }
 
   set value(value: string) {
-    this.el.innerHTML = value
+    this.el.innerText = value
   }
 
   show({
