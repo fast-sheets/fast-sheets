@@ -14,7 +14,7 @@
     "build:lib": "pnpm --filter fast-sheets run build",
     "build:demo": "pnpm --filter='./apps/**' --parallel run build",
     "build": "pnpm run build:lib & pnpm run build:demo",
-    "lint:lib": "pnpm eslint --ext ts ./packages/*/lib --fix",
+    "lint:lib": "eslint --ext ts ./packages/*/lib",
     "lint:demo": "pnpm -r --filter='./apps/**' --parallel run lint",
     "prettier:lib": "prettier --log-level error --write ./packages/*/lib",
     "prettier:demo": "pnpm -r --filter='./apps/**' --parallel run prettier",
