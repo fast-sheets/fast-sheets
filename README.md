@@ -1,6 +1,6 @@
 # fast-sheets
 
-A tiny, dependency-free module that uses WebGL to render massive data grids.
+A tiny, dependency-free module that uses canvas to render massive data grids.
 
 
 ## Installation
