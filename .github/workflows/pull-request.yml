@@ -43,8 +43,8 @@ jobs:
         run: |
           pnpm run lint:lib
           pnpm run lint:demo
-          prettier:lib
-          prettier:demo
+          pnpm run prettier:lib
+          pnpm run prettier:demo
 
       - name: Build
         run: pnpm build:lib
