@@ -210,20 +210,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   public onUpdate(modifiedCells: ModifiedCell[]) {
-    let modifiedCellsPrepared = [...modifiedCells]
-    if (this.instance.state.options.isRowNumberVisible) {
-      modifiedCellsPrepared = modifiedCellsPrepared.map((modifiedCell) => ({
-        ...modifiedCell,
-        columnIndex: (modifiedCell.columnIndex -= 1),
-      }))
-    }
-    if (this.instance.state.hasColumnNames) {
-      modifiedCellsPrepared = modifiedCellsPrepared.map((modifiedCell) => ({
-        ...modifiedCell,
-        rowIndex: (modifiedCell.rowIndex -= 1),
-      }))
-    }
-    this.options.onUpdate(modifiedCellsPrepared) // data could be modified after update
+    this.options.onUpdate([...modifiedCells]) // data could be modified after update
     this.instance.renderer.init() // init needed to recalculate row heights and all dependent sizes
     if (this.focusedCell.cell) {
       this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state }) // actualizing focused cell border
@@ -233,7 +220,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private onDoubleClick(e: MouseEvent) {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
-    if (cell && this.isCellEditable(cell)) {
+    if (cell) {
       const cellInfo = getCellInfo({ cell, state: this.instance.state })
       this.inputController.showInput(cellInfo)
     }
@@ -350,7 +337,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       switch (e.key) {
         case 'ArrowUp': {
           // move focus up
-          newFocusedCell = getAboveCell({ cell: this.focusedCell.cell, state: this.instance.state })
+          newFocusedCell = getAboveCell({ cell: this.focusedCell.cell })
           isArrowKey = true
           break
         }
@@ -362,7 +349,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         }
         case 'ArrowLeft': {
           // move focus left
-          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell, state: this.instance.state })
+          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell })
           isArrowKey = true
           break
         }
@@ -384,7 +371,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       if (e.key === 'Tab') {
         if (e.shiftKey) {
           // same as arrowLeft
-          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell, state: this.instance.state })
+          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell })
         } else {
           // same as arrowRight
           newFocusedCell = getRightCell({ cell: this.focusedCell.cell, state: this.instance.state })
@@ -466,19 +453,13 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       const cell = this.instance.renderer.findCellByMouseEvent(e)
       if (cell) {
         this.focusedCell.highlight({ cell, state: this.instance.state })
-        if (this.isDoubleTap && this.isCellEditable(cell)) {
+        if (this.isDoubleTap) {
           const cellInfo = getCellInfo({ cell, state: this.instance.state })
           this.inputController.showInput(cellInfo)
         }
       }
       this.instance.renderer.render()
     }
-  }
-
-  private isCellEditable(cell: Cell) {
-    const isColumnName = this.instance.state.hasColumnNames && cell.rowIndex === 0
-    const isRowNumber = !!this.instance.state.options.isRowNumberVisible && cell.columnIndex === 0
-    return !isRowNumber && !isColumnName
   }
 
   private isInputVisible() {

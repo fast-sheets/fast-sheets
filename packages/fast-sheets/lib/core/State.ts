@@ -13,7 +13,9 @@ export class State {
   public totalHeight = 0
   public rowHeights: number[] = []
   public columnWidths: number[] = []
-  public hasColumnNames: boolean = false
+  public hasHeaderRow: boolean = false
+  public headerRowHeight = 0
+  public numberingColumnWidth = 0 // column with row numbers
   public canvasSize: CanvasSize = {
     widthWithPixelRatio: 0,
     heightWithPixelRatio: 0,
