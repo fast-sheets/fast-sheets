@@ -37,8 +37,7 @@
     "spreadsheets",
     "grid",
     "tables",
-    "canvas",
-    "webgl"
+    "canvas"
   ],
   "author": "Dmitry Savchenkov <topratecoder@gmail.com>",
   "license": "MIT",
