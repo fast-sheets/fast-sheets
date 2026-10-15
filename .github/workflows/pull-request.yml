@@ -46,6 +46,10 @@ jobs:
           pnpm run prettier:lib
           pnpm run prettier:demo
 
+      - name: Types
+        run: |
+          pnpm run types:check
+
       - name: Build
         run: pnpm build:lib
 
