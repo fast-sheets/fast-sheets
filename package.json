@@ -22,8 +22,8 @@
   },
   "lint-staged": {
     "apps/**/*.{js,ts,tsx,vue}": [
-      "pnpm lint:lib",
-      "pnpm prettier:lib"
+      "pnpm lint:demo",
+      "pnpm prettier:demo"
     ],
     "packages/**/*.{js,ts,tsx}": [
       "pnpm lint:lib",
