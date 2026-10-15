@@ -260,15 +260,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private async onCopy() {
     if (this.selectedRange.range) {
-      let { rowStart, rowEnd, columnStart, columnEnd } = this.selectedRange.range
-      if (this.instance.state.options.isRowNumberVisible) {
-        columnStart -= 1
-        columnEnd -= 1
-      }
-      if (this.instance.state.hasColumnNames) {
-        rowStart -= 1
-        rowEnd -= 1
-      }
+      const { rowStart, rowEnd, columnStart, columnEnd } = this.selectedRange.range
       const data = this.instance.state.options.data.slice(rowStart, rowEnd + 1)
       const rows = data.map((row) => row.slice(columnStart, columnEnd + 1).join('\t'))
       if (navigator.clipboard) {
@@ -398,7 +390,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           e.key === 'Backspace' ||
           e.key === 'Tab'
         ) &&
-        this.isCellEditable(newFocusedCell) &&
         !this.inputController.isInputFieldVisible()
       ) {
         // show input

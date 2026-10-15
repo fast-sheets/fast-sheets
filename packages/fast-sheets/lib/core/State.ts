@@ -1,4 +1,4 @@
-import type { CanvasSize, CellsMap, FastSheetsPlugin, Options, Size } from 'lib/core/types.ts'
+import type { CanvasSize, FastSheetsPlugin, Options, Size } from 'lib/core/types.ts'
 
 export class State {
   public options!: Options
@@ -33,8 +33,6 @@ export class State {
     right: 0,
     bottom: 0,
   }
-  public visibleCells: CellsMap = {}
-
   public plugins: { [pluginName: string]: FastSheetsPlugin } = {}
 }
 
