@@ -50,6 +50,11 @@ jobs:
         run: |
           pnpm run types:check
 
+      - name: Test
+        run: |
+          pnpm run test:lib:unit
+          pnpm run test:lib:e2e
+
       - name: Build
         run: pnpm build:lib
 
