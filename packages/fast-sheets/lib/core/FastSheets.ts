@@ -120,6 +120,10 @@ export class FastSheets {
   }
 
   public use(plugin: FastSheetsPlugin) {
+    if (this.state.plugins[plugin.name]) {
+      throw new Error(`Plugin "${plugin.name}" is already registered`)
+    }
+
     this.state.plugins[plugin.name] = plugin
     plugin.setup(this)
   }
