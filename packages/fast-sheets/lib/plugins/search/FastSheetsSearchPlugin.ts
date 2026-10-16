@@ -1,7 +1,13 @@
-import type { FastSheetsPlugin, FastSheetsInstance, Cell } from 'lib/core/types.ts'
+import type {
+  FastSheetsPlugin,
+  FastSheetsInstance,
+  Cell,
+  RenderCellBackgroundOptions,
+} from 'lib/core/types.ts'
 import { DEFAULT_SELECTION_COLOR } from './constants.ts'
 import type { Options, RawOptions } from './types.ts'
 import { getCellInfo, getCellKey } from 'lib/core/utils/cell.ts'
+import { renderCellBackground } from 'lib/core/utils/render.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -29,22 +35,6 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
 
   setup(instance: FastSheetsInstance) {
     this.instance = instance
-
-    const renderCellBackgroundOriginal = instance.renderer.renderCellBackground
-    instance.renderer.renderCellBackground = ({ ctx, fillStyle, cellInfo }) => {
-      const key = getCellKey(cellInfo.cell)
-      if (this.searchResult[key]) {
-        ctx.fillStyle = 'rgb(8,197,0)'
-        ctx.fillRect(-1, -1, cellInfo.width + 2, cellInfo.height + 2)
-      }
-      renderCellBackgroundOriginal.apply(instance.renderer, [
-        {
-          ctx,
-          fillStyle,
-          cellInfo,
-        },
-      ])
-    }
   }
 
   private scrollTo(cell: Cell) {
@@ -57,7 +47,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
   public highlightResult(cells: Cell[]) {
     this.searchResult = cells.reduce<SearchResult>((acc, cell) => {
       let rowIndex = cell.rowIndex
-      if (this.instance.state.hasColumnNames) {
+      if (this.instance.state.hasHeaderRow) {
         rowIndex++
       }
       let columnIndex = cell.columnIndex
@@ -73,6 +63,28 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
     const firstCell = Object.values(this.searchResult)[0]
     if (firstCell) {
       this.scrollTo(firstCell)
+    }
+  }
+
+  public renderCellBackground({
+    ctx,
+    cell,
+    backgroundColor,
+    borderWidth,
+  }: RenderCellBackgroundOptions) {
+    if (cell) {
+      const cellInfo = getCellInfo({ cell, state: this.instance.state })
+      const key = getCellKey(cellInfo.cell)
+      if (this.searchResult[key]) {
+        renderCellBackground({
+          ctx,
+          bordersColor: 'rgb(8,197,0)',
+          backgroundColor,
+          borderWidth,
+          width: cellInfo.width,
+          height: cellInfo.height,
+        })
+      }
     }
   }
 }

@@ -8,11 +8,14 @@ import {
   DEFAULT_PADDING,
   ROW_HEADING_FONT,
 } from 'lib/core/constants.ts'
-import type { Cell, CellInfo, CellsMap, CellsRange } from 'lib/core/types.ts'
+import type { Cell, CellsRange } from 'lib/core/types.ts'
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
-import { getCellInfo, getCellKey } from 'lib/core/utils/cell.ts'
+import { getCellInfo } from 'lib/core/utils/cell.ts'
 import type { StateInstance } from 'lib/core/State.ts'
 import { Font } from 'lib/core/Font.ts'
+import { getPlugins } from 'lib/core/utils/plugins.ts'
+import { renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
+import { getLinesHeight } from 'lib/core/utils/font.ts'
 
 export class Renderer {
   private readonly state: StateInstance
@@ -24,8 +27,7 @@ export class Renderer {
   }
 
   public init() {
-    const { elCanvas, elScrollInner, elScrollPaneX, elScrollPaneY, columns, isRowNumberVisible } =
-      this.state.options
+    const { elCanvas, elScrollInner, elScrollPaneX, elScrollPaneY, columns } = this.state.options
     const ctx = getContext(elCanvas)
     if (!ctx) {
       return
@@ -37,23 +39,19 @@ export class Renderer {
 
     this.initFonts(ctx)
 
-    if (isRowNumberVisible && columns.length && !columns[0]?.isRowsNumbers) {
-      columns.unshift({
-        width: 50,
-        isRowsNumbers: true,
-      })
-    }
+    this.state.hasHeaderRow = !!columns.find((column) => !!column.name)
 
-    this.state.hasColumnNames = !!columns.find((column) => !!column.name)
+    this.state.headerRowHeight = this.getHeaderRowHeight()
+    this.state.numberingColumnWidth = this.getNumberingColumnWidth()
 
     this.state.rowHeights = this.getRowHeights()
-    this.state.columnWidths = this.getColumnWidth()
+    this.state.columnWidths = this.getColumnWidths()
 
     this.state.totalWidth = this.getTotalWidth()
     this.state.totalHeight = this.getTotalHeight()
 
-    this.state.horizontalOffsets = this.calculateOffsets(this.state.columnWidths)
-    this.state.verticalOffsets = this.calculateOffsets(this.state.rowHeights)
+    this.state.horizontalOffsets = this.getHorizontalOffsets()
+    this.state.verticalOffsets = this.getVerticalOffsets()
 
     this.state.totalSize = {
       width: this.state.horizontalOffsets[this.state.horizontalOffsets.length - 1] || 0,
@@ -74,32 +72,42 @@ export class Renderer {
     this.fonts[ROW_HEADING_FONT] = new Font(ROW_HEADING_FONT, ctx)
   }
 
+  public getHeaderRowHeight() {
+    if (!this.state.hasHeaderRow) {
+      return 0
+    }
+
+    const fontHeight = this.fonts[ROW_HEADING_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
+    const linesHeight = getLinesHeight(1, fontHeight, DEFAULT_LINE_SPACING)
+    const paddingY = DEFAULT_PADDING.y * 4
+    return roundToPixels(linesHeight + paddingY)
+  }
+
+  public getNumberingColumnWidth() {
+    return this.state.options.isRowNumberVisible ? 50 : 0
+  }
+
   public getRowHeights() {
-    const { data } = this.state.options
-    return data.map((_, i) => {
-      let rowIndex: number
-      if (this.state.hasColumnNames) {
-        // we should shift rowIndex if we have to output column names
-        rowIndex = i === 0 ? -1 : i - 1
-      } else {
-        rowIndex = i
-      }
+    const rowsCount = this.state.options.data.length
+    return Array.from({ length: rowsCount }, (_, rowIndex) => {
       const cellsTexts: string[] = this.state.options.data[rowIndex] || []
       const linesLength = cellsTexts
         .map((cellText) => cellText.split('\n').length)
         .filter((value) => value)
       const maxLinesInRow = linesLength.length ? Math.max(...linesLength) : 1
       const fontHeight = this.fonts[DEFAULT_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
-      const linesHeight = this.getLinesHeight(maxLinesInRow, fontHeight, DEFAULT_LINE_SPACING)
-      const paddingY =
-        this.state.hasColumnNames && rowIndex === -1 ? DEFAULT_PADDING.y * 4 : DEFAULT_PADDING.y * 2
+      const linesHeight = getLinesHeight(maxLinesInRow, fontHeight, DEFAULT_LINE_SPACING)
+      const paddingY = DEFAULT_PADDING.y * 2
       return roundToPixels(linesHeight + paddingY)
     })
   }
 
-  public getColumnWidth() {
-    const { columns, borderWidth, elScrollInner } = this.state.options
-    const containerWidth = elScrollInner.offsetWidth - borderWidth * 2
+  public getColumnWidths() {
+    const { columns, borderWidth, elScrollInner, isRowNumberVisible } = this.state.options
+    let containerWidth = elScrollInner.offsetWidth - borderWidth * 2
+    if (isRowNumberVisible) {
+      containerWidth -= this.state.numberingColumnWidth
+    }
     const columnsWithSizeTotalWidth = columns.reduce(
       (total, { width }) => total + (width ? width + borderWidth : 0),
       0,
@@ -117,23 +125,52 @@ export class Renderer {
   public getTotalWidth() {
     const { columns, borderWidth } = this.state.options
     const verticalBordersCount = columns.length - 1
-    return this.state.columnWidths.reduce((a, b) => a + b, 0) + verticalBordersCount * borderWidth
+    return (
+      this.state.numberingColumnWidth +
+      (this.state.numberingColumnWidth > 0 ? borderWidth : 0) +
+      this.state.columnWidths.reduce((a, b) => a + b, 0) +
+      verticalBordersCount * borderWidth
+    )
   }
 
   public getTotalHeight() {
-    const { data, borderWidth } = this.state.options
-    const rowsLength = data.length
+    const { borderWidth } = this.state.options
+    const rowsLength = this.state.rowHeights.length
     const horizontalBordersCount = rowsLength - 1
     return (
+      this.state.headerRowHeight +
+      (this.state.headerRowHeight > 0 ? borderWidth : 0) +
       this.state.rowHeights.reduce((a, b) => a + b, 0) +
       horizontalBordersCount * borderWidth +
       borderWidth
     )
   }
 
-  public calculateOffsets(widthsOrHeights: number[]) {
+  public getVerticalOffsets() {
     const { borderWidth } = this.state.options
-    return widthsOrHeights.slice(0, -1).reduce(
+    let firstOffset = borderWidth
+    if (this.state.hasHeaderRow) {
+      firstOffset += this.getHeaderRowHeight() + borderWidth
+    }
+    return this.state.rowHeights.slice(0, -1).reduce(
+      (offsets, height, index) => {
+        // we will calculate an offset for the next item
+        const currentOffset = offsets[index] || 1
+        const nextOffset = currentOffset + height + borderWidth
+        offsets.push(nextOffset)
+        return offsets
+      },
+      [firstOffset],
+    )
+  }
+
+  public getHorizontalOffsets() {
+    const { borderWidth } = this.state.options
+    let firstOffset = borderWidth
+    if (this.state.options.isRowNumberVisible) {
+      firstOffset += this.getNumberingColumnWidth() + borderWidth
+    }
+    return this.state.columnWidths.slice(0, -1).reduce(
       (offsets, width, index) => {
         // we will calculate an offset for the next item
         const currentOffset = offsets[index] || 1
@@ -141,7 +178,7 @@ export class Renderer {
         offsets.push(nextOffset)
         return offsets
       },
-      [borderWidth], // first element has offset = borderWidth
+      [firstOffset],
     )
   }
 
@@ -178,152 +215,184 @@ export class Renderer {
       return undefined
     }
 
-    const cell: Cell = { columnIndex, rowIndex }
-    const key = getCellKey(cell)
-
-    return this.state.visibleCells[key]
+    const cell: Cell = { rowIndex, columnIndex }
+    return cell
   }
 
-  public prepareCells(range: CellsRange): CellsMap {
-    const visibleRowsLength = range.rowEnd - range.rowStart + 1
-    const visibleColumnsLength = range.columnEnd - range.columnStart + 1
-
-    const cells: CellsMap = {}
-
-    Array.from({ length: visibleRowsLength }).forEach((_, i) => {
-      const rowIndex = i + range.rowStart
-      Array.from({ length: visibleColumnsLength }).forEach((_, j) => {
-        const columnIndex = j + range.columnStart
-        const cell: Cell = {
-          rowIndex,
-          columnIndex,
-        }
-        cells[getCellKey(cell)] = cell
-      })
-    })
-
-    return cells
-  }
-
-  public getLinesHeight(linesLength: number, fontHeight: number, lineSpacing: number) {
-    return linesLength * (fontHeight + lineSpacing) - lineSpacing
-  }
-
-  public renderCellBackground({
-    ctx,
-    fillStyle,
-    cellInfo,
-  }: {
-    ctx: CanvasRenderingContext2D
-    fillStyle: string
-    cellInfo: CellInfo
-  }) {
-    if (cellInfo.isRowNumber || cellInfo.isColumnName) {
-      // gray background rect for column names and row numbers to render borders
-      ctx.fillStyle = '#ccc'
-      ctx.fillRect(-1, -1, cellInfo.width + 2, cellInfo.height + 2)
-    }
-
-    ctx.fillStyle = fillStyle
-    ctx.fillRect(0, 0, cellInfo.width, cellInfo.height)
-  }
-
-  public renderCellText({
-    ctx,
-    cellInfo,
-    // text,
-    // x,
-    // y,
-    font,
-    fill = '#000',
-    textAlign = 'left',
-    verticalAlign = 'middle',
-  }: {
-    ctx: CanvasRenderingContext2D
-    cellInfo: CellInfo
-    // text: string
-    // x: number
-    // y: number
-    font?: InstanceType<typeof Font>
-    fill?: string
-    textAlign: CanvasTextAlign
-    verticalAlign: 'top' | 'middle' | 'bottom'
-  }) {
-    const lineSpacing = DEFAULT_LINE_SPACING
-    const fontHeight = font?.fontHeight || DEFAULT_FONT_HEIGHT
-    const lines = cellInfo.text.split('\n')
-    ctx.font = font?.font || DEFAULT_FONT
-    ctx.fillStyle = fill
-    ctx.textAlign = textAlign
-
-    // make sure that values are rounded using devicePixelRatio
-    const textX = textAlign === 'center' ? cellInfo.center.x : cellInfo.padding.x
-    let textY: number
-    if (verticalAlign === 'middle') {
-      const linesHeight = this.getLinesHeight(lines.length, fontHeight, lineSpacing)
-      textY = cellInfo.center.y + fontHeight - linesHeight * 0.5 // align text top to the center of a cell, and then lift text up on its half height
-    } else {
-      textY = cellInfo.center.y
-    }
-
-    ctx.save()
-    lines.forEach((line, i) => {
-      ctx.fillText(
-        line,
-        roundToPixels(textX),
-        roundToPixels(textY + i * (fontHeight + lineSpacing)),
-      )
-    })
-    ctx.restore()
-  }
-
-  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, fillStyle = '#fff') {
+  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, backgroundColor = '#fff') {
     const cellInfo = getCellInfo({ cell, state: this.state })
+    const { borderWidth } = this.state.options
     setTransform(this.state.viewport, ctx, cellInfo.left, cellInfo.top)
 
-    this.renderCellBackground({
+    renderCellBackground({
       ctx,
-      fillStyle,
-      cellInfo,
+      backgroundColor,
+      width: cellInfo.width,
+      height: cellInfo.height,
+      borderWidth,
+    })
+
+    getPlugins(this.state).forEach((plugin) => {
+      if (typeof plugin.renderCellBackground === 'function') {
+        plugin.renderCellBackground({
+          ctx,
+          cell,
+          backgroundColor,
+          width: cellInfo.width,
+          height: cellInfo.height,
+          borderWidth,
+        })
+      }
     })
 
     if (cellInfo.text) {
-      if (cellInfo.isRowNumber) {
-        const font = this.fonts[ROW_HEADING_FONT]
-        this.renderCellText({
-          ctx,
-          cellInfo,
-          font,
-          textAlign: 'center',
-          verticalAlign: 'middle',
-        })
-      } else if (cellInfo.isColumnName) {
-        const font = this.fonts[COLUMN_HEADING_FONT]
-        this.renderCellText({
-          ctx,
-          cellInfo,
-          font,
-          textAlign: 'left',
-          verticalAlign: 'middle',
-        })
-      } else {
-        const font = this.fonts[DEFAULT_FONT]
-        this.renderCellText({
-          ctx,
-          cellInfo,
-          font,
-          textAlign: 'left',
-          verticalAlign: 'middle',
-        })
+      const font = this.fonts[DEFAULT_FONT]
+      renderCellText({
+        ctx,
+        text: cellInfo.text,
+        x: cellInfo.padding.x,
+        y: cellInfo.center.y,
+        font,
+        textAlign: 'left',
+        verticalAlign: 'middle',
+      })
+
+      getPlugins(this.state).forEach((plugin) => {
+        if (typeof plugin.renderCellText === 'function') {
+          plugin.renderCellText({
+            ctx,
+            cell,
+            text: cellInfo.text,
+            x: cellInfo.padding.x,
+            y: cellInfo.center.y,
+            font,
+            textAlign: 'left',
+            verticalAlign: 'middle',
+          })
+        }
+      })
+    }
+  }
+
+  public renderCells(ctx: CanvasRenderingContext2D, range: CellsRange) {
+    const visibleRowsLength = range.rowEnd - range.rowStart + 1
+    const visibleColumnsLength = range.columnEnd - range.columnStart + 1
+
+    for (let i = 0; i < visibleRowsLength; i++) {
+      const rowIndex = i + range.rowStart
+      for (let j = 0; j < visibleColumnsLength; j++) {
+        const columnIndex = j + range.columnStart
+        const cell = { rowIndex, columnIndex }
+        this.renderCell(ctx, cell)
+      }
+    }
+    setTransform(this.state.viewport, ctx, 0, 0)
+  }
+
+  public renderTopLeftCorner(ctx: CanvasRenderingContext2D) {
+    setTransform(
+      this.state.viewport,
+      ctx,
+      this.state.options.borderWidth,
+      this.state.options.borderWidth,
+    )
+
+    renderCellBackground({
+      ctx,
+      backgroundColor: '#fff',
+      bordersColor: '#ccc',
+      width: this.state.numberingColumnWidth,
+      height: this.state.headerRowHeight,
+      borderWidth: this.state.options.borderWidth,
+    })
+  }
+
+  public renderHeaderRow(ctx: CanvasRenderingContext2D, range: CellsRange) {
+    if (range.rowStart <= 0) {
+      const columnStart = Math.max(0, range.columnStart)
+      const columnEnd = range.columnEnd
+      for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex++) {
+        this.renderHeaderRowCell(ctx, columnIndex)
       }
     }
   }
 
-  public renderCells(ctx: CanvasRenderingContext2D, cells: CellsMap) {
-    Object.values(cells).forEach((cell) => {
-      this.renderCell(ctx, cell)
+  public renderHeaderRowCell(ctx: CanvasRenderingContext2D, columnIndex: number) {
+    const { borderWidth } = this.state.options
+    // noinspection JSSuspiciousNameCombination
+    const cellTop = borderWidth
+    const cellWidth = this.state.columnWidths[columnIndex] || 0
+    const cellHeight = this.state.headerRowHeight
+    const cellLeft = this.state.horizontalOffsets[columnIndex] || 0
+    setTransform(this.state.viewport, ctx, cellLeft, cellTop)
+
+    renderCellBackground({
+      ctx,
+      backgroundColor: '#fff',
+      bordersColor: '#ccc',
+      width: cellWidth,
+      height: cellHeight,
+      borderWidth,
     })
-    setTransform(this.state.viewport, ctx, 0, 0)
+
+    const font = this.fonts[COLUMN_HEADING_FONT]
+    const textX = cellWidth / 2
+    const textY = cellHeight / 2
+    const text = this.state.options.columns[columnIndex]?.name || ''
+
+    renderCellText({
+      ctx,
+      text,
+      x: textX,
+      y: textY,
+      font,
+      textAlign: 'center',
+      verticalAlign: 'middle',
+    })
+  }
+
+  public renderNumberingColumn(ctx: CanvasRenderingContext2D, range: CellsRange) {
+    if (range.columnStart <= 0) {
+      const rowStart = Math.max(0, range.rowStart)
+      const rowEnd = range.rowEnd
+      for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex++) {
+        this.renderNumberingColumnCell(ctx, rowIndex)
+      }
+    }
+  }
+
+  public renderNumberingColumnCell(ctx: CanvasRenderingContext2D, rowIndex: number) {
+    const { borderWidth } = this.state.options
+    const cellTop = this.state.verticalOffsets[rowIndex] || 0
+    const cellWidth = this.state.numberingColumnWidth
+    const cellHeight = this.state.rowHeights[rowIndex] || 0
+    // noinspection UnnecessaryLocalVariableJS
+    const cellLeft = borderWidth
+    setTransform(this.state.viewport, ctx, cellLeft, cellTop)
+
+    renderCellBackground({
+      ctx,
+      backgroundColor: '#fff',
+      bordersColor: '#ccc',
+      width: cellWidth,
+      height: cellHeight,
+      borderWidth,
+    })
+
+    const font = this.fonts[ROW_HEADING_FONT]
+    const textX = DEFAULT_PADDING.x
+    const textY = cellHeight / 2
+    const text = (rowIndex + 1).toString()
+
+    renderCellText({
+      ctx,
+      text,
+      x: textX,
+      y: textY,
+      font,
+      textAlign: 'left',
+      verticalAlign: 'middle',
+    })
   }
 
   public renderImmediate() {
@@ -351,8 +420,16 @@ export class Renderer {
 
     clearCanvas(elCanvas, ctx)
 
-    this.state.visibleCells = this.prepareCells(visibleRange)
-    this.renderCells(ctx, this.state.visibleCells)
+    if (this.state.hasHeaderRow && this.state.options.isRowNumberVisible) {
+      this.renderTopLeftCorner(ctx)
+    }
+    if (this.state.hasHeaderRow) {
+      this.renderHeaderRow(ctx, visibleRange)
+    }
+    if (this.state.options.isRowNumberVisible) {
+      this.renderNumberingColumn(ctx, visibleRange)
+    }
+    this.renderCells(ctx, visibleRange)
   }
 
   public render() {
@@ -364,7 +441,7 @@ export class Renderer {
       this.isRendering = false
       this.renderImmediate()
 
-      Object.values(this.state.plugins).forEach((plugin) => {
+      getPlugins(this.state).forEach((plugin) => {
         if (typeof plugin.render === 'function') {
           plugin.render()
         }

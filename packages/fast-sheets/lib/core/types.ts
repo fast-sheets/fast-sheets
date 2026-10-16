@@ -1,4 +1,5 @@
 import { type FastSheets } from 'lib/core/index.ts'
+import type { Font } from 'lib/core/Font.ts'
 
 export interface RawOptions {
   elContainer: HTMLElement
@@ -53,12 +54,6 @@ export interface Column {
   name?: string
   width?: number
   minWidth?: number
-  isRowsNumbers?: boolean
-}
-
-export interface Row {
-  id: string
-  height: number
 }
 
 export interface Cell {
@@ -80,8 +75,6 @@ export interface CellInfo {
   padding: Padding
   center: Coordinate
   font: string
-  isRowNumber: boolean
-  isColumnName: boolean
 }
 
 export interface CellsRange {
@@ -100,10 +93,34 @@ export interface Viewport {
 
 export type FastSheetsInstance = InstanceType<typeof FastSheets>
 
+export interface RenderCellBackgroundOptions {
+  ctx: CanvasRenderingContext2D
+  cell?: Cell
+  backgroundColor: string
+  bordersColor?: string
+  width: number
+  height: number
+  borderWidth: number
+}
+
+export interface RenderCellTextOptions {
+  ctx: CanvasRenderingContext2D
+  cell?: Cell
+  text: string
+  x: number
+  y: number
+  font?: InstanceType<typeof Font>
+  fill?: string
+  textAlign: CanvasTextAlign
+  verticalAlign: 'top' | 'middle' | 'bottom'
+}
+
 export interface FastSheetsPlugin {
   name: string
   setup(instance: FastSheetsInstance): void
   render?(): void
+  renderCellBackground?(options: RenderCellBackgroundOptions): void
+  renderCellText?(options: RenderCellTextOptions): void
   destroy?(): void
 }
 

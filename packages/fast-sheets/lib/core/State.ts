@@ -1,4 +1,4 @@
-import type { CanvasSize, CellsMap, FastSheetsPlugin, Options, Size } from 'lib/core/types.ts'
+import type { CanvasSize, FastSheetsPlugin, Options, Size } from 'lib/core/types.ts'
 
 export class State {
   public options!: Options
@@ -13,7 +13,9 @@ export class State {
   public totalHeight = 0
   public rowHeights: number[] = []
   public columnWidths: number[] = []
-  public hasColumnNames: boolean = false
+  public hasHeaderRow: boolean = false
+  public headerRowHeight = 0
+  public numberingColumnWidth = 0 // column with row numbers
   public canvasSize: CanvasSize = {
     widthWithPixelRatio: 0,
     heightWithPixelRatio: 0,
@@ -31,8 +33,6 @@ export class State {
     right: 0,
     bottom: 0,
   }
-  public visibleCells: CellsMap = {}
-
   public plugins: { [pluginName: string]: FastSheetsPlugin } = {}
 }
 
