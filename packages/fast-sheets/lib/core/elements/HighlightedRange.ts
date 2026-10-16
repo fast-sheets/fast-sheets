@@ -71,6 +71,10 @@ export class HighlightedRange {
     )
   }
 
+  isEmpty() {
+    return JSON.stringify(this.range) === JSON.stringify(EMPTY_RANGE)
+  }
+
   reset() {
     this.range = { ...EMPTY_RANGE }
     this.borders.hide()

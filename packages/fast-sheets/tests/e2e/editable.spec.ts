@@ -1,11 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 import { initFastSheets } from 'tests/e2e/utils/core.ts'
-import {
-  clickCell,
-  // clickHeaderCell,
-  // getCellMouseCoords
-} from 'tests/e2e/utils/cell.ts'
-// import { copyToClipboard } from 'tests/e2e/utils/clipboard.ts'
+import { clickCell, clickHeaderCell, getCellMouseCoords } from 'tests/e2e/utils/cell.ts'
+import { copyToClipboard } from 'tests/e2e/utils/clipboard.ts'
 
 const getUpdates = (page: Page) => page.evaluate(() => window.updates)
 
@@ -111,49 +107,49 @@ test.describe('last row', () => {
   })
 })
 
-// test.describe('copy', () => {
-//   test('copies the focused cell after a plain click', async ({ page }) => {
-//     await page.goto('/')
-//     const columns = [
-//       { name: 'A', width: 100 },
-//       { name: 'B', width: 100 },
-//     ]
-//     await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-//     await clickCell({ page, columnIndex: 1, rowIndex: 3 })
-//     expect(await copyToClipboard(page)).toEqual({ text: 'r3c1', defaultPrevented: true })
-//   })
-//
-//   test('copies a range selected by dragging', async ({ page }) => {
-//     await page.goto('/')
-//     const columns = [
-//       { name: 'A', width: 100 },
-//       { name: 'B', width: 100 },
-//       { name: 'C', width: 100 },
-//     ]
-//     await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-//     const from = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
-//     const to = await getCellMouseCoords({ page, columnIndex: 2, rowIndex: 3 })
-//     await page.mouse.move(from.x, from.y)
-//     await page.mouse.down()
-//     await page.mouse.move(to.x, to.y, { steps: 6 })
-//     await page.mouse.up()
-//
-//     expect((await copyToClipboard(page)).text).toBe('r1c1\tr1c2\nr2c1\tr2c2\nr3c1\tr3c2')
-//   })
-//
-//   test('does not touch the clipboard when nothing is focused or a header is focused', async ({
-//     page,
-//   }) => {
-//     await page.goto('/')
-//     const columns = [
-//       { name: 'A', width: 100 },
-//       { name: 'B', width: 100 },
-//       { name: 'C', width: 100 },
-//     ]
-//     await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-//     expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
-//
-//     await clickHeaderCell({ page, columnIndex: 1 })
-//     expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
-//   })
-// })
+test.describe('copy', () => {
+  test('copies the focused cell after a plain click', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 3 })
+    expect(await copyToClipboard(page)).toEqual({ text: 'r3c1', defaultPrevented: true })
+  })
+
+  test('copies a range selected by dragging', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const from = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    const to = await getCellMouseCoords({ page, columnIndex: 2, rowIndex: 3 })
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 6 })
+    await page.mouse.up()
+
+    expect((await copyToClipboard(page)).text).toBe('r1c1\tr1c2\nr2c1\tr2c2\nr3c1\tr3c2')
+  })
+
+  test('does not touch the clipboard when nothing is focused or a header is focused', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
+
+    await clickHeaderCell({ page, columnIndex: 1 })
+    expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
+  })
+})

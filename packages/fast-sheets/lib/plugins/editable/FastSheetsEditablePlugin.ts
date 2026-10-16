@@ -1,4 +1,4 @@
-import type { FastSheetsPlugin, FastSheetsInstance, Cell } from 'lib/core/types.ts'
+import type { FastSheetsPlugin, FastSheetsInstance, Cell, CellsRange } from 'lib/core/types.ts'
 import type { ModifiedCell, Options, RawOptions } from './types.ts'
 import { DEFAULT_SELECTION_COLOR } from './constants.ts'
 import { BORDER_STYLE } from 'lib/core/constants.ts'
@@ -12,8 +12,10 @@ import {
   getBelowCell,
   getCellInfo,
   getLeftCell,
+  convertCellToRange,
   getRightCell,
 } from 'lib/core/utils/cell.ts'
+import { stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -45,7 +47,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   boundMouseMove: (e: MouseEvent) => void
   boundKeyDown: (e: KeyboardEvent) => void
   boundKeyUp: (e: KeyboardEvent) => void
-  boundCopy: () => void
+  boundCopy: (e: ClipboardEvent) => void
   boundPaste: (e: ClipboardEvent) => void
   boundPointerDown: (e: PointerEvent) => void
   boundPointerUp: (e: PointerEvent) => void
@@ -258,15 +260,39 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.endSelection()
   }
 
-  private async onCopy() {
-    if (this.selectedRange.range) {
-      const { rowStart, rowEnd, columnStart, columnEnd } = this.selectedRange.range
-      const data = this.instance.state.options.data.slice(rowStart, rowEnd + 1)
-      const rows = data.map((row) => row.slice(columnStart, columnEnd + 1).join('\t'))
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(rows.join('\n'))
-        this.copiedRange.highlight({ range: this.selectedRange.range, state: this.instance.state })
-      } else {
+  private async onCopy(e: ClipboardEvent) {
+    if (this.isInputVisible()) {
+      // let the browser copy the selected text of the cell editor
+      return
+    }
+    const state = this.instance.state
+    const focusedCell = this.focusedCell.cell
+    let range: CellsRange | undefined
+    if (!this.selectedRange.isEmpty()) {
+      // a range selected by mouse or shift + arrows
+      range = this.selectedRange.range
+    } else if (focusedCell) {
+      // or just the focused cell alone
+      range = convertCellToRange(focusedCell)
+    }
+    if (!range) {
+      return
+    }
+    const text = stringifyCellsRange({ data: this.instance.state.options.data, range })
+    if (!text) {
+      return
+    }
+
+    if (e.clipboardData) {
+      // synchronous and does not need the clipboard permission
+      e.clipboardData.setData('text/plain', text)
+      e.preventDefault()
+      this.copiedRange.highlight({ range, state })
+    } else if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text)
+        this.copiedRange.highlight({ range, state })
+      } catch {
         // eslint-disable-next-line no-console
         console.error(`Unable to copy, navigator.clipboard is not available`)
       }

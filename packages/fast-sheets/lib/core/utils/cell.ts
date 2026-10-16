@@ -1,4 +1,4 @@
-import type { Cell, CellInfo, DomRect } from 'lib/core/types.ts'
+import type { Cell, CellInfo, CellsRange, DomRect } from 'lib/core/types.ts'
 import { type StateInstance } from 'lib/core/State.ts'
 import { DEFAULT_FONT, DEFAULT_PADDING } from 'lib/core/constants.ts'
 
@@ -58,5 +58,19 @@ export const getRightCell = ({ cell, state }: { cell: Cell; state: StateInstance
   return {
     ...cell,
     columnIndex: Math.min((state.options.data[0]?.length || 1) - 1, cell.columnIndex + 1),
+  }
+}
+
+/**
+ * Converts a single cell to a range
+ * @param cell
+ * @return range
+ */
+export const convertCellToRange = (cell: Cell): CellsRange => {
+  return {
+    rowStart: cell.rowIndex,
+    rowEnd: cell.rowIndex,
+    columnStart: cell.columnIndex,
+    columnEnd: cell.columnIndex,
   }
 }
