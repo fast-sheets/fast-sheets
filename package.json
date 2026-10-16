@@ -13,7 +13,7 @@
     "dev:vue-demo": "pnpm run dev:lib & pnpm --filter vue-demo run dev",
     "build:lib": "pnpm --filter fast-sheets run build",
     "build:demo": "pnpm --filter='./apps/**' --parallel run build",
-    "build": "pnpm run build:lib & pnpm run build:demo",
+    "build": "pnpm run build:lib && pnpm run build:demo",
     "lint:lib": "eslint --ext ts ./packages/*/lib",
     "lint:demo": "pnpm -r --filter='./apps/**' --parallel run lint",
     "lint": "pnpm run lint:lib & pnpm run lint:demo",
