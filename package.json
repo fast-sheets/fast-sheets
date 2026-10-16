@@ -13,17 +13,18 @@
     "dev:vue-demo": "pnpm run dev:lib & pnpm --filter vue-demo run dev",
     "build:lib": "pnpm --filter fast-sheets run build",
     "build:demo": "pnpm --filter='./apps/**' --parallel run build",
-    "build": "pnpm run build:lib & pnpm run build:demo",
-    "lint:lib": "pnpm eslint --ext ts ./packages/*/lib --fix",
+    "build": "pnpm run build:lib && pnpm run build:demo",
+    "lint:lib": "eslint --ext ts ./packages/*/lib",
     "lint:demo": "pnpm -r --filter='./apps/**' --parallel run lint",
+    "lint": "pnpm run lint:lib & pnpm run lint:demo",
     "prettier:lib": "prettier --log-level error --write ./packages/*/lib",
     "prettier:demo": "pnpm -r --filter='./apps/**' --parallel run prettier",
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check"
   },
   "lint-staged": {
     "apps/**/*.{js,ts,tsx,vue}": [
-      "pnpm lint:lib",
-      "pnpm prettier:lib"
+      "pnpm lint:demo",
+      "pnpm prettier:demo"
     ],
     "packages/**/*.{js,ts,tsx}": [
       "pnpm lint:lib",

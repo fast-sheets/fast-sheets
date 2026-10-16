@@ -8,6 +8,9 @@ on:
     types: [published]
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   publish:
     runs-on: ubuntu-latest
     permissions:
