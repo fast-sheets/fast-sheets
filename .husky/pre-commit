@@ -1,2 +1,4 @@
 pnpm lint-staged
 pnpm types:check
+pnpm test:lib:unit
+pnpm test:lib:e2e
