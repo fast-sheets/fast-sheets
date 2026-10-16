@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>fast-sheets e2e fixture</title>
+  </head>
+  <body style="margin: 0">
+    <div data-testid="fast-sheets" style="width: 800px; height: 400px"></div>
+    <script type="module">
+      import { FastSheets } from 'lib/core/index.ts'
+      import { FastSheetsEditablePlugin } from 'lib/plugins/editable/index.ts'
+
+      window.FastSheets = FastSheets
+      window.FastSheetsEditablePlugin = FastSheetsEditablePlugin
+      window.isFixtureReady = true
+    </script>
+  </body>
+</html>
