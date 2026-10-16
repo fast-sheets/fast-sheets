@@ -19,7 +19,6 @@
     "lint": "pnpm run lint:lib & pnpm run lint:demo",
     "prettier:lib": "prettier --log-level error --write ./packages/*/lib",
     "prettier:demo": "pnpm -r --filter='./apps/**' --parallel run prettier",
-    "prettier": "pnpm run prettier:lib & pnpm run prettier:demo",
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check"
   },
   "lint-staged": {
