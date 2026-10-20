@@ -171,6 +171,10 @@ test.describe('destroy editable plugin', () => {
     await page.keyboard.press('x')
 
     expect(await getUpdates(page)).toEqual([])
+
+    const plugins = await page.evaluate(() => window.fastSheets.state.plugins)
+    expect(plugins['editable']).toBeUndefined()
+
     await expect(page.locator('[data-name="elEditableContainerFront"]')).toHaveCount(0)
     await expect(page.locator('[data-name="elEditableContainerBack"]')).toHaveCount(0)
   })
