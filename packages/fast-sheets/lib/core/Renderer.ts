@@ -452,10 +452,6 @@ export class Renderer {
 
   public destroy() {
     const { elCanvas } = this.state.options
-    const ctx = getContext(elCanvas)
-    if (ctx) {
-      ctx.reset()
-    }
     elCanvas.width = 0
     elCanvas.height = 0
     if (this.animationFrameId !== null) {
