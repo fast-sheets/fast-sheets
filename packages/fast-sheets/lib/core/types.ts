@@ -119,8 +119,15 @@ export interface FastSheetsPlugin {
   name: string
   setup(instance: FastSheetsInstance): void
   render?(): void
+  /**
+   * Returns the background color for a cell, given the color resolved so far.
+   * All plugins are asked before anything is painted, so the result is passed
+   * to every `renderCellBackground` call, whatever the plugin order.
+   */
+  getCellBackgroundColor?(cell: Cell, backgroundColor: string): string
   renderCellBackground?(options: RenderCellBackgroundOptions): void
   renderCellText?(options: RenderCellTextOptions): void
+  /** Releases everything the plugin created and unregisters it with `instance.unuse(this.name)`. */
   destroy(): void
 }
 

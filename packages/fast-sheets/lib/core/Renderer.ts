@@ -220,10 +220,16 @@ export class Renderer {
     return cell
   }
 
-  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, backgroundColor = '#fff') {
+  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
     const cellInfo = getCellInfo({ cell, state: this.state })
     const { borderWidth } = this.state.options
     setTransform(this.state.viewport, ctx, cellInfo.left, cellInfo.top)
+
+    const plugins = getPlugins(this.state)
+    const backgroundColor = plugins.reduce(
+      (color, plugin) => plugin.getCellBackgroundColor?.(cell, color) ?? color,
+      defaultBackgroundColor,
+    )
 
     renderCellBackground({
       ctx,
@@ -233,7 +239,7 @@ export class Renderer {
       borderWidth,
     })
 
-    getPlugins(this.state).forEach((plugin) => {
+    plugins.forEach((plugin) => {
       if (typeof plugin.renderCellBackground === 'function') {
         plugin.renderCellBackground({
           ctx,
@@ -258,7 +264,7 @@ export class Renderer {
         verticalAlign: 'middle',
       })
 
-      getPlugins(this.state).forEach((plugin) => {
+      plugins.forEach((plugin) => {
         if (typeof plugin.renderCellText === 'function') {
           plugin.renderCellText({
             ctx,
@@ -458,5 +464,6 @@ export class Renderer {
       cancelAnimationFrame(this.animationFrameId)
       this.animationFrameId = null
     }
+    this.isRendering = false
   }
 }

@@ -1,10 +1,4 @@
-import type {
-  FastSheetsPlugin,
-  FastSheetsInstance,
-  Cell,
-  CellsRange,
-  RenderCellBackgroundOptions,
-} from 'lib/core/types.ts'
+import type { FastSheetsPlugin, FastSheetsInstance, Cell, CellsRange } from 'lib/core/types.ts'
 import type { ModifiedCell, Options, RawOptions } from './types.ts'
 import {
   DEFAULT_INPUT_FONT,
@@ -26,7 +20,6 @@ import {
   getRightCell,
 } from 'lib/core/utils/cell.ts'
 import { stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
-import { renderCellBackground } from 'lib/core/utils/render.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -51,6 +44,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   pointerDownTime = 0
   isDoubleTap = false
+  doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
 
   boundDoubleClick: (e: MouseEvent) => void
   boundMouseDown: (e: MouseEvent) => void
@@ -142,6 +136,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   destroy() {
     this.unbindEvents(this.instance)
+    this.doubleTapTimeoutIds.forEach(clearTimeout)
+    this.doubleTapTimeoutIds.clear()
     this.inputController.destroy()
     this.copiedRange.destroy()
     this.focusedCell.destroy()
@@ -205,26 +201,11 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.updateContainerPosition()
   }
 
-  public renderCellBackground({
-    ctx,
-    cell,
-    width,
-    height,
-    borderWidth,
-  }: RenderCellBackgroundOptions) {
+  public getCellBackgroundColor(cell: Cell, backgroundColor: string) {
     const isInMultiCellSelection =
-      cell &&
       this.rangeSelectionController.isCellSelected(cell) &&
       this.rangeSelectionController.selectedCellsCount() > 1
-    if (isInMultiCellSelection) {
-      renderCellBackground({
-        ctx,
-        backgroundColor: DEFAULT_SELECTION_BACKGROUND_COLOR,
-        width,
-        height,
-        borderWidth,
-      })
-    }
+    return isInMultiCellSelection ? DEFAULT_SELECTION_BACKGROUND_COLOR : backgroundColor
   }
 
   public onResize() {
@@ -484,10 +465,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       const now = new Date().getTime()
       this.isDoubleTap = now - this.pointerDownTime < 300
       this.pointerDownTime = now
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
+        this.doubleTapTimeoutIds.delete(timeoutId)
         this.pointerDownTime = 0
         this.isDoubleTap = false
       }, 300)
+      this.doubleTapTimeoutIds.add(timeoutId)
     }
   }
 

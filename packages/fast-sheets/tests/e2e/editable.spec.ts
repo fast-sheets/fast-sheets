@@ -159,6 +159,48 @@ test.describe('copy', () => {
   })
 })
 
+test.describe('selection background', () => {
+  /** the color painted inside a cell, away from its text */
+  const getCellBackgroundPixel = (page: Page, cell: { rowIndex: number; columnIndex: number }) =>
+    page.evaluate(({ rowIndex, columnIndex }) => {
+      const { state, renderer } = window.fastSheets
+      renderer.renderImmediate()
+      const { elCanvas } = state.options
+      const scale = elCanvas.width / elCanvas.getBoundingClientRect().width
+      // just inside the top-left corner: past the border, above the vertically centered text
+      const x = Math.round(((state.horizontalOffsets[columnIndex] || 0) + 4) * scale)
+      const y = Math.round(((state.verticalOffsets[rowIndex] || 0) + 4) * scale)
+      const [r, g, b] = elCanvas.getContext('2d')!.getImageData(x, y, 1, 1).data
+      return `rgb(${r}, ${g}, ${b})`
+    }, cell)
+
+  test('is kept on a search hit, whatever the plugin order', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      const searchPlugin = new window.FastSheetsSearchPlugin()
+      window.fastSheets.use(searchPlugin) // registered after the editable plugin
+      searchPlugin.highlightResult([{ rowIndex: 0, columnIndex: 0 }]) // grid cell (1, 1)
+    })
+
+    // select two cells, the search hit included
+    await clickCell({ page, rowIndex: 1, columnIndex: 1 })
+    await page.keyboard.press('Shift+ArrowRight')
+
+    const selected = 'rgb(233, 240, 254)' // DEFAULT_SELECTION_BACKGROUND_COLOR
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(selected)
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 2 })).toBe(selected)
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 3 })).toBe(
+      'rgb(255, 255, 255)',
+    )
+  })
+})
+
 test.describe('destroy editable plugin', () => {
   test('removes all elements', async ({ page }) => {
     await page.goto('/')

@@ -4,6 +4,7 @@ interface Window {
   updates: import('lib/plugins/editable/types').ModifiedCell[][]
   FastSheets: typeof import('lib/core').FastSheets
   FastSheetsEditablePlugin: typeof import('lib/plugins/editable').FastSheetsEditablePlugin
+  FastSheetsSearchPlugin: typeof import('lib/plugins/search').FastSheetsSearchPlugin
   fastSheets: import('lib/core/types').FastSheetsInstance
   fastSheetsEditablePlugin: InstanceType<
     typeof import('lib/plugins/editable').FastSheetsEditablePlugin
