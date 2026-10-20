@@ -2,7 +2,7 @@ import { type Page } from '@playwright/test'
 import { type Column } from 'lib/core'
 import { generateData } from 'tests/utils/generators.ts'
 
-const initFastSheets = async ({
+export const initFastSheets = async ({
   page,
   rowsCount,
   columns,

@@ -1,31 +1,199 @@
 import { expect, test } from '@playwright/test'
-import { initFastSheetsWithPlugins } from 'tests/e2e/utils/core.ts'
+import { initFastSheets } from 'tests/e2e/utils/instance.ts'
+import {
+  getEventListeners,
+  trackAnimationFrames,
+  trackEventListeners,
+  trackResizeObservers,
+} from 'tests/e2e/utils/resource-tracker.ts'
+
+const COLUMNS = [
+  { name: 'A', width: 100 },
+  { name: 'B', width: 100 },
+  { name: 'C', width: 100 },
+]
 
 test.describe('init instance', () => {
   test('has all elements', async ({ page }) => {
     await page.goto('/')
-    const columns = [
-      { name: 'A', width: 100 },
-      { name: 'B', width: 100 },
-      { name: 'C', width: 100 },
-    ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-    await expect(page.getByTestId('fast-sheets').locator(' > *')).toHaveCount(4)
+    await initFastSheets({ page, rowsCount: 4, columns: COLUMNS, isRowNumberVisible: true })
+    await expect(page.getByTestId('fast-sheets').locator(' > *')).toHaveCount(2)
   })
 })
 
 test.describe('destroy instance', () => {
   test('removes all elements', async ({ page }) => {
     await page.goto('/')
-    const columns = [
-      { name: 'A', width: 100 },
-      { name: 'B', width: 100 },
-      { name: 'C', width: 100 },
-    ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheets({ page, rowsCount: 4, columns: COLUMNS, isRowNumberVisible: true })
+    await expect(page.getByTestId('fast-sheets').locator(' > *')).toHaveCount(2)
     await page.evaluate(() => {
       window.fastSheets.destroy()
     })
     await expect(page.getByTestId('fast-sheets').locator(' > *')).toHaveCount(0)
+  })
+
+  test('releases the canvas bitmap', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheets({ page, rowsCount: 4, columns: COLUMNS, isRowNumberVisible: true })
+
+    const size = await page.evaluate(() => {
+      const { elCanvas } = window.fastSheets.state.options
+      window.fastSheets.destroy()
+      return { width: elCanvas.width, height: elCanvas.height }
+    })
+
+    expect(size).toEqual({ width: 0, height: 0 })
+  })
+
+  test('can be called more than once', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheets({ page, rowsCount: 4, columns: COLUMNS, isRowNumberVisible: true })
+
+    const error = await page.evaluate(() => {
+      try {
+        window.fastSheets.destroy()
+        window.fastSheets.destroy()
+        return null
+      } catch (e) {
+        return String(e)
+      }
+    })
+
+    expect(error).toBeNull()
+  })
+
+  test('does not remove elements it did not create', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheets({ page, rowsCount: 4, columns: COLUMNS, isRowNumberVisible: true })
+
+    const isElementKept = await page
+      .getByTestId('fast-sheets')
+      .evaluate(async (elContainer: HTMLElement) => {
+        // the caller keeps its own scroller in its own wrapper and passes it in
+        const elWrapper = document.createElement('div')
+        document.body.appendChild(elWrapper)
+        const elScroll = document.createElement('div')
+        elWrapper.appendChild(elScroll)
+
+        const fastSheets = new window.FastSheets({
+          elContainer,
+          elScroll,
+          data: [['a']],
+        })
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+        fastSheets.destroy()
+
+        return elWrapper.contains(elScroll)
+      })
+
+    expect(isElementKept).toBe(true)
+  })
+
+  test('removes every listener it registered', async ({ page }) => {
+    await trackEventListeners(page)
+    await page.goto('/')
+    await page.waitForFunction(() => window.isFixtureReady === true)
+    const originListeners = await getEventListeners(page)
+    await initFastSheets({ page, rowsCount: 20, columns: COLUMNS, isRowNumberVisible: true })
+
+    expect(await getEventListeners(page)).not.toEqual(originListeners)
+
+    await page.evaluate(() => {
+      window.fastSheets.destroy()
+    })
+
+    expect(await getEventListeners(page)).toEqual(originListeners)
+  })
+
+  test('disconnects its ResizeObservers', async ({ page }) => {
+    await trackResizeObservers(page)
+    await page.goto('/')
+    await initFastSheets({ page, rowsCount: 20, columns: COLUMNS, isRowNumberVisible: true })
+    expect(await page.evaluate(() => window.resourceTracker.liveObservers())).toBeGreaterThan(0)
+
+    await page.evaluate(() => {
+      window.fastSheets.destroy()
+    })
+
+    expect(await page.evaluate(() => window.resourceTracker.liveObservers())).toBe(0)
+  })
+
+  test('cancels the animation frame that is pending when it is destroyed', async ({ page }) => {
+    await trackAnimationFrames(page)
+    await page.goto('/')
+    await initFastSheets({ page, rowsCount: 20, columns: COLUMNS, isRowNumberVisible: true })
+
+    const result = await page.evaluate(async () => {
+      const { fastSheets } = window
+      let renders = 0
+      const renderImmediate = fastSheets.renderer.renderImmediate.bind(fastSheets.renderer)
+      fastSheets.renderer.renderImmediate = () => {
+        renders++
+        renderImmediate()
+      }
+
+      fastSheets.renderer.render() // requests a frame
+      const pendingBeforeDestroy = window.resourceTracker.pendingFrames()
+      fastSheets.destroy()
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      })
+
+      return {
+        pendingBeforeDestroy,
+        renders,
+        pendingAfterDestroy: window.resourceTracker.pendingFrames(),
+      }
+    })
+
+    expect(result.pendingBeforeDestroy).toBeGreaterThan(0)
+    expect(result.renders).toBe(0) // the stale frame must not render into a destroyed grid
+    expect(result.pendingAfterDestroy).toBe(0)
+  })
+
+  test('does not accumulate resources when the grid is created and destroyed repeatedly', async ({
+    page,
+  }) => {
+    await trackEventListeners(page)
+    await trackResizeObservers(page)
+    await trackAnimationFrames(page)
+    await page.goto('/')
+
+    // the way a framework wrapper mounts and unmounts the grid
+    const cycles = await page
+      .getByTestId('fast-sheets')
+      .evaluate(async (elContainer: HTMLElement) => {
+        const data = [
+          ['a', 'b'],
+          ['c', 'd'],
+        ]
+        const columns = [
+          { name: 'A', width: 100 },
+          { name: 'B', width: 100 },
+        ]
+
+        const listenersBefore = window.resourceTracker.listeners().length
+        const results = []
+        for (let i = 0; i < 5; i++) {
+          const fastSheets = new window.FastSheets({ elContainer, data, columns })
+          const nextFrames = () =>
+            new Promise<void>((resolve) => {
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+            })
+          await nextFrames()
+          fastSheets.destroy()
+          await nextFrames()
+          results.push({
+            newListeners: window.resourceTracker.listeners().length - listenersBefore,
+            liveObservers: window.resourceTracker.liveObservers(),
+            pendingFrames: window.resourceTracker.pendingFrames(),
+            containerChildren: elContainer.children.length,
+          })
+        }
+        return results
+      })
+
+    const released = { newListeners: 0, liveObservers: 0, pendingFrames: 0, containerChildren: 0 }
+    expect(cycles).toEqual(Array(5).fill(released))
   })
 })

@@ -1,7 +1,12 @@
 import { expect, type Page, test } from '@playwright/test'
-import { initFastSheetsWithPlugins } from 'tests/e2e/utils/core.ts'
+import { initFastSheets, initFastSheetsWithPlugins } from 'tests/e2e/utils/instance.ts'
 import { clickCell, clickHeaderCell, getCellMouseCoords } from 'tests/e2e/utils/cell.ts'
 import { copyToClipboard } from 'tests/e2e/utils/clipboard.ts'
+import {
+  getEventListeners,
+  trackEventListeners,
+  trackResizeObservers,
+} from 'tests/e2e/utils/resource-tracker.ts'
 
 const getUpdates = (page: Page) => page.evaluate(() => window.updates)
 
@@ -172,10 +177,73 @@ test.describe('destroy editable plugin', () => {
 
     expect(await getUpdates(page)).toEqual([])
 
-    const plugins = await page.evaluate(() => window.fastSheets.state.plugins)
-    expect(plugins['editable']).toBeUndefined()
+    const pluginNames = await page.evaluate(() => Object.keys(window.fastSheets.state.plugins))
+    expect(pluginNames).not.toContain('editable')
 
     await expect(page.locator('[data-name="elEditableContainerFront"]')).toHaveCount(0)
     await expect(page.locator('[data-name="elEditableContainerBack"]')).toHaveCount(0)
+  })
+
+  test('removes every listener and observer it registered', async ({ page }) => {
+    await trackEventListeners(page)
+    await trackResizeObservers(page)
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    // a core-only grid first, so that the snapshot holds the core listeners only
+    await initFastSheets({ page, rowsCount: 20, columns, isRowNumberVisible: true })
+    const coreListeners = await getEventListeners(page)
+    const coreObservers = await page.evaluate(() => window.resourceTracker.liveObservers())
+
+    await page.evaluate(() => {
+      window.fastSheetsEditablePlugin = new window.FastSheetsEditablePlugin({
+        onUpdate() {
+          // do nothing
+        },
+      })
+      window.fastSheets.use(window.fastSheetsEditablePlugin)
+    })
+    expect(await getEventListeners(page)).not.toEqual(coreListeners)
+
+    // use the plugin: select, navigate, drag, open the cell editor
+    await clickCell({ page, rowIndex: 1, columnIndex: 1 })
+    await page.keyboard.press('ArrowDown')
+    await page.mouse.move(300, 150)
+    await page.keyboard.press('Enter')
+
+    await page.evaluate(() => {
+      window.fastSheetsEditablePlugin.destroy()
+    })
+
+    expect(await getEventListeners(page)).toEqual(coreListeners)
+    expect(await page.evaluate(() => window.resourceTracker.liveObservers())).toBe(coreObservers)
+  })
+
+  test('is released together with the grid', async ({ page }) => {
+    await trackEventListeners(page)
+    await trackResizeObservers(page)
+    await page.goto('/')
+    await page.waitForFunction(() => window.isFixtureReady === true)
+    const originListeners = await getEventListeners(page)
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheetsWithPlugins({ page, rowsCount: 20, columns, isRowNumberVisible: true })
+
+    await clickCell({ page, rowIndex: 1, columnIndex: 1 })
+    await page.keyboard.press('Enter')
+
+    await page.evaluate(() => {
+      window.fastSheets.destroy()
+    })
+
+    expect(await getEventListeners(page)).toEqual(originListeners)
+    expect(await page.evaluate(() => window.resourceTracker.liveObservers())).toBe(0)
+    await expect(page.getByTestId('fast-sheets').locator(' > *')).toHaveCount(0)
   })
 })
