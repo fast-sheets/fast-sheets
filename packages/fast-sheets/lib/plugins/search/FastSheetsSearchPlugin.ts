@@ -50,15 +50,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
 
   public highlightResult(cells: Cell[]) {
     this.searchResult = cells.reduce<SearchResult>((acc, cell) => {
-      let rowIndex = cell.rowIndex
-      if (this.instance.state.hasHeaderRow) {
-        rowIndex++
-      }
-      let columnIndex = cell.columnIndex
-      if (this.instance.state.options.isRowNumberVisible) {
-        columnIndex++
-      }
-      const cellToSearch = { columnIndex, rowIndex }
+      const cellToSearch = { columnIndex: cell.columnIndex, rowIndex: cell.rowIndex }
       acc[getCellKey(cellToSearch)] = cellToSearch
       return acc
     }, {})
