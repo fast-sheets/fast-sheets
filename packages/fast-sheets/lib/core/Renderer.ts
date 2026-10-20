@@ -21,6 +21,7 @@ export class Renderer {
   private readonly state: StateInstance
   private isRendering = false
   private fonts: { [fontName: string]: Font } = {}
+  private animationFrameId: number | null = null
 
   constructor(state: StateInstance) {
     this.state = state
@@ -219,10 +220,16 @@ export class Renderer {
     return cell
   }
 
-  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, backgroundColor = '#fff') {
+  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
     const cellInfo = getCellInfo({ cell, state: this.state })
     const { borderWidth } = this.state.options
     setTransform(this.state.viewport, ctx, cellInfo.left, cellInfo.top)
+
+    const plugins = getPlugins(this.state)
+    const backgroundColor = plugins.reduce(
+      (color, plugin) => plugin.getCellBackgroundColor?.(cell, color) ?? color,
+      defaultBackgroundColor,
+    )
 
     renderCellBackground({
       ctx,
@@ -232,7 +239,7 @@ export class Renderer {
       borderWidth,
     })
 
-    getPlugins(this.state).forEach((plugin) => {
+    plugins.forEach((plugin) => {
       if (typeof plugin.renderCellBackground === 'function') {
         plugin.renderCellBackground({
           ctx,
@@ -257,7 +264,7 @@ export class Renderer {
         verticalAlign: 'middle',
       })
 
-      getPlugins(this.state).forEach((plugin) => {
+      plugins.forEach((plugin) => {
         if (typeof plugin.renderCellText === 'function') {
           plugin.renderCellText({
             ctx,
@@ -437,7 +444,7 @@ export class Renderer {
       return
     }
     this.isRendering = true
-    requestAnimationFrame(() => {
+    this.animationFrameId = requestAnimationFrame(() => {
       this.isRendering = false
       this.renderImmediate()
 
@@ -447,5 +454,16 @@ export class Renderer {
         }
       })
     })
+  }
+
+  public destroy() {
+    const { elCanvas } = this.state.options
+    elCanvas.width = 0
+    elCanvas.height = 0
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId)
+      this.animationFrameId = null
+    }
+    this.isRendering = false
   }
 }

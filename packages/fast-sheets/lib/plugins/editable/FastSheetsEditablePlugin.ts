@@ -1,6 +1,10 @@
 import type { FastSheetsPlugin, FastSheetsInstance, Cell, CellsRange } from 'lib/core/types.ts'
 import type { ModifiedCell, Options, RawOptions } from './types.ts'
-import { DEFAULT_SELECTION_COLOR } from './constants.ts'
+import {
+  DEFAULT_INPUT_FONT,
+  DEFAULT_SELECTION_BACKGROUND_COLOR,
+  DEFAULT_SELECTION_COLOR,
+} from './constants.ts'
 import { BORDER_STYLE } from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
@@ -40,6 +44,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   pointerDownTime = 0
   isDoubleTap = false
+  doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
 
   boundDoubleClick: (e: MouseEvent) => void
   boundMouseDown: (e: MouseEvent) => void
@@ -114,7 +119,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.inputController = new InputController({
       name: 'elInput',
       container: this.elEditableContainerFront,
-      font: '14px/15px Verdana', // todo
+      font: DEFAULT_INPUT_FONT,
       onUpdate: (modifiedCell) => {
         this.onUpdate([modifiedCell])
       },
@@ -127,20 +132,19 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
     this.init(instance)
     this.bindEvents(instance)
-
-    const renderCellOriginal = instance.renderer.renderCell
-    instance.renderer.renderCell = (ctx, cell, fillStyleDefault) => {
-      const fillStyle =
-        this.rangeSelectionController.isCellSelected(cell) &&
-        this.rangeSelectionController.selectedCellsCount() > 1
-          ? '#e9f0fe'
-          : fillStyleDefault
-      renderCellOriginal.apply(instance.renderer, [ctx, cell, fillStyle])
-    }
   }
 
   destroy() {
     this.unbindEvents(this.instance)
+    this.doubleTapTimeoutIds.forEach(clearTimeout)
+    this.doubleTapTimeoutIds.clear()
+    this.inputController.destroy()
+    this.copiedRange.destroy()
+    this.focusedCell.destroy()
+    this.selectedRange.destroy()
+    this.elEditableContainerFront.remove()
+    this.elEditableContainerBack.remove()
+    this.instance.unuse(this.name)
   }
 
   init(instance: FastSheetsInstance) {
@@ -195,6 +199,13 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   public render() {
     this.updateContainerPosition()
+  }
+
+  public getCellBackgroundColor(cell: Cell, backgroundColor: string) {
+    const isInMultiCellSelection =
+      this.rangeSelectionController.isCellSelected(cell) &&
+      this.rangeSelectionController.selectedCellsCount() > 1
+    return isInMultiCellSelection ? DEFAULT_SELECTION_BACKGROUND_COLOR : backgroundColor
   }
 
   public onResize() {
@@ -454,10 +465,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       const now = new Date().getTime()
       this.isDoubleTap = now - this.pointerDownTime < 300
       this.pointerDownTime = now
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
+        this.doubleTapTimeoutIds.delete(timeoutId)
         this.pointerDownTime = 0
         this.isDoubleTap = false
       }, 300)
+      this.doubleTapTimeoutIds.add(timeoutId)
     }
   }
 

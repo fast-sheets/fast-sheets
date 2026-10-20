@@ -83,4 +83,8 @@ export class InputField {
   focus() {
     this.el.focus()
   }
+
+  destroy() {
+    this.el.remove()
+  }
 }

@@ -1,7 +1,12 @@
 import { expect, type Page, test } from '@playwright/test'
-import { initFastSheets } from 'tests/e2e/utils/core.ts'
+import { initFastSheets, initFastSheetsWithEditable } from 'tests/e2e/utils/instance.ts'
 import { clickCell, clickHeaderCell, getCellMouseCoords } from 'tests/e2e/utils/cell.ts'
 import { copyToClipboard } from 'tests/e2e/utils/clipboard.ts'
+import {
+  getEventListeners,
+  trackEventListeners,
+  trackResizeObservers,
+} from 'tests/e2e/utils/resource-tracker.ts'
 
 const getUpdates = (page: Page) => page.evaluate(() => window.updates)
 
@@ -12,7 +17,7 @@ test.describe('last row', () => {
       { name: 'A', width: 100 },
       { name: 'B', width: 100 },
     ]
-    await initFastSheets({ page, rowsCount: 1000, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 1000, columns, isRowNumberVisible: true })
 
     const { rowsCount, lastVisibleRowIndex } = await page.evaluate(() => {
       window.fastSheets.state.options.elScroll.scrollTop = 1e9
@@ -35,7 +40,7 @@ test.describe('last row', () => {
       { name: 'A', width: 100 },
       { name: 'B', width: 100 },
     ]
-    await initFastSheets({ page, rowsCount: 5, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 5, columns, isRowNumberVisible: true })
     await clickCell({ page, columnIndex: 0, rowIndex: 4 })
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
@@ -51,7 +56,7 @@ test.describe('last row', () => {
         { name: 'A', width: 100 },
         { name: 'B', width: 100 },
       ]
-      await initFastSheets({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+      await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
       await clickCell({ page, columnIndex: 1, rowIndex: 1 })
       await page.keyboard.press('x')
 
@@ -65,7 +70,7 @@ test.describe('last row', () => {
           { name: 'A', width: 100 },
           { name: 'B', width: 100 },
         ]
-        await initFastSheets({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+        await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
         await clickCell({ page, columnIndex: 1, rowIndex: 2 })
         await page.keyboard.press(key)
 
@@ -80,7 +85,7 @@ test.describe('last row', () => {
     //     { name: 'A', width: 100 },
     //     { name: 'B', width: 100 },
     //   ]
-    //   await initFastSheets({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+    //   await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
     //   const prevented = await page.evaluate(() => {
     //     const press = (init: KeyboardEventInit) => {
     //       const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })
@@ -114,7 +119,7 @@ test.describe('copy', () => {
       { name: 'A', width: 100 },
       { name: 'B', width: 100 },
     ]
-    await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     await clickCell({ page, columnIndex: 1, rowIndex: 3 })
     expect(await copyToClipboard(page)).toEqual({ text: 'r3c1', defaultPrevented: true })
   })
@@ -126,7 +131,7 @@ test.describe('copy', () => {
       { name: 'B', width: 100 },
       { name: 'C', width: 100 },
     ]
-    await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     const from = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
     const to = await getCellMouseCoords({ page, columnIndex: 2, rowIndex: 3 })
     await page.mouse.move(from.x, from.y)
@@ -146,10 +151,141 @@ test.describe('copy', () => {
       { name: 'B', width: 100 },
       { name: 'C', width: 100 },
     ]
-    await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
 
     await clickHeaderCell({ page, columnIndex: 1 })
     expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
+  })
+})
+
+test.describe('selection background', () => {
+  /** the color painted inside a cell, away from its text */
+  const getCellBackgroundPixel = (page: Page, cell: { rowIndex: number; columnIndex: number }) =>
+    page.evaluate(({ rowIndex, columnIndex }) => {
+      const { state, renderer } = window.fastSheets
+      renderer.renderImmediate()
+      const { elCanvas } = state.options
+      const scale = elCanvas.width / elCanvas.getBoundingClientRect().width
+      // just inside the top-left corner: past the border, above the vertically centered text
+      const x = Math.round(((state.horizontalOffsets[columnIndex] || 0) + 4) * scale)
+      const y = Math.round(((state.verticalOffsets[rowIndex] || 0) + 4) * scale)
+      const [r, g, b] = elCanvas.getContext('2d')!.getImageData(x, y, 1, 1).data
+      return `rgb(${r}, ${g}, ${b})`
+    }, cell)
+
+  test('is kept on a search hit, whatever the plugin order', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      const searchPlugin = new window.FastSheetsSearchPlugin()
+      window.fastSheets.use(searchPlugin) // registered after the editable plugin
+      searchPlugin.highlightResult([{ rowIndex: 0, columnIndex: 0 }]) // grid cell (1, 1)
+    })
+
+    // select two cells, the search hit included
+    await clickCell({ page, rowIndex: 1, columnIndex: 1 })
+    await page.keyboard.press('Shift+ArrowRight')
+
+    const selected = 'rgb(233, 240, 254)' // DEFAULT_SELECTION_BACKGROUND_COLOR
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(selected)
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 2 })).toBe(selected)
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 3 })).toBe(
+      'rgb(255, 255, 255)',
+    )
+  })
+})
+
+test.describe('destroy editable plugin', () => {
+  test('removes all elements', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      window.fastSheetsEditablePlugin.destroy()
+    })
+
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await page.keyboard.press('x')
+
+    expect(await getUpdates(page)).toEqual([])
+
+    const pluginNames = await page.evaluate(() => Object.keys(window.fastSheets.state.plugins))
+    expect(pluginNames).not.toContain('editable')
+
+    await expect(page.locator('[data-name="elEditableContainerFront"]')).toHaveCount(0)
+    await expect(page.locator('[data-name="elEditableContainerBack"]')).toHaveCount(0)
+  })
+
+  test('removes every listener and observer it registered', async ({ page }) => {
+    await trackEventListeners(page)
+    await trackResizeObservers(page)
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    // a core-only grid first, so that the snapshot holds the core listeners only
+    await initFastSheets({ page, rowsCount: 20, columns, isRowNumberVisible: true })
+    const coreListeners = await getEventListeners(page)
+    const coreObservers = await page.evaluate(() => window.resourceTracker.liveObservers())
+
+    await page.evaluate(() => {
+      window.fastSheetsEditablePlugin = new window.FastSheetsEditablePlugin({
+        onUpdate() {
+          // do nothing
+        },
+      })
+      window.fastSheets.use(window.fastSheetsEditablePlugin)
+    })
+    expect(await getEventListeners(page)).not.toEqual(coreListeners)
+
+    // use the plugin: select, navigate, drag, open the cell editor
+    await clickCell({ page, rowIndex: 1, columnIndex: 1 })
+    await page.keyboard.press('ArrowDown')
+    await page.mouse.move(300, 150)
+    await page.keyboard.press('Enter')
+
+    await page.evaluate(() => {
+      window.fastSheetsEditablePlugin.destroy()
+    })
+
+    expect(await getEventListeners(page)).toEqual(coreListeners)
+    expect(await page.evaluate(() => window.resourceTracker.liveObservers())).toBe(coreObservers)
+  })
+
+  test('is released together with the grid', async ({ page }) => {
+    await trackEventListeners(page)
+    await trackResizeObservers(page)
+    await page.goto('/')
+    await page.waitForFunction(() => window.isFixtureReady === true)
+    const originListeners = await getEventListeners(page)
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 20, columns, isRowNumberVisible: true })
+
+    await clickCell({ page, rowIndex: 1, columnIndex: 1 })
+    await page.keyboard.press('Enter')
+
+    await page.evaluate(() => {
+      window.fastSheets.destroy()
+    })
+
+    expect(await getEventListeners(page)).toEqual(originListeners)
+    expect(await page.evaluate(() => window.resourceTracker.liveObservers())).toBe(0)
+    await expect(page.getByTestId('fast-sheets').locator(' > *')).toHaveCount(0)
   })
 })

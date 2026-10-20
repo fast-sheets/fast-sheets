@@ -1,6 +1,7 @@
 import type { FastSheetsPlugin, RawOptions } from '../core/types.ts'
 import { Renderer } from './Renderer.ts'
 import { State } from 'lib/core/State.ts'
+import { markAsCreatedByPackage, removeCreatedByPackage } from 'lib/core/utils/dom.ts'
 
 const DEFAULT_OPTIONS = {
   borderWidth: 1,
@@ -37,6 +38,7 @@ export class FastSheets {
       elCanvasContainer.setAttribute('data-name', 'elCanvasContainer')
       elCanvasContainer.style.position = 'relative'
       elCanvasContainer.style.flexGrow = '1'
+      markAsCreatedByPackage(elCanvasContainer)
     }
 
     if (!elCanvas) {
@@ -46,6 +48,7 @@ export class FastSheets {
       elCanvas.style.position = 'absolute'
       elCanvas.style.top = '0'
       elCanvas.style.left = '0'
+      markAsCreatedByPackage(elCanvas)
     }
 
     if (!elScroll) {
@@ -59,6 +62,7 @@ export class FastSheets {
       elScroll.style.overflowX = 'auto'
       elScroll.style.flexShrink = '0'
       elScroll.style.overscrollBehavior = 'none'
+      markAsCreatedByPackage(elScroll)
     }
 
     if (!elScrollInner) {
@@ -68,6 +72,7 @@ export class FastSheets {
       elScrollInner.style.position = 'absolute'
       elScrollInner.style.width = '100%'
       elScrollInner.style.height = '100%'
+      markAsCreatedByPackage(elScrollInner)
     }
 
     if (!elScrollPaneX) {
@@ -75,6 +80,7 @@ export class FastSheets {
       elScroll.appendChild(elScrollPaneX)
       elScrollPaneX.setAttribute('data-name', 'elScrollPaneX')
       elScrollPaneX.style.height = '1px'
+      markAsCreatedByPackage(elScrollPaneX)
     }
 
     if (!elScrollPaneY) {
@@ -82,6 +88,7 @@ export class FastSheets {
       elScroll.appendChild(elScrollPaneY)
       elScrollPaneY.setAttribute('data-name', 'elScrollPaneY')
       elScrollPaneY.style.width = '1px'
+      markAsCreatedByPackage(elScrollPaneY)
     }
 
     const columns = options.columns || options.data[0]?.map(() => ({ width: 100 })) || []
@@ -110,13 +117,22 @@ export class FastSheets {
   }
 
   public destroy() {
-    this.state.options.elContainer.innerHTML = ''
     this.unbindEvents()
     Object.values(this.state.plugins).forEach((plugin) => {
-      if (typeof plugin.destroy === 'function') {
+      try {
         plugin.destroy()
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(`Error destroying plugin ${plugin.name}:`, err)
       }
     })
+    this.renderer.destroy()
+    removeCreatedByPackage(this.state.options.elScrollPaneX)
+    removeCreatedByPackage(this.state.options.elScrollPaneY)
+    removeCreatedByPackage(this.state.options.elScrollInner)
+    removeCreatedByPackage(this.state.options.elScroll)
+    removeCreatedByPackage(this.state.options.elCanvas)
+    removeCreatedByPackage(this.state.options.elCanvasContainer)
   }
 
   public use(plugin: FastSheetsPlugin) {
@@ -126,6 +142,12 @@ export class FastSheets {
 
     this.state.plugins[plugin.name] = plugin
     plugin.setup(this)
+  }
+
+  /** Unregisters a plugin and repaints without it. Called by the plugin's `destroy()`. */
+  public unuse(pluginName: string) {
+    delete this.state.plugins[pluginName]
+    this.renderer.render()
   }
 
   public bindEvents = () => {
