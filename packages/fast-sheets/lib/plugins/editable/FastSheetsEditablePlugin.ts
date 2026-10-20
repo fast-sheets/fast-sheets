@@ -208,25 +208,23 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   public renderCellBackground({
     ctx,
     cell,
-    backgroundColor: defaultBackgroundColor,
     width,
     height,
     borderWidth,
   }: RenderCellBackgroundOptions) {
-    const backgroundColor =
+    const isInMultiCellSelection =
       cell &&
       this.rangeSelectionController.isCellSelected(cell) &&
       this.rangeSelectionController.selectedCellsCount() > 1
-        ? DEFAULT_SELECTION_BACKGROUND_COLOR
-        : defaultBackgroundColor
-
-    renderCellBackground({
-      ctx,
-      backgroundColor,
-      width,
-      height,
-      borderWidth,
-    })
+    if (isInMultiCellSelection) {
+      renderCellBackground({
+        ctx,
+        backgroundColor: DEFAULT_SELECTION_BACKGROUND_COLOR,
+        width,
+        height,
+        borderWidth,
+      })
+    }
   }
 
   public onResize() {

@@ -126,6 +126,7 @@ export class FastSheets {
         console.error(`Error destroying plugin ${plugin.name}:`, err)
       }
     })
+    this.state.plugins = {}
     this.renderer.destroy()
     removeCreatedByPackage(this.state.options.elScrollPaneX)
     removeCreatedByPackage(this.state.options.elScrollPaneY)

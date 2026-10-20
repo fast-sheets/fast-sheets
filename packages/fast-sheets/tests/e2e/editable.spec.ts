@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { initFastSheets, initFastSheetsWithPlugins } from 'tests/e2e/utils/instance.ts'
+import { initFastSheets, initFastSheetsWithEditable } from 'tests/e2e/utils/instance.ts'
 import { clickCell, clickHeaderCell, getCellMouseCoords } from 'tests/e2e/utils/cell.ts'
 import { copyToClipboard } from 'tests/e2e/utils/clipboard.ts'
 import {
@@ -17,7 +17,7 @@ test.describe('last row', () => {
       { name: 'A', width: 100 },
       { name: 'B', width: 100 },
     ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 1000, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 1000, columns, isRowNumberVisible: true })
 
     const { rowsCount, lastVisibleRowIndex } = await page.evaluate(() => {
       window.fastSheets.state.options.elScroll.scrollTop = 1e9
@@ -40,7 +40,7 @@ test.describe('last row', () => {
       { name: 'A', width: 100 },
       { name: 'B', width: 100 },
     ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 5, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 5, columns, isRowNumberVisible: true })
     await clickCell({ page, columnIndex: 0, rowIndex: 4 })
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
@@ -56,7 +56,7 @@ test.describe('last row', () => {
         { name: 'A', width: 100 },
         { name: 'B', width: 100 },
       ]
-      await initFastSheetsWithPlugins({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+      await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
       await clickCell({ page, columnIndex: 1, rowIndex: 1 })
       await page.keyboard.press('x')
 
@@ -70,7 +70,7 @@ test.describe('last row', () => {
           { name: 'A', width: 100 },
           { name: 'B', width: 100 },
         ]
-        await initFastSheetsWithPlugins({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+        await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
         await clickCell({ page, columnIndex: 1, rowIndex: 2 })
         await page.keyboard.press(key)
 
@@ -85,7 +85,7 @@ test.describe('last row', () => {
     //     { name: 'A', width: 100 },
     //     { name: 'B', width: 100 },
     //   ]
-    //   await initEditableFastSheets({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+    //   await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
     //   const prevented = await page.evaluate(() => {
     //     const press = (init: KeyboardEventInit) => {
     //       const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })
@@ -119,7 +119,7 @@ test.describe('copy', () => {
       { name: 'A', width: 100 },
       { name: 'B', width: 100 },
     ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     await clickCell({ page, columnIndex: 1, rowIndex: 3 })
     expect(await copyToClipboard(page)).toEqual({ text: 'r3c1', defaultPrevented: true })
   })
@@ -131,7 +131,7 @@ test.describe('copy', () => {
       { name: 'B', width: 100 },
       { name: 'C', width: 100 },
     ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     const from = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
     const to = await getCellMouseCoords({ page, columnIndex: 2, rowIndex: 3 })
     await page.mouse.move(from.x, from.y)
@@ -151,7 +151,7 @@ test.describe('copy', () => {
       { name: 'B', width: 100 },
       { name: 'C', width: 100 },
     ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
 
     await clickHeaderCell({ page, columnIndex: 1 })
@@ -167,7 +167,7 @@ test.describe('destroy editable plugin', () => {
       { name: 'B', width: 100 },
       { name: 'C', width: 100 },
     ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     await page.evaluate(() => {
       window.fastSheetsEditablePlugin.destroy()
     })
@@ -233,7 +233,7 @@ test.describe('destroy editable plugin', () => {
       { name: 'B', width: 100 },
       { name: 'C', width: 100 },
     ]
-    await initFastSheetsWithPlugins({ page, rowsCount: 20, columns, isRowNumberVisible: true })
+    await initFastSheetsWithEditable({ page, rowsCount: 20, columns, isRowNumberVisible: true })
 
     await clickCell({ page, rowIndex: 1, columnIndex: 1 })
     await page.keyboard.press('Enter')
