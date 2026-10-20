@@ -9,13 +9,7 @@ import {
   ROW_HEADING_FONT,
 } from 'lib/core/constants.ts'
 import type { Cell, CellsRange } from 'lib/core/types.ts'
-import {
-  clearCanvas,
-  getContext,
-  getCanvasSize,
-  setTransform,
-  resetContext,
-} from 'lib/core/utils/canvas.ts'
+import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
 import { getCellInfo } from 'lib/core/utils/cell.ts'
 import type { StateInstance } from 'lib/core/State.ts'
 import { Font } from 'lib/core/Font.ts'
@@ -460,8 +454,10 @@ export class Renderer {
     const { elCanvas } = this.state.options
     const ctx = getContext(elCanvas)
     if (ctx) {
-      resetContext(ctx)
+      ctx.reset()
     }
+    elCanvas.width = 0
+    elCanvas.height = 0
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId)
       this.animationFrameId = null

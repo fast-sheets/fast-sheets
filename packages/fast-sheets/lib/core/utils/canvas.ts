@@ -23,10 +23,6 @@ export const clearCanvas = (canvas: HTMLCanvasElement, ctx: CanvasRenderingConte
 
 export const getContext = (canvas: HTMLCanvasElement) => canvas.getContext('2d', { alpha: false })
 
-export const resetContext = (ctx: CanvasRenderingContext2D) => {
-  ctx.reset()
-}
-
 export const setTransform = (
   viewport: Viewport,
   ctx: CanvasRenderingContext2D,
