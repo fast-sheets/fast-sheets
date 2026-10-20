@@ -39,6 +39,10 @@ export class InputController {
     this.inputField.el.removeEventListener('blur', this.onInputBlurBound)
   }
 
+  destroy() {
+    this.inputField.destroy()
+  }
+
   showInput(cellInfo: CellInfo) {
     this.cellInfo = cellInfo
     const maxWidth = this.getInputMaxWidth(cellInfo)

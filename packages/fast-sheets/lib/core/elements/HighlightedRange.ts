@@ -79,4 +79,8 @@ export class HighlightedRange {
     this.range = { ...EMPTY_RANGE }
     this.borders.hide()
   }
+
+  destroy() {
+    this.borders.destroy()
+  }
 }

@@ -5,4 +5,7 @@ interface Window {
   FastSheets: typeof import('lib/core').FastSheets
   FastSheetsEditablePlugin: typeof import('lib/plugins/editable').FastSheetsEditablePlugin
   fastSheets: import('lib/core/types').FastSheetsInstance
+  fastSheetsEditablePlugin: InstanceType<
+    typeof import('lib/plugins/editable').FastSheetsEditablePlugin
+  >
 }

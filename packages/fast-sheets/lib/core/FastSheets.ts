@@ -110,13 +110,19 @@ export class FastSheets {
   }
 
   public destroy() {
-    this.state.options.elContainer.innerHTML = ''
     this.unbindEvents()
     Object.values(this.state.plugins).forEach((plugin) => {
       if (typeof plugin.destroy === 'function') {
         plugin.destroy()
       }
     })
+    this.renderer.destroy()
+    this.state.options.elScrollPaneX.remove()
+    this.state.options.elScrollPaneY.remove()
+    this.state.options.elScrollInner.remove()
+    this.state.options.elScroll.remove()
+    this.state.options.elCanvas.remove()
+    this.state.options.elCanvasContainer.remove()
   }
 
   public use(plugin: FastSheetsPlugin) {

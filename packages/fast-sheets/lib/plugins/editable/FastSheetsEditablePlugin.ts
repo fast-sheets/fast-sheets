@@ -1,6 +1,16 @@
-import type { FastSheetsPlugin, FastSheetsInstance, Cell, CellsRange } from 'lib/core/types.ts'
+import type {
+  FastSheetsPlugin,
+  FastSheetsInstance,
+  Cell,
+  CellsRange,
+  RenderCellBackgroundOptions,
+} from 'lib/core/types.ts'
 import type { ModifiedCell, Options, RawOptions } from './types.ts'
-import { DEFAULT_SELECTION_COLOR } from './constants.ts'
+import {
+  DEFAULT_INPUT_FONT,
+  DEFAULT_SELECTION_BACKGROUND_COLOR,
+  DEFAULT_SELECTION_COLOR,
+} from './constants.ts'
 import { BORDER_STYLE } from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
@@ -16,10 +26,23 @@ import {
   getRightCell,
 } from 'lib/core/utils/cell.ts'
 import { stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
+import { renderCellBackground } from 'lib/core/utils/render.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
 }
+
+// non-printable keys handled by the plugin when a cell is focused
+const HANDLED_KEYS = [
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Tab',
+  'Backspace',
+  'Enter',
+  'Escape',
+]
 
 export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   name = 'editable'
@@ -114,7 +137,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.inputController = new InputController({
       name: 'elInput',
       container: this.elEditableContainerFront,
-      font: '14px/15px Verdana', // todo
+      font: DEFAULT_INPUT_FONT,
       onUpdate: (modifiedCell) => {
         this.onUpdate([modifiedCell])
       },
@@ -127,20 +150,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
     this.init(instance)
     this.bindEvents(instance)
-
-    const renderCellOriginal = instance.renderer.renderCell
-    instance.renderer.renderCell = (ctx, cell, fillStyleDefault) => {
-      const fillStyle =
-        this.rangeSelectionController.isCellSelected(cell) &&
-        this.rangeSelectionController.selectedCellsCount() > 1
-          ? '#e9f0fe'
-          : fillStyleDefault
-      renderCellOriginal.apply(instance.renderer, [ctx, cell, fillStyle])
-    }
   }
 
   destroy() {
     this.unbindEvents(this.instance)
+    this.inputController.destroy()
+    this.copiedRange.destroy()
+    this.focusedCell.destroy()
+    this.selectedRange.destroy()
+    this.elEditableContainerFront.remove()
+    this.elEditableContainerBack.remove()
   }
 
   init(instance: FastSheetsInstance) {
@@ -197,15 +216,34 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.updateContainerPosition()
   }
 
+  public renderCellBackground({
+    ctx,
+    cell,
+    backgroundColor: defaultBackgroundColor,
+    width,
+    height,
+    borderWidth,
+  }: RenderCellBackgroundOptions) {
+    const backgroundColor =
+      cell &&
+      this.rangeSelectionController.isCellSelected(cell) &&
+      this.rangeSelectionController.selectedCellsCount() > 1
+        ? DEFAULT_SELECTION_BACKGROUND_COLOR
+        : defaultBackgroundColor
+
+    renderCellBackground({
+      ctx,
+      backgroundColor,
+      width,
+      height,
+      borderWidth,
+    })
+  }
+
   public onResize() {
     this.inputController.inputField.hide()
     this.rangeSelectionController.selectionEnd()
-    if (this.rangeSelectionController.selectionRange) {
-      this.selectedRange.highlight({
-        range: this.rangeSelectionController.selectionRange,
-        state: this.instance.state,
-      })
-    }
+    this.highlightSelection()
     if (this.focusedCell.cell) {
       this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state })
     }
@@ -341,9 +379,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyDown(e: KeyboardEvent) {
-    const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c'
-    const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'
-    if (this.focusedCell.cell && !this.isInputVisible() && !isPaste && !isCopy) {
+    const hasShortcutModifier = e.ctrlKey || e.metaKey || e.altKey
+    // a single character that is not part of a shortcut or an IME composition
+    const isPrintableKey = e.key.length === 1 && !hasShortcutModifier && !e.isComposing
+    // handle (and prevent the default action of) only the keys the grid really uses,
+    // so browser shortcuts, F-keys, Tab navigation etc. keep working
+    if (
+      this.focusedCell.cell &&
+      !this.isInputVisible() &&
+      (isPrintableKey || HANDLED_KEYS.includes(e.key))
+    ) {
       e.preventDefault()
       let newFocusedCell: Cell = {
         rowIndex: this.focusedCell.cell.rowIndex,
@@ -404,20 +449,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         this.startSelection(this.focusedCell.cell)
       }
 
-      // any key EXCEPT following
-      if (
-        !(
-          e.metaKey ||
-          e.altKey ||
-          e.ctrlKey ||
-          e.shiftKey ||
-          isArrowKey ||
-          e.key === 'Escape' ||
-          e.key === 'Backspace' ||
-          e.key === 'Tab'
-        ) &&
-        !this.inputController.isInputFieldVisible()
-      ) {
+      // a printable key or Enter starts editing of the focused cell
+      const isEditStart =
+        isPrintableKey || (e.key === 'Enter' && !e.shiftKey && !hasShortcutModifier)
+      if (isEditStart && !this.inputController.isInputFieldVisible()) {
         // show input
         const newFocusedCellInfo = getCellInfo({ cell: newFocusedCell, state: this.instance.state })
         this.inputController.showInput(newFocusedCellInfo)
@@ -504,9 +539,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private endSelection() {
     this.rangeSelectionController.selectionEnd()
-    this.selectedRange.highlight({
-      range: this.rangeSelectionController.selectionRange,
-      state: this.instance.state,
-    })
+    this.highlightSelection()
+  }
+
+  private highlightSelection() {
+    const range = this.rangeSelectionController.selectionRange
+    if (range.rowStart < 0 || range.columnStart < 0) {
+      // nothing is selected yet (e.g. a plain click), so there is nothing to outline
+      this.selectedRange.reset()
+      return
+    }
+    this.selectedRange.highlight({ range, state: this.instance.state })
   }
 }
