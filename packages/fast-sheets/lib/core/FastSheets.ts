@@ -120,7 +120,12 @@ export class FastSheets {
     this.unbindEvents()
     Object.values(this.state.plugins).forEach((plugin) => {
       if (typeof plugin.destroy === 'function') {
-        plugin.destroy()
+        try {
+          plugin.destroy()
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`Error destroying plugin ${plugin.name}:`, err)
+        }
       }
     })
     this.renderer.destroy()
