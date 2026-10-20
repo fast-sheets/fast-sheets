@@ -32,18 +32,6 @@ const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
 }
 
-// non-printable keys handled by the plugin when a cell is focused
-const HANDLED_KEYS = [
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'Tab',
-  'Backspace',
-  'Enter',
-  'Escape',
-]
-
 export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   name = 'editable'
 
@@ -244,7 +232,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   public onResize() {
     this.inputController.inputField.hide()
     this.rangeSelectionController.selectionEnd()
-    this.highlightSelection()
+    if (this.rangeSelectionController.selectionRange) {
+      this.selectedRange.highlight({
+        range: this.rangeSelectionController.selectionRange,
+        state: this.instance.state,
+      })
+    }
     if (this.focusedCell.cell) {
       this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state })
     }
@@ -380,16 +373,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyDown(e: KeyboardEvent) {
-    const hasShortcutModifier = e.ctrlKey || e.metaKey || e.altKey
-    // a single character that is not part of a shortcut or an IME composition
-    const isPrintableKey = e.key.length === 1 && !hasShortcutModifier && !e.isComposing
-    // handle (and prevent the default action of) only the keys the grid really uses,
-    // so browser shortcuts, F-keys, Tab navigation etc. keep working
-    if (
-      this.focusedCell.cell &&
-      !this.isInputVisible() &&
-      (isPrintableKey || HANDLED_KEYS.includes(e.key))
-    ) {
+    const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c'
+    const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'
+    if (this.focusedCell.cell && !this.isInputVisible() && !isPaste && !isCopy) {
       e.preventDefault()
       let newFocusedCell: Cell = {
         rowIndex: this.focusedCell.cell.rowIndex,
@@ -450,10 +436,20 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         this.startSelection(this.focusedCell.cell)
       }
 
-      // a printable key or Enter starts editing of the focused cell
-      const isEditStart =
-        isPrintableKey || (e.key === 'Enter' && !e.shiftKey && !hasShortcutModifier)
-      if (isEditStart && !this.inputController.isInputFieldVisible()) {
+      // any key EXCEPT following
+      if (
+        !(
+          e.metaKey ||
+          e.altKey ||
+          e.ctrlKey ||
+          e.shiftKey ||
+          isArrowKey ||
+          e.key === 'Escape' ||
+          e.key === 'Backspace' ||
+          e.key === 'Tab'
+        ) &&
+        !this.inputController.isInputFieldVisible()
+      ) {
         // show input
         const newFocusedCellInfo = getCellInfo({ cell: newFocusedCell, state: this.instance.state })
         this.inputController.showInput(newFocusedCellInfo)
@@ -540,16 +536,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private endSelection() {
     this.rangeSelectionController.selectionEnd()
-    this.highlightSelection()
-  }
-
-  private highlightSelection() {
-    const range = this.rangeSelectionController.selectionRange
-    if (range.rowStart < 0 || range.columnStart < 0) {
-      // nothing is selected yet (e.g. a plain click), so there is nothing to outline
-      this.selectedRange.reset()
-      return
-    }
-    this.selectedRange.highlight({ range, state: this.instance.state })
+    this.selectedRange.highlight({
+      range: this.rangeSelectionController.selectionRange,
+      state: this.instance.state,
+    })
   }
 }
