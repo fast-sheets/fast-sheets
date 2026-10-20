@@ -130,6 +130,10 @@ export class FastSheets {
     plugin.setup(this)
   }
 
+  public unuse(pluginName: string) {
+    delete this.state.plugins[pluginName]
+  }
+
   public bindEvents = () => {
     const { elContainer, elScroll, elCanvasContainer } = this.state.options
 

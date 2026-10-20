@@ -160,6 +160,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.selectedRange.destroy()
     this.elEditableContainerFront.remove()
     this.elEditableContainerBack.remove()
+    this.instance.unuse(this.name)
   }
 
   init(instance: FastSheetsInstance) {

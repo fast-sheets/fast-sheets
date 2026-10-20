@@ -37,6 +37,10 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
     this.instance = instance
   }
 
+  destroy() {
+    this.instance.unuse(this.name)
+  }
+
   private scrollTo(cell: Cell) {
     const state = this.instance.state
     const borderWidth = this.instance.state.options.borderWidth

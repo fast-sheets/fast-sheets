@@ -121,7 +121,7 @@ export interface FastSheetsPlugin {
   render?(): void
   renderCellBackground?(options: RenderCellBackgroundOptions): void
   renderCellText?(options: RenderCellTextOptions): void
-  destroy?(): void
+  destroy(): void
 }
 
 export interface DomRect {
