@@ -217,13 +217,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   public onResize() {
     this.inputController.inputField.hide()
-    this.rangeSelectionController.selectionEnd()
-    if (this.rangeSelectionController.selectionRange) {
-      this.selectedRange.highlight({
-        range: this.rangeSelectionController.selectionRange,
-        state: this.instance.state,
-      })
-    }
+    // sizes changed, so draw the selection again at its new place
+    this.endSelection()
     if (this.focusedCell.cell) {
       this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state })
     }
@@ -275,7 +270,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onMouseUp() {
-    this.endSelection()
+    if (this.rangeSelectionController.hasStarted) {
+      this.endSelection()
+    }
   }
 
   private async onCopy(e: ClipboardEvent) {
@@ -477,9 +474,13 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   private endSelection() {
     this.rangeSelectionController.selectionEnd()
-    this.selectedRange.highlight({
-      range: this.rangeSelectionController.selectionRange,
-      state: this.instance.state,
-    })
+    if (this.rangeSelectionController.isEmpty()) {
+      this.selectedRange.reset()
+    } else {
+      this.selectedRange.highlight({
+        range: this.rangeSelectionController.selectionRange,
+        state: this.instance.state,
+      })
+    }
   }
 }
