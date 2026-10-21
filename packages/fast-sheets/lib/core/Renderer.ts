@@ -8,7 +8,6 @@ import {
   DEFAULT_PADDING,
   ROW_HEADING_FONT,
 } from 'lib/core/constants.ts'
-import type { Cell, CellsRange } from 'lib/core/types.ts'
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
 import { getCellInfo } from 'lib/core/utils/cell.ts'
 import type { StateInstance } from 'lib/core/State.ts'
@@ -16,6 +15,7 @@ import { Font } from 'lib/core/Font.ts'
 import { getPlugins } from 'lib/core/utils/plugins.ts'
 import { renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
 import { getLinesHeight } from 'lib/core/utils/font.ts'
+import type { Cell, CellsRange } from 'lib/core/types.ts'
 
 export class Renderer {
   private readonly state: StateInstance

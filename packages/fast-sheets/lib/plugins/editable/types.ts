@@ -1,8 +1,4 @@
-export interface ModifiedCell {
-  rowIndex: number
-  columnIndex: number
-  value: string
-}
+import type { ModifiedCell } from 'lib/core/types.ts'
 
 export interface RawOptions {
   selectionColor?: string

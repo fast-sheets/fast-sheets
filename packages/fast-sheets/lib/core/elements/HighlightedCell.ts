@@ -1,7 +1,7 @@
-import type { Cell } from 'lib/core/types.ts'
 import { HighlightedArea } from './HighlightedArea.ts'
 import { getCellDomRect } from 'lib/core/utils/cell.ts'
 import type { StateInstance } from 'lib/core/State.ts'
+import type { Cell } from 'lib/core/types.ts'
 
 interface CellHighlightOptions {
   name: string

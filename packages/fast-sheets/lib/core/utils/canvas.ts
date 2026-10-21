@@ -1,4 +1,4 @@
-import type { CanvasSize, Viewport } from 'lib/core'
+import type { CanvasSize, Viewport } from 'lib/core/types.ts'
 import { DEFAULT_BORDER_COLOR } from 'lib/core/constants.ts'
 
 export const getDevicePixelRatio = () => Math.max(window.devicePixelRatio, 1)

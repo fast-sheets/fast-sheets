@@ -1,13 +1,14 @@
 import type {
   FastSheetsPlugin,
   FastSheetsInstance,
-  Cell,
   RenderCellBackgroundOptions,
+  Cell,
 } from 'lib/core/types.ts'
-import { DEFAULT_SELECTION_COLOR } from './constants.ts'
 import type { Options, RawOptions } from './types.ts'
 import { getCellInfo, getCellKey } from 'lib/core/utils/cell.ts'
 import { renderCellBackground } from 'lib/core/utils/render.ts'
+
+const DEFAULT_SELECTION_COLOR = 'rgb(8, 197 ,0)'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,

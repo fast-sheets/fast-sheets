@@ -1,7 +1,7 @@
-import type { Cell, CellsRange, DomRect } from 'lib/core/types.ts'
-import { HighlightedArea } from './HighlightedArea.ts'
+import { HighlightedArea } from 'lib/core/elements/HighlightedArea.ts'
 import { type StateInstance } from 'lib/core/State.ts'
 import { BORDER_STYLE } from 'lib/core/constants.ts'
+import type { Cell, CellsRange, DomRect } from 'lib/core/types.ts'
 
 const EMPTY_RANGE: CellsRange = {
   rowStart: -1,

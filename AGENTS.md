@@ -14,7 +14,9 @@ It's a **pnpm monorepo**:
 | Path | Purpose |
 | --- | --- |
 | `packages/fast-sheets/` | The published library (npm `fast-sheets`) |
-| `packages/fast-sheets/lib/core/` | Core: `FastSheets`, `Renderer`, `State`, `Font`, types, utils |
+| `packages/fast-sheets/lib/core/` | Core: `FastSheets`, `Renderer`, `State`, `Font`, types, constants, utils |
+| `packages/fast-sheets/lib/core/controllers/` | Reusable controllers for plugins: `InputController`, `RangeSelectionController` |
+| `packages/fast-sheets/lib/core/elements/` | Reusable DOM overlays for plugins: `InputField`, `HighlightedArea`, `HighlightedCell`, `HighlightedRange` |
 | `packages/fast-sheets/lib/plugins/editable/` | Editable plugin: cell input, range selection, clipboard (`fast-sheets/editable`) |
 | `packages/fast-sheets/lib/plugins/search/` | Search plugin: highlighting results and scrolling to them (`fast-sheets/search`) |
 | `packages/fast-sheets/tests/unit/` | Vitest unit tests (jsdom) |
@@ -76,14 +78,15 @@ Add or update tests with any behavior change. Use unit tests for pure logic (cel
 - Imports use the `lib/...` alias (for example `import { getCellInfo } from 'lib/core/utils/cell.ts'`) and tests use `tests/...`. Write explicit `.ts` extensions in import paths, as the existing code does.
 - Use `import type` for type-only imports.
 - Keep the library **free of runtime dependencies**. Don't add entries to `dependencies` in `packages/fast-sheets/package.json`.
-- Shared types belong in `lib/core/types.ts`. Plugin-specific types go in `lib/plugins/<name>/types.ts` and constants in `constants.ts`.
+- Shared types (including ones plugins exchange, such as `ModifiedCell`, `DomRect`, `CellsRangeWithPivot`) belong in `lib/core/types.ts`, and shared defaults (such as selection colors and the input font) in `lib/core/constants.ts`. Plugin-specific option types go in `lib/plugins/<name>/types.ts`.
+- Code that more than one plugin could use (controllers, DOM overlay elements, utils) lives in `lib/core/`, not inside a plugin folder. Plugins don't import from each other.
 
 ## Architecture notes
 
 - **`FastSheets`** (`lib/core/FastSheets.ts`) creates any DOM elements the caller doesn't pass in (container, canvas, scroll layers), merges options with `DEFAULT_OPTIONS` into `State`, binds wheel, scroll and resize events and registers plugins through `use(plugin)`.
 - **`State`** (`lib/core/State.ts`) is a plain mutable state shared by the renderer and plugins: options, viewport, row/column sizes and offsets, canvas size, the plugin map, `hasHeaderRow` and `numberingColumnWidth`.
 - **`Renderer`** (`lib/core/Renderer.ts`): `render()` throttles through `requestAnimationFrame`, and `renderImmediate()` draws synchronously. The header row and the row-numbering column are drawn separately from the grid cells.
-- **Plugins** implement `FastSheetsPlugin` (`lib/core/types.ts`)
+- **Plugins** implement `FastSheetsPlugin` (`lib/core/types.ts`) and build their UI from the core controllers and elements (`lib/core/controllers/`, `lib/core/elements/`).
   A new plugin needs its own `lib/plugins/<name>/index.ts` entry, a matching entry in `packages/fast-sheets/vite.config.ts` and an `exports` entry in `packages/fast-sheets/package.json`.
 - Plugins must clean up their DOM elements and event listeners in `destroy()`.
 - Performance matters most here. Avoid per-cell allocations and DOM work inside render paths. Draw only what's inside the viewport.

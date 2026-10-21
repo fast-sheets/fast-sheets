@@ -1,5 +1,6 @@
 import { State } from 'lib/core/State.ts'
 import { generateData } from 'tests/utils/generators.ts'
+
 import type { Column } from 'lib/core'
 
 export const createState = ({

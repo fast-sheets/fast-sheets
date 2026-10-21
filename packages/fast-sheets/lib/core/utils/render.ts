@@ -1,7 +1,7 @@
 import { DEFAULT_FONT, DEFAULT_FONT_HEIGHT, DEFAULT_LINE_SPACING } from 'lib/core/constants.ts'
 import { roundToPixels } from 'lib/core/utils/round-to-pixels.ts'
 import { getLinesHeight } from 'lib/core/utils/font.ts'
-import type { RenderCellBackgroundOptions, RenderCellTextOptions } from 'lib/core'
+import type { RenderCellBackgroundOptions, RenderCellTextOptions } from 'lib/core/types.ts'
 
 export const renderCellBackground = ({
   ctx,
