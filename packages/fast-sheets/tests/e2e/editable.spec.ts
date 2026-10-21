@@ -10,6 +10,9 @@ import {
 
 const getUpdates = (page: Page) => page.evaluate(() => window.updates)
 
+const getFocusedCell = (page: Page) =>
+  page.evaluate(() => window.fastSheetsEditablePlugin.focusedCell.cell)
+
 test.describe('last row', () => {
   test('the last data row is rendered', async ({ page }) => {
     await page.goto('/')
@@ -63,7 +66,20 @@ test.describe('last row', () => {
       expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }]])
     })
 
-    for (const key of ['Delete', 'F2', 'PageDown', 'CapsLock', 'Home', 'Escape']) {
+    test('a shifted key starts editing with that character', async ({ page }) => {
+      await page.goto('/')
+      const columns = [
+        { name: 'A', width: 100 },
+        { name: 'B', width: 100 },
+      ]
+      await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+      await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+      await page.keyboard.press('Shift+X')
+
+      expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'r1c1X' }]])
+    })
+
+    for (const key of ['Delete', 'F2', 'F5', 'PageDown', 'CapsLock', 'Home', 'Escape']) {
       test(`${key} does not write its name into the cell`, async ({ page }) => {
         await page.goto('/')
         const columns = [
@@ -71,44 +87,48 @@ test.describe('last row', () => {
           { name: 'B', width: 100 },
         ]
         await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
-        await clickCell({ page, columnIndex: 1, rowIndex: 2 })
+        await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+        expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 1 })
         await page.keyboard.press(key)
 
         expect(await getUpdates(page)).toEqual([])
       })
     }
 
-    // todo
-    // test('browser shortcuts are not prevented, keys are', async ({ page }) => {
-    //   await page.goto('/')
-    //   const columns = [
-    //     { name: 'A', width: 100 },
-    //     { name: 'B', width: 100 },
-    //   ]
-    //   await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
-    //   const prevented = await page.evaluate(() => {
-    //     const press = (init: KeyboardEventInit) => {
-    //       const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })
-    //       window.fastSheets.state.options.elContainer.dispatchEvent(event)
-    //       return event.defaultPrevented
-    //     }
-    //     return {
-    //       f5: press({ key: 'F5' }),
-    //       f12: press({ key: 'F12' }),
-    //       ctrlR: press({ key: 'r', ctrlKey: true }),
-    //       ctrlA: press({ key: 'a', ctrlKey: true }),
-    //       arrowRight: press({ key: 'ArrowRight' }),
-    //     }
-    //   })
-    //
-    //   expect(prevented).toEqual({
-    //     f5: false,
-    //     f12: false,
-    //     ctrlR: false,
-    //     ctrlA: false,
-    //     arrowRight: true,
-    //   })
-    // })
+    test('browser shortcuts are not prevented, keys are', async ({ page }) => {
+      await page.goto('/')
+      const columns = [
+        { name: 'A', width: 100 },
+        { name: 'B', width: 100 },
+      ]
+      await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+      await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+      expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 1 })
+      const prevented = await page.evaluate(() => {
+        const press = (init: KeyboardEventInit) => {
+          const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })
+          window.fastSheets.state.options.elContainer.dispatchEvent(event)
+          return event.defaultPrevented
+        }
+        return {
+          f5: press({ key: 'F5' }),
+          f12: press({ key: 'F12' }),
+          ctrlR: press({ key: 'r', ctrlKey: true }),
+          ctrlA: press({ key: 'a', ctrlKey: true }),
+          metaF: press({ key: 'f', metaKey: true }),
+          arrowRight: press({ key: 'ArrowRight' }),
+        }
+      })
+
+      expect(prevented).toEqual({
+        f5: false,
+        f12: false,
+        ctrlR: false,
+        ctrlA: false,
+        metaF: false,
+        arrowRight: true,
+      })
+    })
   })
 })
 

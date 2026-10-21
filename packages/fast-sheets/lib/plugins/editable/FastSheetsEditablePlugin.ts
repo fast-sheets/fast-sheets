@@ -13,6 +13,7 @@ import {
   DEFAULT_SELECTION_COLOR,
 } from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
+import { isArrowKey, isCharacterKey } from 'lib/core/utils/keyboard.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
 import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
@@ -351,118 +352,85 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyUp(e: KeyboardEvent) {
-    const isArrowKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
-    if (this.rangeSelectionController.hasStarted && !(e.shiftKey && isArrowKey)) {
+    if (this.rangeSelectionController.hasStarted && !(e.shiftKey && isArrowKey(e))) {
       this.endSelection()
     }
   }
 
   private onKeyDown(e: KeyboardEvent) {
-    const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c'
-    const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'
-    if (this.focusedCell.cell && !this.isInputVisible() && !isPaste && !isCopy) {
-      e.preventDefault()
-      let newFocusedCell: Cell = {
-        rowIndex: this.focusedCell.cell.rowIndex,
-        columnIndex: this.focusedCell.cell.columnIndex,
-      }
+    const focusedCell = this.focusedCell.cell
+    if (!focusedCell || this.isInputVisible()) {
+      return
+    }
 
-      // arrows
-      let isArrowKey = false
+    const hasCommandModifier = e.ctrlKey || e.metaKey || e.altKey
+    const isArrow = isArrowKey(e)
+    const isMove = (isArrow || e.key === 'Tab') && !hasCommandModifier
+    const isClear = e.key === 'Backspace' && !hasCommandModifier
+    const isEditStart = e.key === 'Enter' && !hasCommandModifier && !e.shiftKey
+    const isCharacter = isCharacterKey(e)
+    if (!isMove && !isClear && !isEditStart && !isCharacter) {
+      // leave shortcuts (copy, paste, reload...) and keys the grid does not use to the browser
+      return
+    }
+    e.preventDefault()
+
+    let newFocusedCell: Cell = focusedCell
+    if (isMove) {
+      const state = this.instance.state
       switch (e.key) {
-        case 'ArrowUp': {
-          // move focus up
-          newFocusedCell = getAboveCell({ cell: this.focusedCell.cell })
-          isArrowKey = true
+        case 'ArrowUp':
+          newFocusedCell = getAboveCell({ cell: focusedCell })
           break
-        }
-        case 'ArrowDown': {
-          // move focus down
-          newFocusedCell = getBelowCell({ cell: this.focusedCell.cell, state: this.instance.state })
-          isArrowKey = true
+        case 'ArrowDown':
+          newFocusedCell = getBelowCell({ cell: focusedCell, state })
           break
-        }
-        case 'ArrowLeft': {
-          // move focus left
-          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell })
-          isArrowKey = true
+        case 'ArrowLeft':
+          newFocusedCell = getLeftCell({ cell: focusedCell })
           break
-        }
-        case 'ArrowRight': {
-          // move focus right
-          newFocusedCell = getRightCell({ cell: this.focusedCell.cell, state: this.instance.state })
-          isArrowKey = true
+        case 'ArrowRight':
+          newFocusedCell = getRightCell({ cell: focusedCell, state })
           break
-        }
-      }
-
-      // backspace
-      if (e.key === 'Backspace') {
-        // clear selected cell
-        this.onUpdate([{ ...newFocusedCell, value: '' }])
-      }
-
-      // tab
-      if (e.key === 'Tab') {
-        if (e.shiftKey) {
-          // same as arrowLeft
-          newFocusedCell = getLeftCell({ cell: this.focusedCell.cell })
-        } else {
-          // same as arrowRight
-          newFocusedCell = getRightCell({ cell: this.focusedCell.cell, state: this.instance.state })
-        }
-      }
-
-      // shift + arrow
-      if (e.shiftKey && isArrowKey && !this.rangeSelectionController.hasStarted) {
-        this.selectedRange.reset()
-        this.rangeSelectionController.reset()
-        this.instance.renderer.render()
-        this.startSelection(this.focusedCell.cell)
-      }
-
-      // any key EXCEPT following
-      if (
-        !(
-          e.metaKey ||
-          e.altKey ||
-          e.ctrlKey ||
-          e.shiftKey ||
-          isArrowKey ||
-          e.key === 'Escape' ||
-          e.key === 'Backspace' ||
-          e.key === 'Tab'
-        ) &&
-        !this.inputController.isInputFieldVisible()
-      ) {
-        // show input
-        const newFocusedCellInfo = getCellInfo({ cell: newFocusedCell, state: this.instance.state })
-        this.inputController.showInput(newFocusedCellInfo)
-        if (e.key !== 'Enter') {
-          this.inputController.setValue(this.inputController.getValue() + e.key)
-        }
-      }
-
-      if (
-        newFocusedCell.rowIndex !== this.focusedCell.cell.rowIndex ||
-        newFocusedCell.columnIndex !== this.focusedCell.cell.columnIndex
-      ) {
-        // actualize focused cell
-        this.focusedCell.highlight({ cell: newFocusedCell, state: this.instance.state })
-      }
-
-      if (e.shiftKey) {
-        // update selection
-        if (this.rangeSelectionController.hasStarted && this.updateSelection(newFocusedCell)) {
-          this.instance.renderer.render()
-        }
-      } else if (!(e.metaKey || e.altKey || e.ctrlKey || e.shiftKey)) {
-        // clear selection
-        this.selectedRange.reset()
-        this.rangeSelectionController.reset()
-        this.instance.renderer.render()
+        case 'Tab':
+          newFocusedCell = e.shiftKey
+            ? getLeftCell({ cell: focusedCell })
+            : getRightCell({ cell: focusedCell, state })
+          break
       }
     }
+
+    if (isClear) {
+      this.onUpdate([{ ...focusedCell, value: '' }])
+    }
+
+    const isRangeSelection = e.shiftKey && isArrow && isMove
+    if (isRangeSelection && !this.rangeSelectionController.hasStarted) {
+      this.selectedRange.reset()
+      this.rangeSelectionController.reset()
+      this.startSelection(focusedCell)
+    }
+
+    if (isEditStart || isCharacter) {
+      this.inputController.showInput(getCellInfo({ cell: focusedCell, state: this.instance.state }))
+      if (isCharacter) {
+        this.inputController.setValue(this.inputController.getValue() + e.key)
+      }
+    }
+
+    if (
+      newFocusedCell.rowIndex !== focusedCell.rowIndex ||
+      newFocusedCell.columnIndex !== focusedCell.columnIndex
+    ) {
+      this.focusedCell.highlight({ cell: newFocusedCell, state: this.instance.state })
+    }
+
+    if (isRangeSelection) {
+      this.updateSelection(newFocusedCell)
+    } else {
+      this.selectedRange.reset()
+      this.rangeSelectionController.reset()
+    }
+    this.instance.renderer.render()
   }
 
   private onPointerDown(e: PointerEvent) {
