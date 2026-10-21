@@ -56,3 +56,17 @@ export const renderCellText = ({
   })
   ctx.restore()
 }
+
+/**
+ * Returns where each row (or column) starts: the first one at `firstOffset`,
+ * and each next one after the previous size and a border.
+ */
+export const getOffsets = (sizes: readonly number[], firstOffset: number, borderWidth: number) => {
+  const offsets: number[] = []
+  let offset = firstOffset
+  for (const size of sizes) {
+    offsets.push(offset)
+    offset += size + borderWidth
+  }
+  return offsets
+}

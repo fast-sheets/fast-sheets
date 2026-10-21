@@ -45,13 +45,26 @@ export class HighlightedRange {
     this.range.columnStart = range.columnStart
     this.range.columnEnd = range.columnEnd
 
-    const offsetTop = state.verticalOffsets[this.range.rowStart] || -1
-    const offsetBottom = state.verticalOffsets[this.range.rowEnd] || -1
-    const offsetLeft = state.horizontalOffsets[this.range.columnStart] || -1
-    const offsetRight = state.horizontalOffsets[this.range.columnEnd] || -1
+    const offsetTop = state.verticalOffsets[this.range.rowStart]
+    const offsetBottom = state.verticalOffsets[this.range.rowEnd]
+    const offsetLeft = state.horizontalOffsets[this.range.columnStart]
+    const offsetRight = state.horizontalOffsets[this.range.columnEnd]
 
-    const widthBottom = state.columnWidths[this.range.columnEnd] || -1
-    const heightRight = state.rowHeights[this.range.rowEnd] || -1
+    const widthBottom = state.columnWidths[this.range.columnEnd]
+    const heightRight = state.rowHeights[this.range.rowEnd]
+
+    if (
+      offsetTop === undefined ||
+      offsetBottom === undefined ||
+      offsetLeft === undefined ||
+      offsetRight === undefined ||
+      widthBottom === undefined ||
+      heightRight === undefined
+    ) {
+      // an empty range, or one outside the grid, has nothing to draw
+      this.borders.hide()
+      return
+    }
 
     const domRect: DomRect = {
       top: offsetTop,

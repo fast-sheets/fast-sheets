@@ -14,7 +14,7 @@ import { getCellInfo } from 'lib/core/utils/cell.ts'
 import type { StateInstance } from 'lib/core/State.ts'
 import { Font } from 'lib/core/Font.ts'
 import { getPlugins } from 'lib/core/utils/plugins.ts'
-import { renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
+import { getOffsets, renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
 import { getLinesHeight } from 'lib/core/utils/font.ts'
 import type { Cell, CellsRange } from 'lib/core/types.ts'
 
@@ -154,16 +154,7 @@ export class Renderer {
     if (this.state.hasHeaderRow) {
       firstOffset += this.getHeaderRowHeight() + borderWidth
     }
-    return this.state.rowHeights.slice(0, -1).reduce(
-      (offsets, height, index) => {
-        // we will calculate an offset for the next item
-        const currentOffset = offsets[index] || 1
-        const nextOffset = currentOffset + height + borderWidth
-        offsets.push(nextOffset)
-        return offsets
-      },
-      [firstOffset],
-    )
+    return getOffsets(this.state.rowHeights, firstOffset, borderWidth)
   }
 
   public getHorizontalOffsets() {
@@ -172,16 +163,7 @@ export class Renderer {
     if (this.state.options.isRowNumberVisible) {
       firstOffset += this.getNumberingColumnWidth() + borderWidth
     }
-    return this.state.columnWidths.slice(0, -1).reduce(
-      (offsets, width, index) => {
-        // we will calculate an offset for the next item
-        const currentOffset = offsets[index] || 1
-        const nextOffset = currentOffset + width + borderWidth
-        offsets.push(nextOffset)
-        return offsets
-      },
-      [firstOffset],
-    )
+    return getOffsets(this.state.columnWidths, firstOffset, borderWidth)
   }
 
   public findColumnIndex = (offsetX: number) => {

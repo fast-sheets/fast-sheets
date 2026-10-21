@@ -146,4 +146,60 @@ describe('renderer', () => {
 
     expect(state.horizontalOffsets).toHaveLength(2)
   })
+
+  describe('with borderWidth 0', () => {
+    const createBorderlessState = () =>
+      createState({
+        rowsCount: 3,
+        columns: [{ width: 100 }, { width: 50 }, { width: 70 }],
+        hasHeaderRow: false,
+        isRowNumberVisible: false,
+        borderWidth: 0,
+      })
+
+    it('starts the first row at 0 and each next row right after the previous one', () => {
+      const state = createBorderlessState()
+      state.rowHeights = [20, 30, 40]
+      const renderer = new Renderer(state)
+
+      expect(renderer.getVerticalOffsets()).toEqual([0, 20, 50])
+    })
+
+    it('starts the first column at 0 and each next column right after the previous one', () => {
+      const state = createBorderlessState()
+      state.columnWidths = [100, 50, 70]
+      const renderer = new Renderer(state)
+
+      expect(renderer.getHorizontalOffsets()).toEqual([0, 100, 150])
+    })
+  })
+
+  it('adds a border before each row and column', () => {
+    const state = createState({
+      rowsCount: 3,
+      columns: [{ width: 100 }, { width: 50 }, { width: 70 }],
+      hasHeaderRow: false,
+      isRowNumberVisible: false,
+      borderWidth: 2,
+    })
+    state.rowHeights = [20, 30, 40]
+    state.columnWidths = [100, 50, 70]
+    const renderer = new Renderer(state)
+
+    expect(renderer.getVerticalOffsets()).toEqual([2, 24, 56])
+    expect(renderer.getHorizontalOffsets()).toEqual([2, 104, 156])
+  })
+
+  it('has no offsets when there are no rows', () => {
+    const state = createState({
+      rowsCount: 0,
+      columns: [{ width: 100 }],
+      hasHeaderRow: false,
+      isRowNumberVisible: false,
+    })
+    state.rowHeights = []
+    const renderer = new Renderer(state)
+
+    expect(renderer.getVerticalOffsets()).toEqual([])
+  })
 })
