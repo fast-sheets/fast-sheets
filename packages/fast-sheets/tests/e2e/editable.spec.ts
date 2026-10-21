@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 import { initFastSheets, initFastSheetsWithEditable } from 'tests/e2e/utils/instance.ts'
 import { clickCell, clickHeaderCell, getCellMouseCoords } from 'tests/e2e/utils/cell.ts'
-import { copyToClipboard } from 'tests/e2e/utils/clipboard.ts'
+import { copyToClipboard, pasteFromClipboard } from 'tests/e2e/utils/clipboard.ts'
 import {
   getEventListeners,
   trackEventListeners,
@@ -176,6 +176,75 @@ test.describe('copy', () => {
 
     await clickHeaderCell({ page, columnIndex: 1 })
     expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
+  })
+
+  test('quotes a cell with line breaks, tabs or quotes', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      window.fastSheets.state.options.data[1]![1] = 'say "hi"\nbye'
+    })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+
+    expect((await copyToClipboard(page)).text).toBe('"say ""hi""\nbye"')
+  })
+})
+
+test.describe('paste', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+    { name: 'C', width: 100 },
+  ]
+
+  test('pastes rows and columns starting at the focused cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await pasteFromClipboard(page, 'a\tb\r\nc\td\r\n')
+
+    expect(await getUpdates(page)).toEqual([
+      [
+        { rowIndex: 1, columnIndex: 1, value: 'a' },
+        { rowIndex: 1, columnIndex: 2, value: 'b' },
+        { rowIndex: 2, columnIndex: 1, value: 'c' },
+        { rowIndex: 2, columnIndex: 2, value: 'd' },
+      ],
+    ])
+  })
+
+  test('pastes a quoted multi-line cell into one cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await pasteFromClipboard(page, '"hello, world!\nsecond line"\thttps://a/nb')
+
+    expect(await getUpdates(page)).toEqual([
+      [
+        { rowIndex: 1, columnIndex: 1, value: 'hello, world!\nsecond line' },
+        { rowIndex: 1, columnIndex: 2, value: 'https://a/nb' },
+      ],
+    ])
+  })
+
+  test('a copied multi-line cell pastes back as one cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      window.fastSheets.state.options.data[1]![1] = 'first, line\nsay "hi"'
+    })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    const { text } = await copyToClipboard(page)
+    await clickCell({ page, columnIndex: 2, rowIndex: 2 })
+    await pasteFromClipboard(page, text)
+
+    expect(await getUpdates(page)).toEqual([
+      [{ rowIndex: 2, columnIndex: 2, value: 'first, line\nsay "hi"' }],
+    ])
   })
 })
 
