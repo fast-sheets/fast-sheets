@@ -5,7 +5,6 @@ import { markAsCreatedByPackage, removeCreatedByPackage } from 'lib/core/utils/d
 
 const DEFAULT_OPTIONS = {
   borderWidth: 1,
-  plugins: [],
   isRowNumberVisible: false,
 }
 
