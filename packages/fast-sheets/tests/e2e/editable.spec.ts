@@ -132,6 +132,67 @@ test.describe('last row', () => {
   })
 })
 
+test.describe('cell editor', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+  ]
+  const getInput = (page: Page) => page.locator('[data-name="elInput"]')
+
+  test('saves what was typed when it loses focus', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await page.keyboard.press('x')
+    await page.keyboard.type('yz')
+    await clickCell({ page, columnIndex: 2, rowIndex: 3 })
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getUpdates(page)).toEqual([
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1xyz' }],
+    ])
+  })
+
+  test('saves and closes on Enter, without opening again', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await page.keyboard.press('x')
+    await page.keyboard.type('y')
+    await page.keyboard.press('Enter')
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getUpdates(page)).toEqual([
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1xy' }],
+    ])
+  })
+
+  test('does not send an unchanged value', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await expect(getInput(page)).toBeVisible()
+    await page.keyboard.press('Enter')
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getUpdates(page)).toEqual([])
+  })
+
+  test('stays open on Shift+Enter', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.press('Shift+Enter')
+
+    await expect(getInput(page)).toBeVisible()
+    expect(await getUpdates(page)).toEqual([])
+  })
+})
+
 test.describe('copy', () => {
   test('copies the focused cell after a plain click', async ({ page }) => {
     await page.goto('/')
