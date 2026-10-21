@@ -26,7 +26,7 @@ import {
   convertCellToRange,
   getRightCell,
 } from 'lib/core/utils/cell.ts'
-import { stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
+import { parseClipboardText, stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -323,27 +323,13 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     const paste = e.clipboardData?.getData('text')
     const focusedCell = this.focusedCell.cell
     if (paste && focusedCell) {
-      let escapedPaste = paste
-      // identify all cells containing quoted text and newlines (e.g., "row1\nrow2")
-      // then, replace newlines with a placeholder to properly parse rows and columns from paste
-      // and finally, restore the newlines in the final values of the modified cells
-      const NEW_LINE_PLACEHOLDER = '/n'
-      const matches = paste.matchAll(/"([\w\n]+)"/g)
-      for (const match of matches) {
-        const substr = match?.[1] // match in group 1 (text without quotes)
-        if (substr) {
-          const replacement = substr.split('\n').join(NEW_LINE_PLACEHOLDER)
-          escapedPaste = escapedPaste.replace(match[0], replacement)
-        }
-      }
-
       const modifiedCells: ModifiedCell[] = []
-      escapedPaste.split('\n').forEach((row, rowIndex) => {
-        row.split('\t').forEach((cell, columnIndex) => {
+      parseClipboardText(paste).forEach((row, rowIndex) => {
+        row.forEach((value, columnIndex) => {
           modifiedCells.push({
             rowIndex: focusedCell.rowIndex + rowIndex,
             columnIndex: focusedCell.columnIndex + columnIndex,
-            value: cell.split(NEW_LINE_PLACEHOLDER).join('\n'),
+            value,
           })
         })
       })
