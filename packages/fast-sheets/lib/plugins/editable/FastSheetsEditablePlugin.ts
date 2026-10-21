@@ -216,7 +216,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   public onResize() {
-    this.inputController.inputField.hide()
+    if (this.isInputVisible()) {
+      // the input is placed for the old sizes, so save what was typed and close it
+      this.inputController.commitInput()
+    }
     // sizes changed, so draw the selection again at its new place
     this.endSelection()
     if (this.focusedCell.cell) {
@@ -341,6 +344,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   private onKeyDown(e: KeyboardEvent) {
+    if (e.target instanceof Node && this.inputController.inputField.el.contains(e.target)) {
+      // the input handles its own keys; an Enter that closed it must not open it again
+      return
+    }
     const focusedCell = this.focusedCell.cell
     if (!focusedCell || this.isInputVisible()) {
       return
