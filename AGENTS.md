@@ -83,12 +83,8 @@ Add or update tests with any behavior change. Use unit tests for pure logic (cel
 - **`FastSheets`** (`lib/core/FastSheets.ts`) creates any DOM elements the caller doesn't pass in (container, canvas, scroll layers), merges options with `DEFAULT_OPTIONS` into `State`, binds wheel, scroll and resize events and registers plugins through `use(plugin)`.
 - **`State`** (`lib/core/State.ts`) is a plain mutable state shared by the renderer and plugins: options, viewport, row/column sizes and offsets, canvas size, the plugin map, `hasHeaderRow` and `numberingColumnWidth`.
 - **`Renderer`** (`lib/core/Renderer.ts`): `render()` throttles through `requestAnimationFrame`, and `renderImmediate()` draws synchronously. The header row and the row-numbering column are drawn separately from the grid cells.
-- **Index offsets** when there is a header row and/or `isRowNumberVisible` is on, internal cell indices are shifted by +1 relative to data indices. See `FastSheetsSearchPlugin.highlightResult` for an example, and keep this shift in mind for any cell math.
-- **Plugins** implement `FastSheetsPlugin` (`lib/core/types.ts`):
-  - `name`, `setup(instance)`
-  - optional hooks: `render()`, `renderCellBackground(opts)`, `renderCellText(opts)`, `destroy()`
-
-  The renderer calls these hooks for every registered plugin. A new plugin needs its own `lib/plugins/<name>/index.ts` entry, a matching entry in `packages/fast-sheets/vite.config.ts` and an `exports` entry in `packages/fast-sheets/package.json`.
+- **Plugins** implement `FastSheetsPlugin` (`lib/core/types.ts`)
+  A new plugin needs its own `lib/plugins/<name>/index.ts` entry, a matching entry in `packages/fast-sheets/vite.config.ts` and an `exports` entry in `packages/fast-sheets/package.json`.
 - Plugins must clean up their DOM elements and event listeners in `destroy()`.
 - Performance matters most here. Avoid per-cell allocations and DOM work inside render paths. Draw only what's inside the viewport.
 
