@@ -8,14 +8,16 @@ export const createState = ({
   columns,
   hasHeaderRow,
   isRowNumberVisible,
+  borderWidth = 1,
 }: {
   rowsCount: number
   columns: Column[]
   hasHeaderRow: boolean
   isRowNumberVisible: boolean
+  borderWidth?: number
 }) => {
   const state = new State()
-  state.hasHeaderRow = !!columns
+  state.hasHeaderRow = hasHeaderRow
   state.options = {
     elContainer: document.createElement('div'),
     elCanvasContainer: document.createElement('div'),
@@ -24,7 +26,7 @@ export const createState = ({
     elScrollInner: document.createElement('div'),
     elScrollPaneX: document.createElement('div'),
     elScrollPaneY: document.createElement('div'),
-    borderWidth: 1,
+    borderWidth,
     data: generateData(rowsCount, columns.length),
     columns: [],
     isRowNumberVisible,
