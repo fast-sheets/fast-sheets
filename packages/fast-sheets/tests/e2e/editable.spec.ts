@@ -248,6 +248,71 @@ test.describe('paste', () => {
   })
 })
 
+test.describe('selected range box', () => {
+  const columns = [{ name: 'A' }, { name: 'B' }, { name: 'C' }]
+
+  /** the selected range box: whether it is shown, and where it is relative to the grid */
+  const getSelectedRangeBox = (page: Page) =>
+    page.evaluate(() => {
+      const { borders } = window.fastSheetsEditablePlugin.selectedRange
+      return {
+        display: borders.container.style.display,
+        left: parseFloat(borders.container.style.left),
+        right:
+          parseFloat(borders.container.style.left) + parseFloat(borders.borderRight.style.left),
+      }
+    })
+
+  const resizeGrid = async (page: Page, width: number) => {
+    await page.getByTestId('fast-sheets').evaluate((el: HTMLElement, width) => {
+      el.style.width = `${width}px`
+    }, width)
+    // let the resize observers run
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    )
+  }
+
+  test('stays hidden after a plain click', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+
+    expect((await getSelectedRangeBox(page)).display).toBe('none')
+  })
+
+  test('stays hidden after a resize when nothing is selected', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await resizeGrid(page, 600)
+
+    expect((await getSelectedRangeBox(page)).display).toBe('none')
+  })
+
+  test('follows the selected cells after a resize', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const from = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    const to = await getCellMouseCoords({ page, columnIndex: 2, rowIndex: 2 })
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 6 })
+    await page.mouse.up()
+    await resizeGrid(page, 600)
+
+    const expected = await page.evaluate(() => {
+      const state = window.fastSheets.state
+      return {
+        display: 'block',
+        left: state.horizontalOffsets[1],
+        right: state.horizontalOffsets[2]! + state.columnWidths[2]! - 1,
+      }
+    })
+    expect(await getSelectedRangeBox(page)).toEqual(expected)
+  })
+})
+
 test.describe('selection background', () => {
   /** the color painted inside a cell, away from its text */
   const getCellBackgroundPixel = (page: Page, cell: { rowIndex: number; columnIndex: number }) =>

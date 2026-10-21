@@ -58,7 +58,15 @@ export class RangeSelectionController {
     )
   }
 
+  /** Whether no cells are selected: nothing was selected yet, or a selection was started but not extended. */
+  isEmpty() {
+    return this.selectionRange.rowStart < 0 || this.selectionRange.columnStart < 0
+  }
+
   selectedCellsCount() {
+    if (this.isEmpty()) {
+      return 0
+    }
     return (
       (Math.abs(this.selectionRange.columnEnd - this.selectionRange.columnStart) + 1) *
       (Math.abs(this.selectionRange.rowEnd - this.selectionRange.rowStart) + 1)
