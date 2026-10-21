@@ -7,6 +7,7 @@
       <RouterLink to="/editable">Editable</RouterLink>
       <RouterLink to="/multiple">Multiple</RouterLink>
       <RouterLink to="/search">Search</RouterLink>
+      <RouterLink to="/search-editable">Search & Editable</RouterLink>
     </nav>
     <div class="content">
       <RouterView />
