@@ -1,6 +1,13 @@
-import type { DomRect } from 'lib/core/types.ts'
-import { uberlay } from 'lib/plugins/editable/styles.ts'
 import { BORDER_STYLE } from 'lib/core/constants.ts'
+
+import type { DomRect } from 'lib/core/types.ts'
+
+const uberlay: Partial<CSSStyleDeclaration> = {
+  position: 'absolute',
+  height: '0',
+  width: '0',
+  top: '0',
+}
 
 const highlightedBoxStyles: Partial<CSSStyleDeclaration> = {
   position: 'absolute',

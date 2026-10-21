@@ -1,16 +1,22 @@
-import type { FastSheetsPlugin, FastSheetsInstance, Cell, CellsRange } from 'lib/core/types.ts'
-import type { ModifiedCell, Options, RawOptions } from './types.ts'
+import type {
+  FastSheetsPlugin,
+  FastSheetsInstance,
+  ModifiedCell,
+  CellsRange,
+  Cell,
+} from 'lib/core/types.ts'
+import type { Options, RawOptions } from './types.ts'
 import {
+  BORDER_STYLE,
   DEFAULT_INPUT_FONT,
   DEFAULT_SELECTION_BACKGROUND_COLOR,
   DEFAULT_SELECTION_COLOR,
-} from './constants.ts'
-import { BORDER_STYLE } from 'lib/core/constants.ts'
+} from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
 import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
-import { InputController } from './controllers/InputController.ts'
+import { InputController } from 'lib/core/controllers/InputController.ts'
 import {
   getAboveCell,
   getBelowCell,

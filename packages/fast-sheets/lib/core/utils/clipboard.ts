@@ -1,4 +1,4 @@
-import type { CellsRange, Data } from 'lib/core'
+import type { CellsRange, Data } from 'lib/core/types.ts'
 
 /**
  * Converts a range of cells into a string for clipboard.

@@ -1,4 +1,4 @@
-import { getDevicePixelRatio } from 'lib/core/utils/canvas'
+import { getDevicePixelRatio } from 'lib/core/utils/canvas.ts'
 
 export const roundToPixels = (value: number) => {
   const devicePixelRatio = getDevicePixelRatio()

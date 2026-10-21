@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test'
-import { type Column } from 'lib/core'
 import { generateData } from 'tests/utils/generators.ts'
+import type { Column } from 'lib/core'
 
 interface InitOptions {
   page: Page

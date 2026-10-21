@@ -1,5 +1,5 @@
+import { DEFAULT_SELECTION_COLOR } from 'lib/core/constants.ts'
 import type { CellInfo } from 'lib/core/types.ts'
-import { DEFAULT_SELECTION_COLOR } from 'lib/plugins/editable/constants.ts'
 
 export const inputField: Partial<CSSStyleDeclaration> = {
   position: 'absolute',

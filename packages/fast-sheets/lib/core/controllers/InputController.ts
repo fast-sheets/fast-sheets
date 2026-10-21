@@ -1,7 +1,6 @@
-import type { CellInfo } from 'lib/core/types.ts'
-import { InputField } from '../elements/InputField.ts'
-import type { ModifiedCell } from '../types.ts'
+import { InputField } from 'lib/core/elements/InputField.ts'
 import type { StateInstance } from 'lib/core/State.ts'
+import type { CellInfo, ModifiedCell } from 'lib/core/types.ts'
 
 interface InputControllerOptions {
   name: string

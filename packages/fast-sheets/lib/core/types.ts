@@ -1,44 +1,7 @@
-import { type FastSheets } from 'lib/core/index.ts'
+import type { FastSheets } from 'lib/core/FastSheets.ts'
 import type { Font } from 'lib/core/Font.ts'
 
-export interface RawOptions {
-  elContainer: HTMLElement
-  elCanvasContainer?: HTMLElement
-  elCanvas?: HTMLCanvasElement
-  elScroll?: HTMLElement
-  elScrollInner?: HTMLElement
-  elScrollPaneX?: HTMLElement
-  elScrollPaneY?: HTMLElement
-  data: Data
-  borderWidth?: number
-  columns?: Column[]
-  isRowNumberVisible?: boolean
-}
-
-export interface Options extends RawOptions {
-  elCanvas: HTMLCanvasElement
-  elCanvasContainer: HTMLElement
-  elScroll: HTMLElement
-  elScrollInner: HTMLElement
-  elScrollPaneX: HTMLElement
-  elScrollPaneY: HTMLElement
-  borderWidth: number
-  columns: Column[]
-}
-
 export type Data = string[][]
-
-export interface Size {
-  width: number
-  height: number
-}
-
-export interface CanvasSize {
-  widthWithPixelRatio: number
-  heightWithPixelRatio: number
-  width: string
-  height: string
-}
 
 export interface Padding {
   x: number
@@ -77,11 +40,66 @@ export interface CellInfo {
   font: string
 }
 
+export interface DomRect {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
 export interface CellsRange {
   columnStart: number
   rowStart: number
   columnEnd: number
   rowEnd: number
+}
+
+export interface CellsRangeWithPivot extends CellsRange {
+  rowPivot: number
+  columnPivot: number
+}
+
+export interface ModifiedCell {
+  rowIndex: number
+  columnIndex: number
+  value: string
+}
+
+export interface RawOptions {
+  elContainer: HTMLElement
+  elCanvasContainer?: HTMLElement
+  elCanvas?: HTMLCanvasElement
+  elScroll?: HTMLElement
+  elScrollInner?: HTMLElement
+  elScrollPaneX?: HTMLElement
+  elScrollPaneY?: HTMLElement
+  data: Data
+  borderWidth?: number
+  columns?: Column[]
+  isRowNumberVisible?: boolean
+}
+
+export interface Options extends RawOptions {
+  elCanvas: HTMLCanvasElement
+  elCanvasContainer: HTMLElement
+  elScroll: HTMLElement
+  elScrollInner: HTMLElement
+  elScrollPaneX: HTMLElement
+  elScrollPaneY: HTMLElement
+  borderWidth: number
+  columns: Column[]
+}
+
+export interface Size {
+  width: number
+  height: number
+}
+
+export interface CanvasSize {
+  widthWithPixelRatio: number
+  heightWithPixelRatio: number
+  width: string
+  height: string
 }
 
 export interface Viewport {
@@ -129,16 +147,4 @@ export interface FastSheetsPlugin {
   renderCellText?(options: RenderCellTextOptions): void
   /** Releases everything the plugin created and unregisters it with `instance.unuse(this.name)`. */
   destroy(): void
-}
-
-export interface DomRect {
-  top: number
-  left: number
-  width: number
-  height: number
-}
-
-export interface CellsRangeWithPivot extends CellsRange {
-  rowPivot: number
-  columnPivot: number
 }

@@ -1,5 +1,5 @@
-import type { FastSheetsPlugin, RawOptions } from '../core/types.ts'
-import { Renderer } from './Renderer.ts'
+import type { FastSheetsPlugin, RawOptions } from 'lib/core/types.ts'
+import { Renderer } from 'lib/core/Renderer.ts'
 import { State } from 'lib/core/State.ts'
 import { markAsCreatedByPackage, removeCreatedByPackage } from 'lib/core/utils/dom.ts'
 
