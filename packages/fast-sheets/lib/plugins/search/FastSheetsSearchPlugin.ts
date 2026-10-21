@@ -7,11 +7,10 @@ import type {
 import type { Options, RawOptions } from './types.ts'
 import { getCellInfo, getCellKey } from 'lib/core/utils/cell.ts'
 import { renderCellBackground } from 'lib/core/utils/render.ts'
-
-const DEFAULT_SELECTION_COLOR = 'rgb(8, 197 ,0)'
+import { DEFAULT_SEARCH_RESULT_COLOR } from 'lib/core/constants.ts'
 
 const DEFAULT_OPTIONS = {
-  selectionColor: DEFAULT_SELECTION_COLOR,
+  selectionColor: DEFAULT_SEARCH_RESULT_COLOR,
 }
 
 interface SearchResult {
@@ -75,7 +74,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
       if (this.searchResult[key]) {
         renderCellBackground({
           ctx,
-          bordersColor: 'rgb(8,197,0)',
+          bordersColor: this.options.selectionColor,
           backgroundColor,
           borderWidth,
           width: cellInfo.width,
