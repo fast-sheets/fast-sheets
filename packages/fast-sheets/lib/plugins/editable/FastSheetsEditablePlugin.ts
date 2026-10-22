@@ -47,6 +47,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   pointerDownTime = 0
   isDoubleTap = false
   doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
+  // the container's touch-action before setup, restored on destroy
+  #initialTouchAction = ''
 
   #boundDoubleClick: (e: MouseEvent) => void
   #boundMouseDown: (e: MouseEvent) => void
@@ -146,6 +148,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.selectedRange.destroy()
     this.elEditableContainerFront.remove()
     this.elEditableContainerBack.remove()
+    this.instance.state.options.elContainer.style.touchAction = this.#initialTouchAction
     this.instance.unregister(this.name)
   }
 
@@ -155,6 +158,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
     // elEditableContainerFront should be after scroll
     instance.state.options.elScroll.after(this.elEditableContainerFront)
+
+    // a double tap opens the cell editor, so it must not zoom the page
+    this.#initialTouchAction = instance.state.options.elContainer.style.touchAction
+    instance.state.options.elContainer.style.touchAction = 'manipulation'
   }
 
   bindEvents(instance: FastSheetsInstance) {
@@ -241,6 +248,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onMouseDown(e: MouseEvent) {
+    if (this.#isMouseDownOnEditedCell(e)) {
+      // iOS sends the mouse events of the tap that opened the editor to the grid under it.
+      // Their default action would focus the grid, and the blur would close the editor
+      e.preventDefault()
+      return
+    }
     if (!isLeftMouseButton(e)) {
       return
     }
@@ -450,6 +463,19 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       }
       this.instance.renderer.render()
     }
+  }
+
+  /** Whether the mouse is pressed on the grid at the cell being edited, not on the editor itself */
+  #isMouseDownOnEditedCell(e: MouseEvent) {
+    const editedCell = this.inputController.cellInfo?.cell
+    if (!editedCell || !this.#isInputVisible()) {
+      return false
+    }
+    if (e.target instanceof Node && this.inputController.inputField.el.contains(e.target)) {
+      return false
+    }
+    const cell = this.instance.renderer.findCellByMouseEvent(e)
+    return cell?.rowIndex === editedCell.rowIndex && cell.columnIndex === editedCell.columnIndex
   }
 
   #isInputVisible() {
