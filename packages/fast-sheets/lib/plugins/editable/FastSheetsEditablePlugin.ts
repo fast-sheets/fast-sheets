@@ -232,8 +232,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.instance.renderer.render()
   }
 
-  /** Selects all cells. The focused cell stays where it is, or moves to the first cell if there is none. */
-  selectAll() {
+  selectAllCells() {
     const state = this.instance.state
     const rowsCount = state.rowHeights.length
     const columnsCount = state.columnWidths.length
@@ -276,8 +275,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       if (!this.#isInputVisible()) {
         this.#startSelection(cell)
       }
-    } else if (this.instance.renderer.isTopLeftCornerMouseEvent(e)) {
-      this.selectAll()
+    } else if (this.instance.renderer.isTopLeftCorner(e)) {
+      this.selectAllCells()
     }
     this.instance.renderer.render()
   }
@@ -373,7 +372,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
     if (isSelectAllShortcut(e)) {
       e.preventDefault()
-      this.selectAll()
+      this.selectAllCells()
       return
     }
     const focusedCell = this.focusedCell.cell
@@ -479,8 +478,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           const cellInfo = getCellInfo({ cell, state: this.instance.state })
           this.inputController.showInput(cellInfo)
         }
-      } else if (this.instance.renderer.isTopLeftCornerMouseEvent(e)) {
-        this.selectAll()
+      } else if (this.instance.renderer.isTopLeftCorner(e)) {
+        this.selectAllCells()
       }
       this.instance.renderer.render()
     }

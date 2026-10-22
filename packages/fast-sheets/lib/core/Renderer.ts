@@ -269,8 +269,7 @@ export class Renderer {
     return cell
   }
 
-  /** Whether the event is over the top left corner, above the row numbers and before the column names. */
-  isTopLeftCornerMouseEvent(e: MouseEvent) {
+  isTopLeftCorner(e: MouseEvent) {
     const state = this.#state
     if (!state.hasHeaderRow || !state.options.isRowNumberVisible) {
       return false
