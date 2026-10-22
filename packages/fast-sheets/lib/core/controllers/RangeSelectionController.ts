@@ -45,6 +45,16 @@ export class RangeSelectionController {
     return false
   }
 
+  /** Selects the whole range at once, with the pivot at its first cell. */
+  selectRange(range: CellsRange) {
+    this.hasStarted = false
+    this.selectionRange = {
+      ...range,
+      rowPivot: range.rowStart,
+      columnPivot: range.columnStart,
+    }
+  }
+
   selectionEnd() {
     this.hasStarted = false
   }
