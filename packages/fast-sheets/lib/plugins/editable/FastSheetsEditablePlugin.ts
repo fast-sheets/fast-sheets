@@ -3,11 +3,12 @@ import type { Options, RawOptions } from './types.ts'
 import {
   BORDER_STYLE,
   DEFAULT_INPUT_FONT,
+  DEFAULT_SELECTED_HEADING_BACKGROUND_COLOR,
   DEFAULT_SELECTION_BACKGROUND_COLOR,
   DEFAULT_SELECTION_COLOR,
 } from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
-import { isArrowKey, isCharacterKey } from 'lib/core/utils/keyboard.ts'
+import { isArrowKey, isCharacterKey, isSelectAllShortcut } from 'lib/core/utils/keyboard.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
 import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
@@ -212,6 +213,26 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     return isInMultiCellSelection ? DEFAULT_SELECTION_BACKGROUND_COLOR : backgroundColor
   }
 
+  getColumnHeadingBackgroundColor(columnIndex: number, backgroundColor: string) {
+    const range = this.rangeSelectionController.selectionRange
+    const isSelected =
+      this.focusedCell.cell?.columnIndex === columnIndex ||
+      (!this.rangeSelectionController.isEmpty() &&
+        columnIndex >= range.columnStart &&
+        columnIndex <= range.columnEnd)
+    return isSelected ? DEFAULT_SELECTED_HEADING_BACKGROUND_COLOR : backgroundColor
+  }
+
+  getRowHeadingBackgroundColor(rowIndex: number, backgroundColor: string) {
+    const range = this.rangeSelectionController.selectionRange
+    const isSelected =
+      this.focusedCell.cell?.rowIndex === rowIndex ||
+      (!this.rangeSelectionController.isEmpty() &&
+        rowIndex >= range.rowStart &&
+        rowIndex <= range.rowEnd)
+    return isSelected ? DEFAULT_SELECTED_HEADING_BACKGROUND_COLOR : backgroundColor
+  }
+
   onResize() {
     // Column widths follow the grid width, while a new height alone moves no cell:
     // on phones the height changes whenever the keyboard opens or closes
@@ -239,6 +260,27 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.instance.renderer.render()
   }
 
+  selectAllCells() {
+    const state = this.instance.state
+    const rowsCount = state.rowHeights.length
+    const columnsCount = state.columnWidths.length
+    if (!rowsCount || !columnsCount) {
+      return
+    }
+    const range: CellsRange = {
+      rowStart: 0,
+      rowEnd: rowsCount - 1,
+      columnStart: 0,
+      columnEnd: columnsCount - 1,
+    }
+    this.rangeSelectionController.selectRange(range)
+    this.selectedRange.highlight({ range, state })
+    if (!this.focusedCell.cell) {
+      this.focusedCell.highlight({ cell: { rowIndex: 0, columnIndex: 0 }, state })
+    }
+    this.instance.renderer.render()
+  }
+
   #onDoubleClick(e: MouseEvent) {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell) {
@@ -261,6 +303,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       if (!this.#isInputVisible()) {
         this.#startSelection(cell)
       }
+    } else if (this.instance.renderer.isTopLeftCorner(e)) {
+      this.selectAllCells()
     }
     this.instance.renderer.render()
   }
@@ -351,8 +395,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       // the input handles its own keys; an Enter that closed it must not open it again
       return
     }
+    if (this.#isInputVisible()) {
+      return
+    }
+    if (isSelectAllShortcut(e)) {
+      e.preventDefault()
+      this.selectAllCells()
+      return
+    }
     const focusedCell = this.focusedCell.cell
-    if (!focusedCell || this.#isInputVisible()) {
+    if (!focusedCell) {
       return
     }
 
@@ -454,6 +506,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           const cellInfo = getCellInfo({ cell, state: this.instance.state })
           this.inputController.showInput(cellInfo)
         }
+      } else if (this.instance.renderer.isTopLeftCorner(e)) {
+        this.selectAllCells()
       }
       this.instance.renderer.render()
     }

@@ -114,7 +114,6 @@ test.describe('last row', () => {
           f5: press({ key: 'F5' }),
           f12: press({ key: 'F12' }),
           ctrlR: press({ key: 'r', ctrlKey: true }),
-          ctrlA: press({ key: 'a', ctrlKey: true }),
           metaF: press({ key: 'f', metaKey: true }),
           arrowRight: press({ key: 'ArrowRight' }),
         }
@@ -124,11 +123,36 @@ test.describe('last row', () => {
         f5: false,
         f12: false,
         ctrlR: false,
-        ctrlA: false,
         metaF: false,
         arrowRight: true,
       })
     })
+  })
+})
+
+test.describe('page scrolled', () => {
+  test('a click focuses the cell under the pointer', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 10, columns, isRowNumberVisible: true })
+    // the page is taller than the window and scrolled, as it often is on a phone
+    const { x, y } = await page.evaluate(() => {
+      document.body.style.paddingTop = '200px'
+      document.body.style.height = '3000px'
+      window.scrollTo(0, 260)
+      const { state } = window.fastSheets
+      const rect = state.options.elScrollInner.getBoundingClientRect()
+      return {
+        x: rect.left + (state.horizontalOffsets[0] || 0) + 5,
+        y: rect.top + (state.verticalOffsets[2] || 0) + 5,
+      }
+    })
+    await page.mouse.click(x, y)
+
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 2, columnIndex: 0 })
   })
 })
 
@@ -179,6 +203,37 @@ test.describe('cell editor', () => {
 
     await expect(getInput(page)).toBeHidden()
     expect(await getUpdates(page)).toEqual([])
+  })
+
+  test('discards what was typed and closes on Escape', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.type('xyz')
+    await page.keyboard.press('Escape')
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getUpdates(page)).toEqual([])
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 1 })
+    // the focus is back on the grid, so arrows move the focused cell again
+    await page.keyboard.press('ArrowDown')
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 2, columnIndex: 1 })
+  })
+
+  test('restores the cell text on Escape after typing started the editing', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await page.keyboard.press('x')
+    await page.keyboard.type('y')
+    await page.keyboard.press('Escape')
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getUpdates(page)).toEqual([
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1' }],
+    ])
   })
 
   test('stays open on Shift+Enter', async ({ page }) => {
@@ -289,6 +344,86 @@ test.describe('copy', () => {
   })
 })
 
+test.describe('select all', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+    { name: 'C', width: 100 },
+  ]
+  // the first generated cell has a line break, so it is quoted
+  const allCellsText = '"r0\nc0"\tr0c1\tr0c2\nr1c0\tr1c1\tr1c2\nr2c0\tr2c1\tr2c2'
+  const allCellsRange = { rowStart: 0, rowEnd: 2, columnStart: 0, columnEnd: 2 }
+
+  /** the selected range, or undefined while its box is hidden */
+  const getSelectedRange = (page: Page) =>
+    page.evaluate(() => {
+      const { range, borders } = window.fastSheetsEditablePlugin.selectedRange
+      return borders.container.style.display === 'none' ? undefined : { ...range }
+    })
+
+  for (const shortcut of ['Control+a', 'Meta+a']) {
+    test(`${shortcut} selects all cells and keeps the focused cell`, async ({ page }) => {
+      await page.goto('/')
+      await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+      await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+      await page.keyboard.press(shortcut)
+
+      expect(await getSelectedRange(page)).toEqual(allCellsRange)
+      expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 1 })
+      expect((await copyToClipboard(page)).text).toBe(allCellsText)
+    })
+  }
+
+  test('Ctrl+A is prevented on the grid', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    const prevented = await page.evaluate(() => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'a',
+        code: 'KeyA',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      window.fastSheets.state.options.elContainer.dispatchEvent(event)
+      return event.defaultPrevented
+    })
+    expect(prevented).toBe(true)
+  })
+
+  test('a click on the top left corner selects all cells', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await page.mouse.click(5, 5)
+
+    expect(await getSelectedRange(page)).toEqual(allCellsRange)
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 0, columnIndex: 0 })
+    expect((await copyToClipboard(page)).text).toBe(allCellsText)
+  })
+
+  test('a click on a column name does not select all cells', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await clickHeaderCell({ page, columnIndex: 1 })
+
+    expect(await getSelectedRange(page)).toBeUndefined()
+    expect(await getFocusedCell(page)).toBeUndefined()
+  })
+
+  test('Ctrl+A in the cell editor selects its text, not the cells', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('new')
+    await page.keyboard.press('Enter')
+
+    expect(await getSelectedRange(page)).toBeUndefined()
+    expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'new' }]])
+  })
+})
+
 test.describe('paste', () => {
   const columns = [
     { name: 'A', width: 100 },
@@ -340,6 +475,66 @@ test.describe('paste', () => {
     expect(await getUpdates(page)).toEqual([
       [{ rowIndex: 2, columnIndex: 2, value: 'first, line\nsay "hi"' }],
     ])
+  })
+})
+
+test.describe('headings of the selection', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+    { name: 'C', width: 100 },
+  ]
+  const white = '#ffffff'
+  const highlighted = '#d3e3fd'
+
+  /** the background colors of the column names and the row numbers, read from the canvas */
+  const getHeadingColors = (page: Page) =>
+    page.evaluate(() => {
+      const { state } = window.fastSheets
+      const ctx = state.options.elCanvas.getContext('2d')!
+      const ratio = Math.max(window.devicePixelRatio, 1)
+      // a point near the top left corner of the heading, away from its text and borders
+      const getColor = (x: number, y: number) => {
+        const [r, g, b] = ctx.getImageData((x + 3) * ratio, (y + 3) * ratio, 1, 1).data
+        return '#' + [r, g, b].map((value) => value!.toString(16).padStart(2, '0')).join('')
+      }
+      const top = state.options.borderWidth
+      const left = state.options.borderWidth
+      return {
+        columns: state.horizontalOffsets.map((offset) => getColor(offset, top)),
+        rows: state.verticalOffsets.map((offset) => getColor(left, offset)),
+      }
+    })
+
+  test('are highlighted for the focused cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    expect(await getHeadingColors(page)).toEqual({
+      columns: [white, white, white],
+      rows: [white, white, white],
+    })
+
+    await clickCell({ page, columnIndex: 1, rowIndex: 2 })
+    await expect
+      .poll(() => getHeadingColors(page))
+      .toEqual({ columns: [white, highlighted, white], rows: [white, white, highlighted] })
+  })
+
+  test('are highlighted for a selected range', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 0 })
+    await page.keyboard.down('Shift')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.up('Shift')
+
+    await expect
+      .poll(() => getHeadingColors(page))
+      .toEqual({
+        columns: [white, highlighted, highlighted],
+        rows: [highlighted, highlighted, white],
+      })
   })
 })
 
@@ -447,7 +642,7 @@ test.describe('selection background', () => {
     await page.evaluate(() => {
       const searchPlugin = new window.FastSheetsSearchPlugin()
       window.fastSheets.use(searchPlugin) // registered after the editable plugin
-      searchPlugin.highlightResult([{ rowIndex: 0, columnIndex: 0 }]) // grid cell (1, 1)
+      searchPlugin.highlightResult([{ rowIndex: 1, columnIndex: 1 }])
     })
 
     // select two cells, the search hit included
@@ -457,7 +652,8 @@ test.describe('selection background', () => {
     const selected = 'rgb(233, 240, 254)' // DEFAULT_SELECTION_BACKGROUND_COLOR
     expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(selected)
     expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 2 })).toBe(selected)
-    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 3 })).toBe(
+    // a cell outside the selection
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 0 })).toBe(
       'rgb(255, 255, 255)',
     )
   })

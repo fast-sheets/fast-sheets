@@ -15,15 +15,21 @@ describe('createPluginHooks', () => {
       render() {},
     })
     const text = createPlugin('text', { renderCellText() {}, renderCellBackground() {} })
+    const headings = createPlugin('headings', {
+      getColumnHeadingBackgroundColor: (_, color) => color,
+      getRowHeadingBackgroundColor: (_, color) => color,
+    })
     const plain = createPlugin('plain')
     const both = createPlugin('both', { render() {}, renderCellBackground() {} })
 
-    const hooks = createPluginHooks([background, text, plain, both])
+    const hooks = createPluginHooks([background, text, plain, both, headings])
 
     expect(hooks.render).toEqual([background, both])
     expect(hooks.getCellBackgroundColor).toEqual([background])
     expect(hooks.renderCellBackground).toEqual([text, both])
     expect(hooks.renderCellText).toEqual([text])
+    expect(hooks.getColumnHeadingBackgroundColor).toEqual([headings])
+    expect(hooks.getRowHeadingBackgroundColor).toEqual([headings])
   })
 
   it('has empty groups without plugins', () => {

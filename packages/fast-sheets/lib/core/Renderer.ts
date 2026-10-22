@@ -250,9 +250,10 @@ export class Renderer {
 
   findCellByMouseEvent(e: MouseEvent) {
     const { elScrollInner } = this.#state.options
+    // both relative to the window: page coordinates would add the page scroll a second time
     const { left, top } = elScrollInner.getBoundingClientRect()
-    const x = e.pageX - left
-    const y = e.pageY - top
+    const x = e.clientX - left
+    const y = e.clientY - top
 
     if (x < 0 || y < 0) {
       return undefined
@@ -267,6 +268,23 @@ export class Renderer {
 
     const cell: Cell = { rowIndex, columnIndex }
     return cell
+  }
+
+  isTopLeftCorner(e: MouseEvent) {
+    const state = this.#state
+    if (!state.hasHeaderRow || !state.options.isRowNumberVisible) {
+      return false
+    }
+    const { borderWidth, elScrollInner } = state.options
+    const { left, top } = elScrollInner.getBoundingClientRect()
+    const x = e.clientX - left
+    const y = e.clientY - top
+    return (
+      x >= borderWidth &&
+      x < borderWidth + state.numberingColumnWidth &&
+      y >= borderWidth &&
+      y < borderWidth + state.headerRowHeight
+    )
   }
 
   renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
@@ -366,9 +384,14 @@ export class Renderer {
     const cellLeft = this.#state.horizontalOffsets[columnIndex] || 0
     setTransform(this.#state.viewport, ctx, cellLeft, cellTop)
 
+    let backgroundColor = '#fff'
+    for (const plugin of this.#pluginHooks.getColumnHeadingBackgroundColor) {
+      backgroundColor = plugin.getColumnHeadingBackgroundColor(columnIndex, backgroundColor)
+    }
+
     renderCellBackground({
       ctx,
-      backgroundColor: '#fff',
+      backgroundColor,
       bordersColor: '#ccc',
       width: cellWidth,
       height: cellHeight,
@@ -410,9 +433,14 @@ export class Renderer {
     const cellLeft = borderWidth
     setTransform(this.#state.viewport, ctx, cellLeft, cellTop)
 
+    let backgroundColor = '#fff'
+    for (const plugin of this.#pluginHooks.getRowHeadingBackgroundColor) {
+      backgroundColor = plugin.getRowHeadingBackgroundColor(rowIndex, backgroundColor)
+    }
+
     renderCellBackground({
       ctx,
-      backgroundColor: '#fff',
+      backgroundColor,
       bordersColor: '#ccc',
       width: cellWidth,
       height: cellHeight,

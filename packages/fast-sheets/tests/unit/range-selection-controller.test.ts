@@ -32,4 +32,13 @@ describe('RangeSelectionController', () => {
     controller.reset()
     expect(controller.isEmpty()).toBe(true)
   })
+
+  it('selects a whole range at once', () => {
+    const controller = new RangeSelectionController()
+    controller.selectRange({ rowStart: 0, rowEnd: 9, columnStart: 0, columnEnd: 2 })
+    expect(controller.hasStarted).toBe(false)
+    expect(controller.selectedCellsCount()).toBe(30)
+    expect(controller.isCellSelected({ rowIndex: 9, columnIndex: 2 })).toBe(true)
+    expect(controller.isCellSelected({ rowIndex: 10, columnIndex: 2 })).toBe(false)
+  })
 })
