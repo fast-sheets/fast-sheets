@@ -2,7 +2,6 @@ interface Window {
   isFixtureReady?: boolean
   data: import('lib/core/types').Data
   updates: import('lib/plugins/editable/types').ModifiedCell[][]
-  tapEvents: string[]
   FastSheets: typeof import('lib/core').FastSheets
   FastSheetsEditablePlugin: typeof import('lib/plugins/editable').FastSheetsEditablePlugin
   FastSheetsSearchPlugin: typeof import('lib/plugins/search').FastSheetsSearchPlugin

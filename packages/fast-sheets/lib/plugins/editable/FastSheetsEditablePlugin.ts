@@ -49,8 +49,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
   // the container's touch-action before setup, restored on destroy
   #initialTouchAction = ''
-  // whether the touch that is ending opened the cell editor
-  #isEditorOpenedByTouch = false
   // the grid width at the last resize: only a new width moves the cells
   #lastWidth: number | undefined
 
@@ -64,7 +62,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   #boundPaste: (e: ClipboardEvent) => void
   #boundPointerDown: (e: PointerEvent) => void
   #boundPointerUp: (e: PointerEvent) => void
-  #boundTouchEnd: (e: TouchEvent) => void
 
   constructor(options: RawOptions) {
     this.options = {
@@ -82,7 +79,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.#boundPaste = this.#onPaste.bind(this)
     this.#boundPointerDown = this.#onPointerDown.bind(this)
     this.#boundPointerUp = this.#onPointerUp.bind(this)
-    this.#boundTouchEnd = this.#onTouchEnd.bind(this)
 
     this.resizeObserver = new ResizeObserver((entries) => {
       const width = entries[entries.length - 1]?.contentRect.width
@@ -188,10 +184,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     // pointer events
     instance.state.options.elContainer.addEventListener('pointerdown', this.#boundPointerDown)
     window.addEventListener('pointerup', this.#boundPointerUp)
-    // not passive: it may cancel the click of the tap
-    instance.state.options.elContainer.addEventListener('touchend', this.#boundTouchEnd, {
-      passive: false,
-    })
     // observables
     this.resizeObserver.observe(this.instance.state.options.elCanvasContainer)
     // input
@@ -213,7 +205,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     // pointer events
     instance.state.options.elContainer.removeEventListener('pointerdown', this.#boundPointerDown)
     window.removeEventListener('pointerup', this.#boundPointerUp)
-    instance.state.options.elContainer.removeEventListener('touchend', this.#boundTouchEnd)
     // observables
     this.resizeObserver.disconnect()
     // input
@@ -266,12 +257,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onMouseDown(e: MouseEvent) {
-    if (this.#isMouseDownOnEditedCell(e)) {
-      // iOS sends the mouse events of the tap that opened the editor to the grid under it.
-      // Their default action would focus the grid, and the blur would close the editor
-      e.preventDefault()
-      return
-    }
     if (!isLeftMouseButton(e)) {
       return
     }
@@ -453,7 +438,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   #onPointerDown(e: PointerEvent) {
     // Only trigger on actual touch taps, ignoring mouse clicks
     if (e.pointerType === 'touch') {
-      this.#isEditorOpenedByTouch = false
       const now = new Date().getTime()
       this.isDoubleTap = now - this.pointerDownTime < 300
       this.pointerDownTime = now
@@ -478,35 +462,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         if (this.isDoubleTap) {
           const cellInfo = getCellInfo({ cell, state: this.instance.state })
           this.inputController.showInput(cellInfo)
-          this.#isEditorOpenedByTouch = true
         }
       }
       this.instance.renderer.render()
     }
-  }
-
-  #onTouchEnd(e: TouchEvent) {
-    if (this.#isEditorOpenedByTouch) {
-      this.#isEditorOpenedByTouch = false
-      // iOS turns a tap into mouse events and a click on the grid under the finger, and a click
-      // that does not land on the editor closes the keyboard. Cancelling the touchend stops them
-      if (e.cancelable) {
-        e.preventDefault()
-      }
-    }
-  }
-
-  /** Whether the mouse is pressed on the grid at the cell being edited, not on the editor itself */
-  #isMouseDownOnEditedCell(e: MouseEvent) {
-    const editedCell = this.inputController.cellInfo?.cell
-    if (!editedCell || !this.#isInputVisible()) {
-      return false
-    }
-    if (e.target instanceof Node && this.inputController.inputField.el.contains(e.target)) {
-      return false
-    }
-    const cell = this.instance.renderer.findCellByMouseEvent(e)
-    return cell?.rowIndex === editedCell.rowIndex && cell.columnIndex === editedCell.columnIndex
   }
 
   #isInputVisible() {
