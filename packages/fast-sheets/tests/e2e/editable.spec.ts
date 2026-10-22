@@ -181,6 +181,37 @@ test.describe('cell editor', () => {
     expect(await getUpdates(page)).toEqual([])
   })
 
+  test('discards what was typed and closes on Escape', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.type('xyz')
+    await page.keyboard.press('Escape')
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getUpdates(page)).toEqual([])
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 1 })
+    // the focus is back on the grid, so arrows move the focused cell again
+    await page.keyboard.press('ArrowDown')
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 2, columnIndex: 1 })
+  })
+
+  test('restores the cell text on Escape after typing started the editing', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await page.keyboard.press('x')
+    await page.keyboard.type('y')
+    await page.keyboard.press('Escape')
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getUpdates(page)).toEqual([
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1' }],
+    ])
+  })
+
   test('stays open on Shift+Enter', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })

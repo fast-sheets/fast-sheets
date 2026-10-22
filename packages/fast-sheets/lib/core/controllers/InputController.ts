@@ -19,6 +19,8 @@ export class InputController {
   readonly #onInputBlurBound: (event: FocusEvent) => void
   // the value last sent with `onUpdate`, so that an unchanged value is not sent again
   #savedValue = ''
+  // the cell text when the input opened, restored by `cancelInput`
+  #originalValue = ''
 
   constructor(options: InputControllerOptions) {
     this.inputField = new InputField({ name: options.name, font: options.font })
@@ -50,6 +52,7 @@ export class InputController {
     const maxHeight = this.getInputMaxHeight(cellInfo)
     this.inputField.show({ cellInfo, maxWidth, maxHeight })
     this.#savedValue = this.getValue()
+    this.#originalValue = this.#savedValue
     this.inputField.focus()
     this.inputField.setCaretPosition(this.getValue().length)
   }
@@ -69,6 +72,14 @@ export class InputController {
     this.hideInput()
   }
 
+  /** Discards the changes, restoring the cell text it had when the input opened, then closes the input */
+  cancelInput() {
+    // a value may already be saved, for example the character that started the editing
+    this.#saveValue(this.#originalValue)
+    this.cellInfo = null
+    this.hideInput()
+  }
+
   isInputFieldVisible() {
     return this.inputField.el.style.display !== 'none'
   }
@@ -78,6 +89,9 @@ export class InputController {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault()
       this.commitInput()
+    } else if (e.key === 'Escape' && !e.isComposing) {
+      e.preventDefault()
+      this.cancelInput()
     }
   }
 
