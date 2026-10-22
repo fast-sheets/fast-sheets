@@ -130,6 +130,32 @@ test.describe('last row', () => {
   })
 })
 
+test.describe('page scrolled', () => {
+  test('a click focuses the cell under the pointer', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 10, columns, isRowNumberVisible: true })
+    // the page is taller than the window and scrolled, as it often is on a phone
+    const { x, y } = await page.evaluate(() => {
+      document.body.style.paddingTop = '200px'
+      document.body.style.height = '3000px'
+      window.scrollTo(0, 260)
+      const { state } = window.fastSheets
+      const rect = state.options.elScrollInner.getBoundingClientRect()
+      return {
+        x: rect.left + (state.horizontalOffsets[0] || 0) + 5,
+        y: rect.top + (state.verticalOffsets[2] || 0) + 5,
+      }
+    })
+    await page.mouse.click(x, y)
+
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 2, columnIndex: 0 })
+  })
+})
+
 test.describe('cell editor', () => {
   const columns = [
     { name: 'A', width: 100 },
