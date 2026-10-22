@@ -452,6 +452,66 @@ test.describe('paste', () => {
   })
 })
 
+test.describe('headings of the selection', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+    { name: 'C', width: 100 },
+  ]
+  const white = '#ffffff'
+  const highlighted = '#d3e3fd'
+
+  /** the background colors of the column names and the row numbers, read from the canvas */
+  const getHeadingColors = (page: Page) =>
+    page.evaluate(() => {
+      const { state } = window.fastSheets
+      const ctx = state.options.elCanvas.getContext('2d')!
+      const ratio = Math.max(window.devicePixelRatio, 1)
+      // a point near the top left corner of the heading, away from its text and borders
+      const getColor = (x: number, y: number) => {
+        const [r, g, b] = ctx.getImageData((x + 3) * ratio, (y + 3) * ratio, 1, 1).data
+        return '#' + [r, g, b].map((value) => value!.toString(16).padStart(2, '0')).join('')
+      }
+      const top = state.options.borderWidth
+      const left = state.options.borderWidth
+      return {
+        columns: state.horizontalOffsets.map((offset) => getColor(offset, top)),
+        rows: state.verticalOffsets.map((offset) => getColor(left, offset)),
+      }
+    })
+
+  test('are highlighted for the focused cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    expect(await getHeadingColors(page)).toEqual({
+      columns: [white, white, white],
+      rows: [white, white, white],
+    })
+
+    await clickCell({ page, columnIndex: 1, rowIndex: 2 })
+    await expect
+      .poll(() => getHeadingColors(page))
+      .toEqual({ columns: [white, highlighted, white], rows: [white, white, highlighted] })
+  })
+
+  test('are highlighted for a selected range', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 0 })
+    await page.keyboard.down('Shift')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.up('Shift')
+
+    await expect
+      .poll(() => getHeadingColors(page))
+      .toEqual({
+        columns: [white, highlighted, highlighted],
+        rows: [highlighted, highlighted, white],
+      })
+  })
+})
+
 test.describe('selected range box', () => {
   const columns = [{ name: 'A' }, { name: 'B' }, { name: 'C' }]
 
@@ -543,7 +603,7 @@ test.describe('selection background', () => {
     await page.evaluate(() => {
       const searchPlugin = new window.FastSheetsSearchPlugin()
       window.fastSheets.use(searchPlugin) // registered after the editable plugin
-      searchPlugin.highlightResult([{ rowIndex: 0, columnIndex: 0 }]) // grid cell (1, 1)
+      searchPlugin.highlightResult([{ rowIndex: 1, columnIndex: 1 }])
     })
 
     // select two cells, the search hit included
@@ -553,7 +613,8 @@ test.describe('selection background', () => {
     const selected = 'rgb(233, 240, 254)' // DEFAULT_SELECTION_BACKGROUND_COLOR
     expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(selected)
     expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 2 })).toBe(selected)
-    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 3 })).toBe(
+    // a cell outside the selection
+    expect(await getCellBackgroundPixel(page, { rowIndex: 1, columnIndex: 0 })).toBe(
       'rgb(255, 255, 255)',
     )
   })

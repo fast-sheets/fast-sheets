@@ -3,6 +3,7 @@ import type { Options, RawOptions } from './types.ts'
 import {
   BORDER_STYLE,
   DEFAULT_INPUT_FONT,
+  DEFAULT_SELECTED_HEADING_BACKGROUND_COLOR,
   DEFAULT_SELECTION_BACKGROUND_COLOR,
   DEFAULT_SELECTION_COLOR,
 } from 'lib/core/constants.ts'
@@ -208,6 +209,26 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       this.rangeSelectionController.isCellSelected(cell) &&
       this.rangeSelectionController.selectedCellsCount() > 1
     return isInMultiCellSelection ? DEFAULT_SELECTION_BACKGROUND_COLOR : backgroundColor
+  }
+
+  getColumnHeadingBackgroundColor(columnIndex: number, backgroundColor: string) {
+    const range = this.rangeSelectionController.selectionRange
+    const isSelected =
+      this.focusedCell.cell?.columnIndex === columnIndex ||
+      (!this.rangeSelectionController.isEmpty() &&
+        columnIndex >= range.columnStart &&
+        columnIndex <= range.columnEnd)
+    return isSelected ? DEFAULT_SELECTED_HEADING_BACKGROUND_COLOR : backgroundColor
+  }
+
+  getRowHeadingBackgroundColor(rowIndex: number, backgroundColor: string) {
+    const range = this.rangeSelectionController.selectionRange
+    const isSelected =
+      this.focusedCell.cell?.rowIndex === rowIndex ||
+      (!this.rangeSelectionController.isEmpty() &&
+        rowIndex >= range.rowStart &&
+        rowIndex <= range.rowEnd)
+    return isSelected ? DEFAULT_SELECTED_HEADING_BACKGROUND_COLOR : backgroundColor
   }
 
   onResize() {
