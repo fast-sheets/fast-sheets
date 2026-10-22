@@ -48,7 +48,7 @@ export const renderCellText = ({
 
   ctx.save()
   if (linesCount === 1) {
-    // most cells have one line and need no array of lines
+    // most cells have one line
     ctx.fillText(text, roundToPixels(textX), roundToPixels(textY))
   } else {
     text.split('\n').forEach((textLine, i) => {

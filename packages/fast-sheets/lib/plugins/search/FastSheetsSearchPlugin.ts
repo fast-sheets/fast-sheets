@@ -20,7 +20,10 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
 
   options: Options
 
-  /** the found cells: the column indexes for each row index, looked up for every drawn cell */
+  /**
+   * Cells found by the search, grouped by row: maps a row index to the column indexes found in it.
+   * Checked for every cell drawn, so a lookup must be fast and must not allocate.
+   */
   searchResult = new Map<number, Set<number>>()
 
   constructor(options: RawOptions = {}) {

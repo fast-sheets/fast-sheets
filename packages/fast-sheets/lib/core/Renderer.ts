@@ -148,7 +148,8 @@ export class Renderer {
       return
     }
 
-    // every row after the first changed one starts after the previous row, as getOffsets does
+    // The first changed row keeps its offset, so only the rows below it would move.
+    // Each starts at the previous row's offset + rowHeight + borderWidth
     const { borderWidth } = state.options
     const offsets = state.verticalOffsets
     for (let rowIndex = firstChangedRowIndex + 1; rowIndex < rowsCount; rowIndex++) {

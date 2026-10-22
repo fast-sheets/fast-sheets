@@ -1,4 +1,6 @@
-/** The number of lines in a text: its line breaks plus one. Does not allocate, unlike `split`. */
+/**
+ * Counts the lines in a text: number of "\n" + 1
+ */
 export const getLinesCount = (text: string) => {
   let linesCount = 1
   let index = text.indexOf('\n')
