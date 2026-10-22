@@ -21,6 +21,49 @@ test.describe('init instance', () => {
   })
 })
 
+test.describe('cell borders', () => {
+  test('are drawn after scrolling', async ({ page }) => {
+    await page.goto('/')
+    const columns = Array.from({ length: 15 }, (_, i) => ({ name: `C${i}`, width: 100 }))
+    await initFastSheets({ page, rowsCount: 200, columns, isRowNumberVisible: true })
+
+    const borders = await page.evaluate(() => {
+      const { state, renderer } = window.fastSheets
+      const { elCanvas, elScroll } = state.options
+      const ctx = elCanvas.getContext('2d')!
+      const scale = elCanvas.width / elCanvas.getBoundingClientRect().width
+      /** the color of the grid at a point, in grid coordinates */
+      const getPixel = (x: number, y: number) => {
+        const canvasX = Math.floor((x - state.viewport.left) * scale)
+        const canvasY = Math.floor((y - state.viewport.top) * scale)
+        const [r, g, b] = ctx.getImageData(canvasX, canvasY, 1, 1).data
+        return `rgb(${r}, ${g}, ${b})`
+      }
+
+      // scroll in small steps, as a wheel does, drawing a frame at each step
+      for (let step = 1; step <= 10; step++) {
+        elScroll.scrollTop = step * 23
+        elScroll.scrollLeft = step * 17
+        renderer.renderImmediate()
+      }
+
+      // near the bottom-right corner: the part a clear shifted by the scroll position misses
+      const rowIndex = renderer.findRowIndex(state.viewport.bottom) - 1
+      const columnIndex = renderer.findColumnIndex(state.viewport.right) - 1
+      const top = state.verticalOffsets[rowIndex]!
+      const left = state.horizontalOffsets[columnIndex]!
+      return {
+        // the 1px borders right above and left of a cell
+        horizontal: getPixel(left + 50, top - 0.5),
+        vertical: getPixel(left - 0.5, top + 10),
+      }
+    })
+
+    const borderColor = 'rgb(233, 233, 233)' // DEFAULT_BORDER_COLOR
+    expect(borders).toEqual({ horizontal: borderColor, vertical: borderColor })
+  })
+})
+
 test.describe('destroy instance', () => {
   test('removes all elements', async ({ page }) => {
     await page.goto('/')

@@ -1,6 +1,6 @@
 import { DEFAULT_FONT, DEFAULT_FONT_HEIGHT, DEFAULT_LINE_SPACING } from 'lib/core/constants.ts'
 import { roundToPixels } from 'lib/core/utils/round-to-pixels.ts'
-import { getLinesHeight } from 'lib/core/utils/font.ts'
+import { getLinesCount, getLinesHeight } from 'lib/core/utils/font.ts'
 import type { RenderCellBackgroundOptions, RenderCellTextOptions } from 'lib/core/types.ts'
 
 export const renderCellBackground = ({
@@ -32,7 +32,7 @@ export const renderCellText = ({
 }: RenderCellTextOptions) => {
   const lineSpacing = DEFAULT_LINE_SPACING
   const fontHeight = font?.fontHeight || DEFAULT_FONT_HEIGHT
-  const textByLines = text.split('\n')
+  const linesCount = getLinesCount(text)
   ctx.font = font?.font || DEFAULT_FONT
   ctx.fillStyle = fill
   ctx.textAlign = textAlign
@@ -40,20 +40,25 @@ export const renderCellText = ({
   const textX = x
   let textY: number
   if (verticalAlign === 'middle') {
-    const linesHeight = getLinesHeight(textByLines.length, fontHeight, lineSpacing)
+    const linesHeight = getLinesHeight(linesCount, fontHeight, lineSpacing)
     textY = y + fontHeight - linesHeight * 0.5 // align text-top to the center of a cell, and then lift text up on its half-height
   } else {
     textY = y
   }
 
   ctx.save()
-  textByLines.forEach((textLine, i) => {
-    ctx.fillText(
-      textLine,
-      roundToPixels(textX),
-      roundToPixels(textY + i * (fontHeight + lineSpacing)),
-    )
-  })
+  if (linesCount === 1) {
+    // most cells have one line and need no array of lines
+    ctx.fillText(text, roundToPixels(textX), roundToPixels(textY))
+  } else {
+    text.split('\n').forEach((textLine, i) => {
+      ctx.fillText(
+        textLine,
+        roundToPixels(textX),
+        roundToPixels(textY + i * (fontHeight + lineSpacing)),
+      )
+    })
+  }
   ctx.restore()
 }
 

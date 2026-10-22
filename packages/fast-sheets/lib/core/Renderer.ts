@@ -10,19 +10,20 @@ import {
   ROW_HEADING_FONT,
 } from 'lib/core/constants.ts'
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
-import { getCellInfo } from 'lib/core/utils/cell.ts'
 import type { StateInstance } from 'lib/core/State.ts'
 import { Font } from 'lib/core/Font.ts'
 import { getPlugins } from 'lib/core/utils/plugins.ts'
 import { getOffsets, renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
-import { getLinesHeight } from 'lib/core/utils/font.ts'
-import type { Cell, CellsRange } from 'lib/core/types.ts'
+import { getLinesHeight, getLinesCount } from 'lib/core/utils/font.ts'
+import type { Cell, CellsRange, FastSheetsPlugin } from 'lib/core/types.ts'
 
 export class Renderer {
   private readonly state: StateInstance
   private isRendering = false
   private fonts: { [fontName: string]: Font } = {}
   private animationFrameId: number | null = null
+  /** row heights by the number of text lines in the row; reset when the fonts are measured */
+  private rowHeightsByLinesCount: number[] = []
 
   constructor(state: StateInstance) {
     this.state = state
@@ -72,6 +73,7 @@ export class Renderer {
   public initFonts(ctx: CanvasRenderingContext2D) {
     this.fonts[DEFAULT_FONT] = new Font(DEFAULT_FONT, ctx)
     this.fonts[ROW_HEADING_FONT] = new Font(ROW_HEADING_FONT, ctx)
+    this.rowHeightsByLinesCount = []
   }
 
   public getHeaderRowHeight() {
@@ -91,17 +93,71 @@ export class Renderer {
 
   public getRowHeights() {
     const rowsCount = this.state.options.data.length
-    return Array.from({ length: rowsCount }, (_, rowIndex) => {
-      const cellsTexts: string[] = this.state.options.data[rowIndex] || []
-      const linesLength = cellsTexts
-        .map((cellText) => cellText.split('\n').length)
-        .filter((value) => value)
-      const maxLinesInRow = linesLength.length ? Math.max(...linesLength) : 1
+    const rowHeights = new Array<number>(rowsCount)
+    for (let rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
+      rowHeights[rowIndex] = this.getRowHeight(rowIndex)
+    }
+    return rowHeights
+  }
+
+  /** The height of a row: enough for the cell with the most text lines. */
+  public getRowHeight(rowIndex: number) {
+    const cellsTexts = this.state.options.data[rowIndex] || []
+    let maxLinesCount = 1
+    for (const cellText of cellsTexts) {
+      maxLinesCount = Math.max(maxLinesCount, getLinesCount(cellText))
+    }
+    return this.getRowHeightByLinesCount(maxLinesCount)
+  }
+
+  private getRowHeightByLinesCount(linesCount: number) {
+    let rowHeight = this.rowHeightsByLinesCount[linesCount]
+    if (rowHeight === undefined) {
       const fontHeight = this.fonts[DEFAULT_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
-      const linesHeight = getLinesHeight(maxLinesInRow, fontHeight, DEFAULT_LINE_SPACING)
+      const linesHeight = getLinesHeight(linesCount, fontHeight, DEFAULT_LINE_SPACING)
       const paddingY = DEFAULT_PADDING.y * 2
-      return roundToPixels(linesHeight + paddingY)
-    })
+      rowHeight = roundToPixels(linesHeight + paddingY)
+      this.rowHeightsByLinesCount[linesCount] = rowHeight
+    }
+    return rowHeight
+  }
+
+  public updateRows(rowIndexes: Iterable<number>) {
+    const { state } = this
+    const rowsCount = state.options.data.length
+    if (rowsCount !== state.rowHeights.length) {
+      this.init()
+      return
+    }
+
+    let firstChangedRowIndex = rowsCount
+    let heightDelta = 0
+    for (const rowIndex of rowIndexes) {
+      const oldHeight = state.rowHeights[rowIndex]
+      if (oldHeight === undefined) {
+        continue
+      }
+      const newHeight = this.getRowHeight(rowIndex)
+      if (newHeight !== oldHeight) {
+        state.rowHeights[rowIndex] = newHeight
+        heightDelta += newHeight - oldHeight
+        firstChangedRowIndex = Math.min(firstChangedRowIndex, rowIndex)
+      }
+    }
+    if (firstChangedRowIndex === rowsCount) {
+      // no row changed its height
+      return
+    }
+
+    // every row after the first changed one starts after the previous row, as getOffsets does
+    const { borderWidth } = state.options
+    const offsets = state.verticalOffsets
+    for (let rowIndex = firstChangedRowIndex + 1; rowIndex < rowsCount; rowIndex++) {
+      offsets[rowIndex] = offsets[rowIndex - 1]! + state.rowHeights[rowIndex - 1]! + borderWidth
+    }
+    state.totalHeight += heightDelta
+    state.totalSize.height = offsets[offsets.length - 1] || 0
+    state.options.elScrollPaneY.style.height = `${state.totalHeight}px`
   }
 
   public getColumnWidths() {
@@ -203,77 +259,76 @@ export class Renderer {
     return cell
   }
 
-  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
-    const cellInfo = getCellInfo({ cell, state: this.state })
-    const { borderWidth } = this.state.options
-    setTransform(this.state.viewport, ctx, cellInfo.left, cellInfo.top)
-
-    const plugins = getPlugins(this.state)
-    const backgroundColor = plugins.reduce(
-      (color, plugin) => plugin.getCellBackgroundColor?.(cell, color) ?? color,
-      defaultBackgroundColor,
+  /**
+   * Draws one grid cell.
+   * `plugins` is the registered plugins; `renderCells` passes it in so that it is read once per frame.
+   */
+  public renderCell(
+    ctx: CanvasRenderingContext2D,
+    cell: Cell,
+    defaultBackgroundColor = '#fff',
+    plugins: FastSheetsPlugin[] = getPlugins(this.state),
+  ) {
+    const { state } = this
+    const { rowIndex, columnIndex } = cell
+    const { borderWidth } = state.options
+    const width = state.columnWidths[columnIndex] || 0
+    const height = state.rowHeights[rowIndex] || 0
+    setTransform(
+      state.viewport,
+      ctx,
+      state.horizontalOffsets[columnIndex] || 0,
+      state.verticalOffsets[rowIndex] || 0,
     )
 
-    renderCellBackground({
-      ctx,
-      backgroundColor,
-      width: cellInfo.width,
-      height: cellInfo.height,
-      borderWidth,
-    })
-
-    plugins.forEach((plugin) => {
-      if (typeof plugin.renderCellBackground === 'function') {
-        plugin.renderCellBackground({
-          ctx,
-          cell,
-          backgroundColor,
-          width: cellInfo.width,
-          height: cellInfo.height,
-          borderWidth,
-        })
+    let backgroundColor = defaultBackgroundColor
+    for (const plugin of plugins) {
+      if (plugin.getCellBackgroundColor) {
+        backgroundColor = plugin.getCellBackgroundColor(cell, backgroundColor)
       }
-    })
+    }
 
-    if (cellInfo.text) {
+    renderCellBackground({ ctx, backgroundColor, width, height, borderWidth })
+
+    for (const plugin of plugins) {
+      if (plugin.renderCellBackground) {
+        plugin.renderCellBackground({ ctx, cell, backgroundColor, width, height, borderWidth })
+      }
+    }
+
+    const text = state.options.data[rowIndex]?.[columnIndex]
+    if (text) {
       const font = this.fonts[DEFAULT_FONT]
-      renderCellText({
-        ctx,
-        text: cellInfo.text,
-        x: cellInfo.padding.x,
-        y: cellInfo.center.y,
-        font,
-        textAlign: 'left',
-        verticalAlign: 'middle',
-      })
+      const x = DEFAULT_PADDING.x
+      const y = height / 2
+      renderCellText({ ctx, text, x, y, font, textAlign: 'left', verticalAlign: 'middle' })
 
-      plugins.forEach((plugin) => {
-        if (typeof plugin.renderCellText === 'function') {
+      for (const plugin of plugins) {
+        if (plugin.renderCellText) {
           plugin.renderCellText({
             ctx,
             cell,
-            text: cellInfo.text,
-            x: cellInfo.padding.x,
-            y: cellInfo.center.y,
+            text,
+            x,
+            y,
             font,
             textAlign: 'left',
             verticalAlign: 'middle',
           })
         }
-      })
+      }
     }
   }
 
   public renderCells(ctx: CanvasRenderingContext2D, range: CellsRange) {
-    const visibleRowsLength = range.rowEnd - range.rowStart + 1
-    const visibleColumnsLength = range.columnEnd - range.columnStart + 1
+    const plugins = getPlugins(this.state)
+    const rowStart = Math.max(0, range.rowStart)
+    const columnStart = Math.max(0, range.columnStart)
 
-    for (let i = 0; i < visibleRowsLength; i++) {
-      const rowIndex = i + range.rowStart
-      for (let j = 0; j < visibleColumnsLength; j++) {
-        const columnIndex = j + range.columnStart
+    for (let rowIndex = rowStart; rowIndex <= range.rowEnd; rowIndex++) {
+      for (let columnIndex = columnStart; columnIndex <= range.columnEnd; columnIndex++) {
         const cell = { rowIndex, columnIndex }
-        this.renderCell(ctx, cell)
+        this.renderCell(ctx, cell, undefined, plugins)
       }
     }
     setTransform(this.state.viewport, ctx, 0, 0)
@@ -392,8 +447,13 @@ export class Renderer {
       return
     }
 
-    elCanvas.width = this.state.canvasSize.widthWithPixelRatio
-    elCanvas.height = this.state.canvasSize.heightWithPixelRatio
+    const { widthWithPixelRatio, heightWithPixelRatio } = this.state.canvasSize
+    if (elCanvas.width !== widthWithPixelRatio) {
+      elCanvas.width = widthWithPixelRatio
+    }
+    if (elCanvas.height !== heightWithPixelRatio) {
+      elCanvas.height = heightWithPixelRatio
+    }
 
     const left = elScroll.scrollLeft || 0
     const top = elScroll.scrollTop || 0
@@ -431,11 +491,12 @@ export class Renderer {
       this.isRendering = false
       this.renderImmediate()
 
-      getPlugins(this.state).forEach((plugin) => {
-        if (typeof plugin.render === 'function') {
+      const plugins = getPlugins(this.state)
+      for (const plugin of plugins) {
+        if (plugin.render) {
           plugin.render()
         }
-      })
+      }
     })
   }
 

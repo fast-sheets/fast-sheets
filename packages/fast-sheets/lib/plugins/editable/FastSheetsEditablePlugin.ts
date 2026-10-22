@@ -229,7 +229,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   public onUpdate(modifiedCells: ModifiedCell[]) {
     this.options.onUpdate([...modifiedCells]) // data could be modified after update
-    this.instance.renderer.init() // init needed to recalculate row heights and all dependent sizes
+    // only the edited rows can change their height
+    this.instance.renderer.updateRows(new Set(modifiedCells.map(({ rowIndex }) => rowIndex)))
     if (this.focusedCell.cell) {
       this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state }) // actualizing focused cell border
     }

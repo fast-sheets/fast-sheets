@@ -202,4 +202,63 @@ describe('renderer', () => {
 
     expect(renderer.getVerticalOffsets()).toEqual([])
   })
+
+  describe('updateRows', () => {
+    const createRenderedState = () => {
+      const state = createState({
+        rowsCount: 4,
+        columns: [{ width: 100 }, { width: 100 }],
+        hasHeaderRow: false,
+        isRowNumberVisible: false,
+      })
+      const renderer = new Renderer(state)
+      state.rowHeights = renderer.getRowHeights()
+      state.verticalOffsets = renderer.getVerticalOffsets()
+      state.totalHeight = renderer.getTotalHeight()
+      return { state, renderer }
+    }
+
+    /** the sizes a full measure gives for the current data */
+    const measureAll = (renderer: Renderer) => ({
+      rowHeights: renderer.getRowHeights(),
+      verticalOffsets: renderer.getVerticalOffsets(),
+    })
+
+    it('measures an edited row again and moves the rows below it', () => {
+      const { state, renderer } = createRenderedState()
+      const oneLineHeight = state.rowHeights[1]
+      state.options.data[1]![0] = 'two\nlines'
+      renderer.updateRows([1])
+
+      expect(state.rowHeights[1]).toBeGreaterThan(oneLineHeight!)
+      const { rowHeights, verticalOffsets } = measureAll(renderer)
+      expect(state.rowHeights).toEqual(rowHeights)
+      expect(state.verticalOffsets).toEqual(verticalOffsets)
+      state.rowHeights = rowHeights
+      expect(state.totalHeight).toBe(renderer.getTotalHeight())
+      expect(state.options.elScrollPaneY.style.height).toBe(`${state.totalHeight}px`)
+    })
+
+    it('keeps the sizes when the edited rows keep their height', () => {
+      const { state, renderer } = createRenderedState()
+      const verticalOffsets = [...state.verticalOffsets]
+      state.options.data[2]![1] = 'another one-line text'
+      renderer.updateRows([2])
+
+      expect(state.verticalOffsets).toEqual(verticalOffsets)
+    })
+
+    it('measures everything again when rows were added', () => {
+      const { state, renderer } = createRenderedState()
+      state.options.data.push(['new', 'row'])
+      // init() needs a canvas context, which jsdom does not have, so check that it is called
+      let isInitCalled = false
+      renderer.init = () => {
+        isInitCalled = true
+      }
+      renderer.updateRows([4])
+
+      expect(isInitCalled).toBe(true)
+    })
+  })
 })
