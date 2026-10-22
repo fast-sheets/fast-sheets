@@ -366,9 +366,14 @@ export class Renderer {
     const cellLeft = this.#state.horizontalOffsets[columnIndex] || 0
     setTransform(this.#state.viewport, ctx, cellLeft, cellTop)
 
+    let backgroundColor = '#fff'
+    for (const plugin of this.#pluginHooks.getColumnHeadingBackgroundColor) {
+      backgroundColor = plugin.getColumnHeadingBackgroundColor(columnIndex, backgroundColor)
+    }
+
     renderCellBackground({
       ctx,
-      backgroundColor: '#fff',
+      backgroundColor,
       bordersColor: '#ccc',
       width: cellWidth,
       height: cellHeight,
@@ -410,9 +415,14 @@ export class Renderer {
     const cellLeft = borderWidth
     setTransform(this.#state.viewport, ctx, cellLeft, cellTop)
 
+    let backgroundColor = '#fff'
+    for (const plugin of this.#pluginHooks.getRowHeadingBackgroundColor) {
+      backgroundColor = plugin.getRowHeadingBackgroundColor(rowIndex, backgroundColor)
+    }
+
     renderCellBackground({
       ctx,
-      backgroundColor: '#fff',
+      backgroundColor,
       bordersColor: '#ccc',
       width: cellWidth,
       height: cellHeight,
