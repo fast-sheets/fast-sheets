@@ -24,6 +24,7 @@ const initWithSearchResult = async (page: Page, options?: { selectionColor: stri
   await initFastSheets({ page, rowsCount: 4, columns, isRowNumberVisible: false })
   await page.evaluate((options) => {
     const searchPlugin = new window.FastSheetsSearchPlugin(options)
+    window.fastSheetsSearchPlugin = searchPlugin
     window.fastSheets.use(searchPlugin)
     searchPlugin.highlightResult([{ rowIndex: 1, columnIndex: 1 }])
   }, options)
@@ -47,6 +48,21 @@ test.describe('search results', () => {
 
     expect(await getCellTopBorderPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(
       'rgb(8, 197, 0)',
+    )
+  })
+
+  test('are no longer outlined after the plugin is destroyed', async ({ page }) => {
+    await initWithSearchResult(page, { selectionColor: 'rgb(255, 0, 0)' })
+    expect(await getCellTopBorderPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(
+      'rgb(255, 0, 0)',
+    )
+
+    await page.evaluate(() => {
+      window.fastSheetsSearchPlugin.destroy()
+    })
+
+    expect(await getCellTopBorderPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(
+      'rgb(233, 233, 233)', // DEFAULT_BORDER_COLOR
     )
   })
 })

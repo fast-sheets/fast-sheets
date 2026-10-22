@@ -1,4 +1,4 @@
-import type { CanvasSize, FastSheetsPlugin, Options, Size } from 'lib/core/types.ts'
+import type { CanvasSize, Options, Size } from 'lib/core/types.ts'
 
 export class State {
   public options!: Options
@@ -33,7 +33,6 @@ export class State {
     right: 0,
     bottom: 0,
   }
-  public plugins: { [pluginName: string]: FastSheetsPlugin } = {}
 }
 
 export type StateInstance = InstanceType<typeof State>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getOffsets } from 'lib/core/utils/render.ts'
+import { getLinesCount } from 'lib/core/utils/font.ts'
 
 describe('getOffsets', () => {
   it('starts at the first offset and adds each size and a border', () => {
@@ -12,5 +13,14 @@ describe('getOffsets', () => {
 
   it('returns no offsets for no sizes', () => {
     expect(getOffsets([], 1, 1)).toEqual([])
+  })
+})
+
+describe('getLinesCount', () => {
+  it('counts the line breaks plus one', () => {
+    expect(getLinesCount('')).toBe(1)
+    expect(getLinesCount('one')).toBe(1)
+    expect(getLinesCount('one\ntwo')).toBe(2)
+    expect(getLinesCount('\n\n')).toBe(3)
   })
 })

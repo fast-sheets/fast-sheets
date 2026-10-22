@@ -193,6 +193,40 @@ test.describe('cell editor', () => {
   })
 })
 
+test.describe('row sizes after an edit', () => {
+  test('are the same as when every row is measured again', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      window.fastSheetsEditablePlugin.options.onUpdate = (cells) => {
+        for (const { rowIndex, columnIndex, value } of cells) {
+          window.fastSheets.state.options.data[rowIndex]![columnIndex] = value
+        }
+      }
+    })
+    await clickCell({ page, columnIndex: 1, rowIndex: 2 })
+    await pasteFromClipboard(page, '"three\nline\ntext"\tb\none')
+
+    const sizes = await page.evaluate(() => {
+      const { state, renderer } = window.fastSheets
+      const pick = () => ({
+        rowHeights: [...state.rowHeights],
+        verticalOffsets: [...state.verticalOffsets],
+        totalHeight: state.totalHeight,
+      })
+      const afterEdit = pick()
+      renderer.init()
+      return { afterEdit, measuredAgain: pick() }
+    })
+    expect(sizes.afterEdit.rowHeights[2]).toBeGreaterThan(sizes.afterEdit.rowHeights[1]!)
+    expect(sizes.afterEdit).toEqual(sizes.measuredAgain)
+  })
+})
+
 test.describe('copy', () => {
   test('copies the focused cell after a plain click', async ({ page }) => {
     await page.goto('/')
@@ -434,8 +468,7 @@ test.describe('destroy editable plugin', () => {
 
     expect(await getUpdates(page)).toEqual([])
 
-    const pluginNames = await page.evaluate(() => Object.keys(window.fastSheets.state.plugins))
-    expect(pluginNames).not.toContain('editable')
+    expect(await page.evaluate(() => window.fastSheets.hasPlugin('editable'))).toBe(false)
 
     await expect(page.locator('[data-name="elEditableContainerFront"]')).toHaveCount(0)
     await expect(page.locator('[data-name="elEditableContainerBack"]')).toHaveCount(0)

@@ -9,5 +9,6 @@ interface Window {
   fastSheetsEditablePlugin: InstanceType<
     typeof import('lib/plugins/editable').FastSheetsEditablePlugin
   >
+  fastSheetsSearchPlugin: InstanceType<typeof import('lib/plugins/search').FastSheetsSearchPlugin>
   resourceTracker: import('tests/e2e/utils/resource-tracker.ts').ResourceTracker
 }

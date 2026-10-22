@@ -1,20 +1,12 @@
-import type {
-  FastSheetsPlugin,
-  FastSheetsInstance,
-  RenderCellBackgroundOptions,
-  Cell,
-} from 'lib/core/types.ts'
+import type { FastSheetsInstance, RenderCellBackgroundOptions, Cell } from 'lib/core/types.ts'
 import type { Options, RawOptions } from './types.ts'
-import { getCellInfo, getCellKey } from 'lib/core/utils/cell.ts'
+import { getCellInfo } from 'lib/core/utils/cell.ts'
 import { renderCellBackground } from 'lib/core/utils/render.ts'
 import { DEFAULT_SEARCH_RESULT_COLOR } from 'lib/core/constants.ts'
+import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SEARCH_RESULT_COLOR,
-}
-
-interface SearchResult {
-  [key: string]: Cell
 }
 
 export class FastSheetsSearchPlugin implements FastSheetsPlugin {
@@ -24,7 +16,11 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
 
   options: Options
 
-  searchResult: SearchResult = {}
+  /**
+   * Cells found by the search, grouped by row: maps a row index to the column indexes found in it.
+   * Checked for every cell drawn, so a lookup must be fast and must not allocate.
+   */
+  searchResult = new Map<number, Set<number>>()
 
   constructor(options: RawOptions = {}) {
     this.options = {
@@ -38,7 +34,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
   }
 
   destroy() {
-    this.instance.unuse(this.name)
+    this.instance.unregister(this.name)
   }
 
   private scrollTo(cell: Cell) {
@@ -49,14 +45,18 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
   }
 
   public highlightResult(cells: Cell[]) {
-    this.searchResult = cells.reduce<SearchResult>((acc, cell) => {
-      const cellToSearch = { columnIndex: cell.columnIndex, rowIndex: cell.rowIndex }
-      acc[getCellKey(cellToSearch)] = cellToSearch
-      return acc
-    }, {})
+    this.searchResult = new Map()
+    for (const { rowIndex, columnIndex } of cells) {
+      let columnIndexes = this.searchResult.get(rowIndex)
+      if (!columnIndexes) {
+        columnIndexes = new Set()
+        this.searchResult.set(rowIndex, columnIndexes)
+      }
+      columnIndexes.add(columnIndex)
+    }
     this.instance.renderer.renderImmediate()
 
-    const firstCell = Object.values(this.searchResult)[0]
+    const firstCell = cells[0]
     if (firstCell) {
       this.scrollTo(firstCell)
     }
@@ -67,20 +67,18 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
     cell,
     backgroundColor,
     borderWidth,
+    width,
+    height,
   }: RenderCellBackgroundOptions) {
-    if (cell) {
-      const cellInfo = getCellInfo({ cell, state: this.instance.state })
-      const key = getCellKey(cellInfo.cell)
-      if (this.searchResult[key]) {
-        renderCellBackground({
-          ctx,
-          bordersColor: this.options.selectionColor,
-          backgroundColor,
-          borderWidth,
-          width: cellInfo.width,
-          height: cellInfo.height,
-        })
-      }
+    if (cell && this.searchResult.get(cell.rowIndex)?.has(cell.columnIndex)) {
+      renderCellBackground({
+        ctx,
+        bordersColor: this.options.selectionColor,
+        backgroundColor,
+        borderWidth,
+        width,
+        height,
+      })
     }
   }
 }

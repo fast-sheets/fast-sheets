@@ -1,10 +1,4 @@
-import type {
-  FastSheetsPlugin,
-  FastSheetsInstance,
-  ModifiedCell,
-  CellsRange,
-  Cell,
-} from 'lib/core/types.ts'
+import type { FastSheetsInstance, ModifiedCell, CellsRange, Cell } from 'lib/core/types.ts'
 import type { Options, RawOptions } from './types.ts'
 import {
   BORDER_STYLE,
@@ -27,6 +21,7 @@ import {
   getRightCell,
 } from 'lib/core/utils/cell.ts'
 import { parseClipboardText, stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
+import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -151,7 +146,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.selectedRange.destroy()
     this.elEditableContainerFront.remove()
     this.elEditableContainerBack.remove()
-    this.instance.unuse(this.name)
+    this.instance.unregister(this.name)
   }
 
   init(instance: FastSheetsInstance) {
@@ -229,7 +224,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   public onUpdate(modifiedCells: ModifiedCell[]) {
     this.options.onUpdate([...modifiedCells]) // data could be modified after update
-    this.instance.renderer.init() // init needed to recalculate row heights and all dependent sizes
+    // only the edited rows can change their height
+    this.instance.renderer.updateRows(new Set(modifiedCells.map(({ rowIndex }) => rowIndex)))
     if (this.focusedCell.cell) {
       this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state }) // actualizing focused cell border
     }

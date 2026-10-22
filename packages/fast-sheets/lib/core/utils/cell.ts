@@ -2,8 +2,6 @@ import { type StateInstance } from 'lib/core/State.ts'
 import { DEFAULT_FONT, DEFAULT_PADDING } from 'lib/core/constants.ts'
 import type { Cell, CellInfo, CellsRange, DomRect } from 'lib/core/types.ts'
 
-export const getCellKey = (cell: Cell) => `${cell.rowIndex}:${cell.columnIndex}`
-
 export const getCellText = ({ cell, state }: { cell: Cell; state: StateInstance }): string => {
   return state.options.data[cell.rowIndex]?.[cell.columnIndex] || ''
 }

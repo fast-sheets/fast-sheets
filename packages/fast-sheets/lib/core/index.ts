@@ -1,3 +1,4 @@
 export * from './FastSheets.ts'
 export * from './Renderer.ts'
 export * from './types.ts'
+export type { FastSheetsPlugin } from './utils/plugins.ts'
