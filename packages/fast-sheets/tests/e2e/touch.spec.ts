@@ -53,6 +53,32 @@ test.describe('double tap', () => {
     ])
   })
 
+  test('sends no mouse events or click for the tap that opened the editor', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      window.tapEvents = []
+      for (const type of ['touchend', 'mousedown', 'mouseup', 'click']) {
+        window.addEventListener(type, (e) => {
+          // the touchend listener on window runs after the grid's, so it sees the cancel
+          window.tapEvents.push(type === 'touchend' ? `touchend:${e.defaultPrevented}` : type)
+        })
+      }
+    })
+    await doubleTap(page, 1, 1)
+    await expect(getInput(page)).toBeFocused()
+
+    expect(await page.evaluate(() => window.tapEvents)).toEqual([
+      // the first tap only focuses the cell, so its mouse events are kept
+      'touchend:false',
+      'mousedown',
+      'mouseup',
+      'click',
+      // the second tap opens the editor
+      'touchend:true',
+    ])
+  })
+
   test('turns off the double tap zoom over the grid', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
