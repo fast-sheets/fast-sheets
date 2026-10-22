@@ -48,25 +48,4 @@ test.describe('double tap', () => {
     await expect(getInput(page)).toBeFocused()
     expect(await page.evaluate(() => window.updates)).toEqual([])
   })
-
-  test('turns off the double tap zoom over the grid', async ({ page }) => {
-    await page.goto('/')
-    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-    const touchAction = await page.evaluate(
-      () => window.fastSheets.state.options.elContainer.style.touchAction,
-    )
-    expect(touchAction).toBe('manipulation')
-  })
-  test('gives the container its touch-action back on destroy', async ({ page }) => {
-    await page.goto('/')
-    await page.getByTestId('fast-sheets').evaluate((el: HTMLElement) => {
-      el.style.touchAction = 'pan-y'
-    })
-    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-    const touchAction = await page.evaluate(() => {
-      window.fastSheetsEditablePlugin.destroy()
-      return window.fastSheets.state.options.elContainer.style.touchAction
-    })
-    expect(touchAction).toBe('pan-y')
-  })
 })

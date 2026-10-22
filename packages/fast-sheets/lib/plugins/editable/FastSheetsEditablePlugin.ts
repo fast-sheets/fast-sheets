@@ -47,8 +47,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   pointerDownTime = 0
   isDoubleTap = false
   doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
-  // the container's touch-action before setup, restored on destroy
-  #initialTouchAction = ''
   // the grid width at the last resize: only a new width moves the cells
   #lastWidth: number | undefined
 
@@ -153,7 +151,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.selectedRange.destroy()
     this.elEditableContainerFront.remove()
     this.elEditableContainerBack.remove()
-    this.instance.state.options.elContainer.style.touchAction = this.#initialTouchAction
     this.instance.unregister(this.name)
   }
 
@@ -163,10 +160,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
     // elEditableContainerFront should be after scroll
     instance.state.options.elScroll.after(this.elEditableContainerFront)
-
-    // a double tap opens the cell editor, so it must not zoom the page
-    this.#initialTouchAction = instance.state.options.elContainer.style.touchAction
-    instance.state.options.elContainer.style.touchAction = 'manipulation'
   }
 
   bindEvents(instance: FastSheetsInstance) {
