@@ -7,7 +7,7 @@ import {
   DEFAULT_SELECTION_COLOR,
 } from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
-import { isArrowKey, isCharacterKey } from 'lib/core/utils/keyboard.ts'
+import { isArrowKey, isCharacterKey, isSelectAllShortcut } from 'lib/core/utils/keyboard.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
 import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
@@ -232,6 +232,28 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.instance.renderer.render()
   }
 
+  /** Selects all cells. The focused cell stays where it is, or moves to the first cell if there is none. */
+  selectAll() {
+    const state = this.instance.state
+    const rowsCount = state.rowHeights.length
+    const columnsCount = state.columnWidths.length
+    if (!rowsCount || !columnsCount) {
+      return
+    }
+    const range: CellsRange = {
+      rowStart: 0,
+      rowEnd: rowsCount - 1,
+      columnStart: 0,
+      columnEnd: columnsCount - 1,
+    }
+    this.rangeSelectionController.selectRange(range)
+    this.selectedRange.highlight({ range, state })
+    if (!this.focusedCell.cell) {
+      this.focusedCell.highlight({ cell: { rowIndex: 0, columnIndex: 0 }, state })
+    }
+    this.instance.renderer.render()
+  }
+
   #onDoubleClick(e: MouseEvent) {
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell) {
@@ -254,6 +276,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       if (!this.#isInputVisible()) {
         this.#startSelection(cell)
       }
+    } else if (this.instance.renderer.isTopLeftCornerMouseEvent(e)) {
+      this.selectAll()
     }
     this.instance.renderer.render()
   }
@@ -344,8 +368,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       // the input handles its own keys; an Enter that closed it must not open it again
       return
     }
+    if (this.#isInputVisible()) {
+      return
+    }
+    if (isSelectAllShortcut(e)) {
+      e.preventDefault()
+      this.selectAll()
+      return
+    }
     const focusedCell = this.focusedCell.cell
-    if (!focusedCell || this.#isInputVisible()) {
+    if (!focusedCell) {
       return
     }
 
@@ -447,6 +479,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
           const cellInfo = getCellInfo({ cell, state: this.instance.state })
           this.inputController.showInput(cellInfo)
         }
+      } else if (this.instance.renderer.isTopLeftCornerMouseEvent(e)) {
+        this.selectAll()
       }
       this.instance.renderer.render()
     }

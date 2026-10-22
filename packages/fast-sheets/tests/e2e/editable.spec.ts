@@ -114,7 +114,6 @@ test.describe('last row', () => {
           f5: press({ key: 'F5' }),
           f12: press({ key: 'F12' }),
           ctrlR: press({ key: 'r', ctrlKey: true }),
-          ctrlA: press({ key: 'a', ctrlKey: true }),
           metaF: press({ key: 'f', metaKey: true }),
           arrowRight: press({ key: 'ArrowRight' }),
         }
@@ -124,7 +123,6 @@ test.describe('last row', () => {
         f5: false,
         f12: false,
         ctrlR: false,
-        ctrlA: false,
         metaF: false,
         arrowRight: true,
       })
@@ -286,6 +284,86 @@ test.describe('copy', () => {
     await clickCell({ page, columnIndex: 1, rowIndex: 1 })
 
     expect((await copyToClipboard(page)).text).toBe('"say ""hi""\nbye"')
+  })
+})
+
+test.describe('select all', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+    { name: 'C', width: 100 },
+  ]
+  // the first generated cell has a line break, so it is quoted
+  const allCellsText = '"r0\nc0"\tr0c1\tr0c2\nr1c0\tr1c1\tr1c2\nr2c0\tr2c1\tr2c2'
+  const allCellsRange = { rowStart: 0, rowEnd: 2, columnStart: 0, columnEnd: 2 }
+
+  /** the selected range, or undefined while its box is hidden */
+  const getSelectedRange = (page: Page) =>
+    page.evaluate(() => {
+      const { range, borders } = window.fastSheetsEditablePlugin.selectedRange
+      return borders.container.style.display === 'none' ? undefined : { ...range }
+    })
+
+  for (const shortcut of ['Control+a', 'Meta+a']) {
+    test(`${shortcut} selects all cells and keeps the focused cell`, async ({ page }) => {
+      await page.goto('/')
+      await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+      await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+      await page.keyboard.press(shortcut)
+
+      expect(await getSelectedRange(page)).toEqual(allCellsRange)
+      expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 1 })
+      expect((await copyToClipboard(page)).text).toBe(allCellsText)
+    })
+  }
+
+  test('Ctrl+A is prevented on the grid', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    const prevented = await page.evaluate(() => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'a',
+        code: 'KeyA',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      window.fastSheets.state.options.elContainer.dispatchEvent(event)
+      return event.defaultPrevented
+    })
+    expect(prevented).toBe(true)
+  })
+
+  test('a click on the top left corner selects all cells', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await page.mouse.click(5, 5)
+
+    expect(await getSelectedRange(page)).toEqual(allCellsRange)
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 0, columnIndex: 0 })
+    expect((await copyToClipboard(page)).text).toBe(allCellsText)
+  })
+
+  test('a click on a column name does not select all cells', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await clickHeaderCell({ page, columnIndex: 1 })
+
+    expect(await getSelectedRange(page)).toBeUndefined()
+    expect(await getFocusedCell(page)).toBeUndefined()
+  })
+
+  test('Ctrl+A in the cell editor selects its text, not the cells', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('new')
+    await page.keyboard.press('Enter')
+
+    expect(await getSelectedRange(page)).toBeUndefined()
+    expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'new' }]])
   })
 })
 

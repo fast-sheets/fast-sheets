@@ -269,6 +269,24 @@ export class Renderer {
     return cell
   }
 
+  /** Whether the event is over the top left corner, above the row numbers and before the column names. */
+  isTopLeftCornerMouseEvent(e: MouseEvent) {
+    const state = this.#state
+    if (!state.hasHeaderRow || !state.options.isRowNumberVisible) {
+      return false
+    }
+    const { borderWidth, elScrollInner } = state.options
+    const { left, top } = elScrollInner.getBoundingClientRect()
+    const x = e.clientX - left
+    const y = e.clientY - top
+    return (
+      x >= borderWidth &&
+      x < borderWidth + state.numberingColumnWidth &&
+      y >= borderWidth &&
+      y < borderWidth + state.headerRowHeight
+    )
+  }
+
   renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
     const state = this.#state
     const pluginHooks = this.#pluginHooks
