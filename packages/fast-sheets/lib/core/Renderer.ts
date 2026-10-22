@@ -12,10 +12,9 @@ import {
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
 import type { StateInstance } from 'lib/core/State.ts'
 import { Font } from 'lib/core/Font.ts'
-import { getPlugins } from 'lib/core/utils/plugins.ts'
 import { getOffsets, renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
 import { getLinesHeight, getLinesCount } from 'lib/core/utils/font.ts'
-import type { Cell, CellsRange, FastSheetsPlugin } from 'lib/core/types.ts'
+import type { Cell, CellsRange } from 'lib/core/types.ts'
 
 export class Renderer {
   private readonly state: StateInstance
@@ -259,17 +258,9 @@ export class Renderer {
     return cell
   }
 
-  /**
-   * Draws one grid cell.
-   * `plugins` is the registered plugins; `renderCells` passes it in so that it is read once per frame.
-   */
-  public renderCell(
-    ctx: CanvasRenderingContext2D,
-    cell: Cell,
-    defaultBackgroundColor = '#fff',
-    plugins: FastSheetsPlugin[] = getPlugins(this.state),
-  ) {
+  public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
     const { state } = this
+    const { pluginHooks } = state
     const { rowIndex, columnIndex } = cell
     const { borderWidth } = state.options
     const width = state.columnWidths[columnIndex] || 0
@@ -282,18 +273,14 @@ export class Renderer {
     )
 
     let backgroundColor = defaultBackgroundColor
-    for (const plugin of plugins) {
-      if (plugin.getCellBackgroundColor) {
-        backgroundColor = plugin.getCellBackgroundColor(cell, backgroundColor)
-      }
+    for (const plugin of pluginHooks.getCellBackgroundColor) {
+      backgroundColor = plugin.getCellBackgroundColor(cell, backgroundColor)
     }
 
     renderCellBackground({ ctx, backgroundColor, width, height, borderWidth })
 
-    for (const plugin of plugins) {
-      if (plugin.renderCellBackground) {
-        plugin.renderCellBackground({ ctx, cell, backgroundColor, width, height, borderWidth })
-      }
+    for (const plugin of pluginHooks.renderCellBackground) {
+      plugin.renderCellBackground({ ctx, cell, backgroundColor, width, height, borderWidth })
     }
 
     const text = state.options.data[rowIndex]?.[columnIndex]
@@ -303,32 +290,29 @@ export class Renderer {
       const y = height / 2
       renderCellText({ ctx, text, x, y, font, textAlign: 'left', verticalAlign: 'middle' })
 
-      for (const plugin of plugins) {
-        if (plugin.renderCellText) {
-          plugin.renderCellText({
-            ctx,
-            cell,
-            text,
-            x,
-            y,
-            font,
-            textAlign: 'left',
-            verticalAlign: 'middle',
-          })
-        }
+      for (const plugin of pluginHooks.renderCellText) {
+        plugin.renderCellText({
+          ctx,
+          cell,
+          text,
+          x,
+          y,
+          font,
+          textAlign: 'left',
+          verticalAlign: 'middle',
+        })
       }
     }
   }
 
   public renderCells(ctx: CanvasRenderingContext2D, range: CellsRange) {
-    const plugins = getPlugins(this.state)
     const rowStart = Math.max(0, range.rowStart)
     const columnStart = Math.max(0, range.columnStart)
 
     for (let rowIndex = rowStart; rowIndex <= range.rowEnd; rowIndex++) {
       for (let columnIndex = columnStart; columnIndex <= range.columnEnd; columnIndex++) {
         const cell = { rowIndex, columnIndex }
-        this.renderCell(ctx, cell, undefined, plugins)
+        this.renderCell(ctx, cell)
       }
     }
     setTransform(this.state.viewport, ctx, 0, 0)
@@ -491,11 +475,8 @@ export class Renderer {
       this.isRendering = false
       this.renderImmediate()
 
-      const plugins = getPlugins(this.state)
-      for (const plugin of plugins) {
-        if (plugin.render) {
-          plugin.render()
-        }
+      for (const plugin of this.state.pluginHooks.render) {
+        plugin.render()
       }
     })
   }

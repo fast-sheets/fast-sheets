@@ -1,4 +1,5 @@
 import type { CanvasSize, FastSheetsPlugin, Options, Size } from 'lib/core/types.ts'
+import { createPluginHooks, type PluginHooks } from 'lib/core/utils/plugins.ts'
 
 export class State {
   public options!: Options
@@ -33,7 +34,10 @@ export class State {
     right: 0,
     bottom: 0,
   }
-  public plugins: { [pluginName: string]: FastSheetsPlugin } = {}
+  /** the registered plugins by name; change them only with `FastSheets.use` and `unuse` */
+  public plugins: { readonly [pluginName: string]: FastSheetsPlugin } = {}
+  /** `plugins` grouped by hook for the renderer; built again by `FastSheets.use` and `unuse` */
+  public pluginHooks: PluginHooks = createPluginHooks([])
 }
 
 export type StateInstance = InstanceType<typeof State>

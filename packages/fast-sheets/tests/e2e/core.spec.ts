@@ -64,6 +64,44 @@ test.describe('cell borders', () => {
   })
 })
 
+test.describe('plugin hooks', () => {
+  test('follow the plugins that are added and removed', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheets({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+    const hooks = await page.evaluate(() => {
+      const { state } = window.fastSheets
+      const names = () => ({
+        all: state.pluginHooks.all.map(({ name }) => name),
+        render: state.pluginHooks.render.map(({ name }) => name),
+        renderCellBackground: state.pluginHooks.renderCellBackground.map(({ name }) => name),
+      })
+      const editable = new window.FastSheetsEditablePlugin({ onUpdate() {} })
+      const search = new window.FastSheetsSearchPlugin()
+      window.fastSheets.use(editable)
+      window.fastSheets.use(search)
+      const withBoth = names()
+      editable.destroy()
+      const withSearch = names()
+      search.destroy()
+      return { withBoth, withSearch, withNone: names() }
+    })
+
+    expect(hooks).toEqual({
+      withBoth: {
+        all: ['editable', 'search'],
+        render: ['editable'],
+        renderCellBackground: ['search'],
+      },
+      withSearch: { all: ['search'], render: [], renderCellBackground: ['search'] },
+      withNone: { all: [], render: [], renderCellBackground: [] },
+    })
+  })
+})
+
 test.describe('destroy instance', () => {
   test('removes all elements', async ({ page }) => {
     await page.goto('/')

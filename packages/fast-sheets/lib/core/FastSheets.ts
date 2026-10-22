@@ -2,6 +2,7 @@ import type { FastSheetsPlugin, RawOptions } from 'lib/core/types.ts'
 import { Renderer } from 'lib/core/Renderer.ts'
 import { State } from 'lib/core/State.ts'
 import { markAsCreatedByPackage, removeCreatedByPackage } from 'lib/core/utils/dom.ts'
+import { createPluginHooks } from 'lib/core/utils/plugins.ts'
 
 const DEFAULT_OPTIONS = {
   borderWidth: 1,
@@ -139,14 +140,24 @@ export class FastSheets {
       throw new Error(`Plugin "${plugin.name}" is already registered`)
     }
 
-    this.state.plugins[plugin.name] = plugin
+    this.setPlugins({ ...this.state.plugins, [plugin.name]: plugin })
     plugin.setup(this)
   }
 
   /** Unregisters a plugin and repaints without it. Called by the plugin's `destroy()`. */
   public unuse(pluginName: string) {
-    delete this.state.plugins[pluginName]
+    this.setPlugins(
+      Object.fromEntries(
+        Object.entries(this.state.plugins).filter(([name]) => name !== pluginName),
+      ),
+    )
     this.renderer.render()
+  }
+
+  /** Replaces the plugins, and the plugins grouped by hook that the renderer reads. */
+  private setPlugins(plugins: State['plugins']) {
+    this.state.plugins = plugins
+    this.state.pluginHooks = createPluginHooks(Object.values(plugins))
   }
 
   public bindEvents = () => {
