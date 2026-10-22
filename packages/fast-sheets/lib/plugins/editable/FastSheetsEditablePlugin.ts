@@ -47,8 +47,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   pointerDownTime = 0
   isDoubleTap = false
   doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
-  // the grid width at the last resize: only a new width moves the cells
-  #lastWidth: number | undefined
+  // the grid width at the previous resize: only a new width moves the cells
+  #prevWidth: number | undefined
 
   #boundDoubleClick: (e: MouseEvent) => void
   #boundMouseDown: (e: MouseEvent) => void
@@ -78,11 +78,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.#boundPointerDown = this.#onPointerDown.bind(this)
     this.#boundPointerUp = this.#onPointerUp.bind(this)
 
-    this.resizeObserver = new ResizeObserver((entries) => {
-      const width = entries[entries.length - 1]?.contentRect.width
-      const isWidthChanged = width !== this.#lastWidth
-      this.#lastWidth = width
-      this.onResize({ isWidthChanged })
+    this.resizeObserver = new ResizeObserver(() => {
+      this.onResize()
     })
 
     // elEditableContainerFront
@@ -215,11 +212,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     return isInMultiCellSelection ? DEFAULT_SELECTION_BACKGROUND_COLOR : backgroundColor
   }
 
-  /**
-   * @param isWidthChanged whether the cells could move. Column widths follow the grid width, while
-   * a new height alone moves no cell: on phones it changes whenever the keyboard opens or closes
-   */
-  onResize({ isWidthChanged = true }: { isWidthChanged?: boolean } = {}) {
+  onResize() {
+    // Column widths follow the grid width, while a new height alone moves no cell:
+    // on phones the height changes whenever the keyboard opens or closes
+    const width = this.instance.state.options.elCanvasContainer.getBoundingClientRect().width
+    const isWidthChanged = width !== this.#prevWidth
+    this.#prevWidth = width
     if (this.#isInputVisible() && isWidthChanged) {
       // the input is placed for the old sizes, so save what was typed and close it
       this.inputController.commitInput()
