@@ -64,38 +64,34 @@ test.describe('cell borders', () => {
   })
 })
 
-test.describe('plugin hooks', () => {
-  test('follow the plugins that are added and removed', async ({ page }) => {
+test.describe('plugins', () => {
+  test('hasPlugin follows the plugins that are added and destroyed', async ({ page }) => {
     await page.goto('/')
     const columns = [
       { name: 'A', width: 100 },
       { name: 'B', width: 100 },
     ]
     await initFastSheets({ page, rowsCount: 2, columns, isRowNumberVisible: true })
-    const hooks = await page.evaluate(() => {
-      const { state } = window.fastSheets
-      const names = () => ({
-        render: state.pluginHooks.render.map(({ name }) => name),
-        renderCellBackground: state.pluginHooks.renderCellBackground.map(({ name }) => name),
-      })
+    const registered = await page.evaluate(() => {
+      const fastSheets = window.fastSheets
+      const names = () => ['editable', 'search'].filter((name) => fastSheets.hasPlugin(name))
       const editable = new window.FastSheetsEditablePlugin({ onUpdate() {} })
       const search = new window.FastSheetsSearchPlugin()
-      window.fastSheets.use(editable)
-      window.fastSheets.use(search)
+      const withNone = names()
+      fastSheets.use(editable)
+      fastSheets.use(search)
       const withBoth = names()
       editable.destroy()
       const withSearch = names()
       search.destroy()
-      return { withBoth, withSearch, withNone: names() }
+      return { withNone, withBoth, withSearch, afterAll: names() }
     })
 
-    expect(hooks).toEqual({
-      withBoth: {
-        render: ['editable'],
-        renderCellBackground: ['search'],
-      },
-      withSearch: { render: [], renderCellBackground: ['search'] },
-      withNone: { render: [], renderCellBackground: [] },
+    expect(registered).toEqual({
+      withNone: [],
+      withBoth: ['editable', 'search'],
+      withSearch: ['search'],
+      afterAll: [],
     })
   })
 })

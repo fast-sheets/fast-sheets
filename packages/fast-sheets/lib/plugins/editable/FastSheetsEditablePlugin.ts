@@ -1,5 +1,4 @@
 import type { FastSheetsInstance, ModifiedCell, CellsRange, Cell } from 'lib/core/types.ts'
-import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 import type { Options, RawOptions } from './types.ts'
 import {
   BORDER_STYLE,
@@ -22,6 +21,7 @@ import {
   getRightCell,
 } from 'lib/core/utils/cell.ts'
 import { parseClipboardText, stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
+import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,

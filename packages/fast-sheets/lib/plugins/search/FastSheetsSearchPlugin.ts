@@ -1,9 +1,9 @@
 import type { FastSheetsInstance, RenderCellBackgroundOptions, Cell } from 'lib/core/types.ts'
-import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 import type { Options, RawOptions } from './types.ts'
 import { getCellInfo } from 'lib/core/utils/cell.ts'
 import { renderCellBackground } from 'lib/core/utils/render.ts'
 import { DEFAULT_SEARCH_RESULT_COLOR } from 'lib/core/constants.ts'
+import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SEARCH_RESULT_COLOR,

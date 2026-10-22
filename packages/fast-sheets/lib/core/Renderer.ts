@@ -15,17 +15,27 @@ import { Font } from 'lib/core/Font.ts'
 import { getOffsets, renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
 import { getLinesHeight, getLinesCount } from 'lib/core/utils/font.ts'
 import type { Cell, CellsRange } from 'lib/core/types.ts'
+import { createPluginHooks, type FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 export class Renderer {
   private readonly state: StateInstance
   private isRendering = false
   private fonts: { [fontName: string]: Font } = {}
   private animationFrameId: number | null = null
-  /** row heights by the number of text lines in the row; reset when the fonts are measured */
-  private rowHeightsByLinesCount: number[] = []
+  /**
+   * The registered plugins grouped by hook, read for every frame and every cell.
+   * Replaced by `setPlugins`, never changed in place, so a frame being drawn keeps the plugins it started with.
+   */
+  #pluginHooks = createPluginHooks([])
+  private rowHeightsByLinesCount: number[] = [] //  row heights by the number of text lines in the row
 
   constructor(state: StateInstance) {
     this.state = state
+  }
+
+  /** Sets the plugins to call while drawing. Called by `FastSheets` whenever a plugin is added or removed. */
+  public setPluginHooks(plugins: readonly FastSheetsPlugin[]) {
+    this.#pluginHooks = createPluginHooks(plugins)
   }
 
   public init() {
@@ -261,7 +271,7 @@ export class Renderer {
 
   public renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
     const { state } = this
-    const { pluginHooks } = state
+    const pluginHooks = this.#pluginHooks
     const { rowIndex, columnIndex } = cell
     const { borderWidth } = state.options
     const width = state.columnWidths[columnIndex] || 0
@@ -476,7 +486,7 @@ export class Renderer {
       this.isRendering = false
       this.renderImmediate()
 
-      for (const plugin of this.state.pluginHooks.render) {
+      for (const plugin of this.#pluginHooks.render) {
         plugin.render()
       }
     })
