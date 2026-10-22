@@ -1,5 +1,9 @@
-import type { CanvasSize, FastSheetsPlugin, Options, Size } from 'lib/core/types.ts'
-import { createPluginHooks, type PluginHooks } from 'lib/core/utils/plugins.ts'
+import type { CanvasSize, Options, Size } from 'lib/core/types.ts'
+import {
+  createPluginHooks,
+  type FastSheetsPlugin,
+  type PluginHooks,
+} from 'lib/core/utils/plugins.ts'
 
 export class State {
   public options!: Options

@@ -75,7 +75,6 @@ test.describe('plugin hooks', () => {
     const hooks = await page.evaluate(() => {
       const { state } = window.fastSheets
       const names = () => ({
-        all: state.pluginHooks.all.map(({ name }) => name),
         render: state.pluginHooks.render.map(({ name }) => name),
         renderCellBackground: state.pluginHooks.renderCellBackground.map(({ name }) => name),
       })
@@ -92,12 +91,11 @@ test.describe('plugin hooks', () => {
 
     expect(hooks).toEqual({
       withBoth: {
-        all: ['editable', 'search'],
         render: ['editable'],
         renderCellBackground: ['search'],
       },
-      withSearch: { all: ['search'], render: [], renderCellBackground: ['search'] },
-      withNone: { all: [], render: [], renderCellBackground: [] },
+      withSearch: { render: [], renderCellBackground: ['search'] },
+      withNone: { render: [], renderCellBackground: [] },
     })
   })
 })

@@ -1,8 +1,8 @@
-import type { FastSheetsPlugin, RawOptions } from 'lib/core/types.ts'
+import type { RawOptions } from 'lib/core/types.ts'
 import { Renderer } from 'lib/core/Renderer.ts'
 import { State } from 'lib/core/State.ts'
 import { markAsCreatedByPackage, removeCreatedByPackage } from 'lib/core/utils/dom.ts'
-import { createPluginHooks } from 'lib/core/utils/plugins.ts'
+import { createPluginHooks, type FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 const DEFAULT_OPTIONS = {
   borderWidth: 1,

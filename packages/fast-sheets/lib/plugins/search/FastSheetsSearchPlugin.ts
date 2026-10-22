@@ -1,9 +1,5 @@
-import type {
-  FastSheetsPlugin,
-  FastSheetsInstance,
-  RenderCellBackgroundOptions,
-  Cell,
-} from 'lib/core/types.ts'
+import type { FastSheetsInstance, RenderCellBackgroundOptions, Cell } from 'lib/core/types.ts'
+import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 import type { Options, RawOptions } from './types.ts'
 import { getCellInfo } from 'lib/core/utils/cell.ts'
 import { renderCellBackground } from 'lib/core/utils/render.ts'

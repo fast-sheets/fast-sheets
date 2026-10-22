@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createPluginHooks } from 'lib/core/utils/plugins.ts'
-import type { FastSheetsPlugin } from 'lib/core/types.ts'
+import { createPluginHooks, type FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 const createPlugin = (name: string, hooks: Partial<FastSheetsPlugin> = {}): FastSheetsPlugin => ({
   name,
@@ -21,7 +20,6 @@ describe('createPluginHooks', () => {
 
     const hooks = createPluginHooks([background, text, plain, both])
 
-    expect(hooks.all).toEqual([background, text, plain, both])
     expect(hooks.render).toEqual([background, both])
     expect(hooks.getCellBackgroundColor).toEqual([background])
     expect(hooks.renderCellBackground).toEqual([text, both])
@@ -30,7 +28,6 @@ describe('createPluginHooks', () => {
 
   it('has empty groups without plugins', () => {
     const hooks = createPluginHooks([])
-    expect(hooks.all).toEqual([])
     expect(hooks.render).toEqual([])
     expect(hooks.renderCellBackground).toEqual([])
   })

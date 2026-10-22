@@ -1,10 +1,5 @@
-import type {
-  FastSheetsPlugin,
-  FastSheetsInstance,
-  ModifiedCell,
-  CellsRange,
-  Cell,
-} from 'lib/core/types.ts'
+import type { FastSheetsInstance, ModifiedCell, CellsRange, Cell } from 'lib/core/types.ts'
+import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 import type { Options, RawOptions } from './types.ts'
 import {
   BORDER_STYLE,
