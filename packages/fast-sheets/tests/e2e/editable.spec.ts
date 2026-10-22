@@ -376,6 +376,19 @@ test.describe('selected range box', () => {
     expect((await getSelectedRangeBox(page)).display).toBe('none')
   })
 
+  test('a new width saves and closes the cell editor', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+    await page.keyboard.press('x')
+    await resizeGrid(page, 600)
+
+    await expect(page.locator('[data-name="elInput"]')).toBeHidden()
+    expect(await page.evaluate(() => window.updates)).toEqual([
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
+    ])
+  })
+
   test('stays hidden after a resize when nothing is selected', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })

@@ -79,6 +79,27 @@ test.describe('double tap', () => {
     ])
   })
 
+  test('keeps the editor open when the keyboard makes the grid shorter', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await doubleTap(page, 1, 1)
+    await expect(getInput(page)).toBeFocused()
+
+    // a grid sized to the visible part of the page, such as 100dvh, gets shorter on a phone
+    // when the keyboard opens
+    await page.getByTestId('fast-sheets').evaluate((el: HTMLElement) => {
+      el.style.height = '200px'
+    })
+    // let the resize observers run
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    )
+
+    await expect(getInput(page)).toBeVisible()
+    await expect(getInput(page)).toBeFocused()
+    expect(await page.evaluate(() => window.updates)).toEqual([])
+  })
+
   test('turns off the double tap zoom over the grid', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })

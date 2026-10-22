@@ -51,6 +51,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   #initialTouchAction = ''
   // whether the touch that is ending opened the cell editor
   #isEditorOpenedByTouch = false
+  // the grid width at the last resize: only a new width moves the cells
+  #lastWidth: number | undefined
 
   #boundDoubleClick: (e: MouseEvent) => void
   #boundMouseDown: (e: MouseEvent) => void
@@ -82,8 +84,11 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.#boundPointerUp = this.#onPointerUp.bind(this)
     this.#boundTouchEnd = this.#onTouchEnd.bind(this)
 
-    this.resizeObserver = new ResizeObserver(() => {
-      this.onResize()
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[entries.length - 1]?.contentRect.width
+      const isWidthChanged = width !== this.#lastWidth
+      this.#lastWidth = width
+      this.onResize({ isWidthChanged })
     })
 
     // elEditableContainerFront
@@ -226,8 +231,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     return isInMultiCellSelection ? DEFAULT_SELECTION_BACKGROUND_COLOR : backgroundColor
   }
 
-  onResize() {
-    if (this.#isInputVisible()) {
+  /**
+   * @param isWidthChanged whether the cells could move. Column widths follow the grid width, while
+   * a new height alone moves no cell: on phones it changes whenever the keyboard opens or closes
+   */
+  onResize({ isWidthChanged = true }: { isWidthChanged?: boolean } = {}) {
+    if (this.#isInputVisible() && isWidthChanged) {
       // the input is placed for the old sizes, so save what was typed and close it
       this.inputController.commitInput()
     }
