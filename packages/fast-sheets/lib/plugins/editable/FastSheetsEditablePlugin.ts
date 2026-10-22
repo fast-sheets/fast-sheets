@@ -28,6 +28,11 @@ const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
 }
 
+// how far in px the second tap of a double tap may land from the first one
+const DOUBLE_TAP_MAX_DISTANCE = 30
+// how long in ms after a tap a mouse event is taken as made by that tap
+const TAP_MOUSE_EVENTS_DELAY = 1000
+
 export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   name = 'editable'
 
@@ -45,6 +50,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   resizeObserver: ResizeObserver
 
+  // the previous tap: where it was and the cell it focused
+  #prevTap: { x: number; y: number; cell: Cell | undefined } | undefined
+  // compared with event timestamps, which start at page load, so no tap is a long time ago
+  #lastTapTime = -Infinity
   pointerDownTime = 0
   isDoubleTap = false
   doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
@@ -275,6 +284,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onDoubleClick(e: MouseEvent) {
+    if (this.#isMadeByTap(e)) {
+      return
+    }
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell) {
       const cellInfo = getCellInfo({ cell, state: this.instance.state })
@@ -283,6 +295,15 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onMouseDown(e: MouseEvent) {
+    if (this.#isMadeByTap(e)) {
+      const isOnInput =
+        e.target instanceof Node && this.inputController.inputField.el.contains(e.target)
+      if (this.#isInputVisible() && !isOnInput) {
+        // the tap opened the editor: focusing the grid under the finger would close it
+        e.preventDefault()
+      }
+      return
+    }
     if (!isLeftMouseButton(e)) {
       return
     }
@@ -492,10 +513,20 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       this.rangeSelectionController.reset()
       this.focusedCell.reset()
       this.copiedRange.reset()
-      const cell = this.instance.renderer.findCellByMouseEvent(e)
+      this.#lastTapTime = e.timeStamp
+      // a finger rarely lands on the same spot twice: a second tap near the first one is for
+      // the first tap's cell, even when it lands on the next cell. A far one is a new tap
+      const prevTap = this.#prevTap
+      const isDoubleTap =
+        this.isDoubleTap &&
+        prevTap !== undefined &&
+        Math.hypot(e.clientX - prevTap.x, e.clientY - prevTap.y) <= DOUBLE_TAP_MAX_DISTANCE
+      const cell = isDoubleTap ? prevTap.cell : this.instance.renderer.findCellByMouseEvent(e)
+      // a third quick tap starts over instead of opening the editor again
+      this.#prevTap = isDoubleTap ? undefined : { x: e.clientX, y: e.clientY, cell }
       if (cell) {
         this.focusedCell.highlight({ cell, state: this.instance.state })
-        if (this.isDoubleTap) {
+        if (isDoubleTap) {
           const cellInfo = getCellInfo({ cell, state: this.instance.state })
           this.inputController.showInput(cellInfo)
         }
@@ -504,6 +535,14 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       }
       this.instance.renderer.render()
     }
+  }
+
+  /**
+   * Whether the mouse event was made by the browser for a tap, which the touch events handled.
+   * After a tap browsers also send mousedown, mouseup and click, and dblclick after a double tap
+   */
+  #isMadeByTap(e: MouseEvent) {
+    return e.timeStamp - this.#lastTapTime < TAP_MOUSE_EVENTS_DELAY
   }
 
   #isInputVisible() {

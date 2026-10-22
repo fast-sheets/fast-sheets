@@ -2,6 +2,7 @@ interface Window {
   isFixtureReady?: boolean
   data: import('lib/core/types').Data
   updates: import('lib/plugins/editable/types').ModifiedCell[][]
+  showInputCalls: number
   FastSheets: typeof import('lib/core').FastSheets
   FastSheetsEditablePlugin: typeof import('lib/plugins/editable').FastSheetsEditablePlugin
   FastSheetsSearchPlugin: typeof import('lib/plugins/search').FastSheetsSearchPlugin

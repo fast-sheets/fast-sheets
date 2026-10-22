@@ -156,6 +156,76 @@ test.describe('page scrolled', () => {
   })
 })
 
+test.describe('double tap', () => {
+  test.use({ hasTouch: true })
+
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+  ]
+  const getInput = (page: Page) => page.locator('[data-name="elInput"]')
+
+  /** the y of the border between a row and the next one */
+  const getRowBottom = (page: Page, rowIndex: number) =>
+    page.evaluate((rowIndex) => window.fastSheets.state.verticalOffsets[rowIndex + 1]!, rowIndex)
+
+  test('opens the first cell when the second tap lands just below it', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
+    const { x } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    const border = await getRowBottom(page, 1)
+    await page.touchscreen.tap(x + 5, border - 4) // the bottom of row 1
+    await page.touchscreen.tap(x + 5, border + 6) // the top of row 2
+
+    await expect(getInput(page)).toBeVisible()
+    await expect(getInput(page)).toHaveText('r1c1')
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 1 })
+  })
+
+  test('does not open the editor when the second tap is far from the first', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
+    const first = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    const second = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 4 })
+    await page.touchscreen.tap(first.x + 5, first.y + 5)
+    await page.touchscreen.tap(second.x + 5, second.y + 5)
+
+    await expect(getInput(page)).toBeHidden()
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 4, columnIndex: 1 })
+  })
+
+  test('a single tap lets the keyboard move the focused cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.touchscreen.tap(x + 5, y + 5)
+    await page.keyboard.press('ArrowDown')
+
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 2, columnIndex: 1 })
+  })
+
+  test('a third quick tap does not open the editor again', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      const { inputController } = window.fastSheetsEditablePlugin
+      const showInput = inputController.showInput.bind(inputController)
+      window.showInputCalls = 0
+      inputController.showInput = (cellInfo) => {
+        window.showInputCalls++
+        showInput(cellInfo)
+      }
+    })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.touchscreen.tap(x + 5, y + 5)
+    await page.touchscreen.tap(x + 5, y + 5)
+    await page.touchscreen.tap(x + 5, y + 5)
+
+    await expect(getInput(page)).toBeFocused()
+    expect(await page.evaluate(() => window.showInputCalls)).toBe(1)
+  })
+})
+
 test.describe('cell editor', () => {
   const columns = [
     { name: 'A', width: 100 },
