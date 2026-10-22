@@ -37,14 +37,14 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
     this.instance.unregister(this.name)
   }
 
-  private scrollTo(cell: Cell) {
+  #scrollTo(cell: Cell) {
     const state = this.instance.state
     const borderWidth = this.instance.state.options.borderWidth
     const cellInfo = getCellInfo({ cell, state })
     state.options.elScroll.scrollTo({ top: cellInfo.top - borderWidth, behavior: 'smooth' })
   }
 
-  public highlightResult(cells: Cell[]) {
+  highlightResult(cells: Cell[]) {
     this.searchResult = new Map()
     for (const { rowIndex, columnIndex } of cells) {
       let columnIndexes = this.searchResult.get(rowIndex)
@@ -58,11 +58,11 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
 
     const firstCell = cells[0]
     if (firstCell) {
-      this.scrollTo(firstCell)
+      this.#scrollTo(firstCell)
     }
   }
 
-  public renderCellBackground({
+  renderCellBackground({
     ctx,
     cell,
     backgroundColor,

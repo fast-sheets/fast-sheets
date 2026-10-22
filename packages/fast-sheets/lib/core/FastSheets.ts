@@ -10,14 +10,14 @@ const DEFAULT_OPTIONS = {
 }
 
 export class FastSheets {
-  public state: InstanceType<typeof State>
-  public renderer: InstanceType<typeof Renderer>
+  state: InstanceType<typeof State>
+  renderer: InstanceType<typeof Renderer>
 
   /** The registered plugins by name. Changed only by `use` and `unregister`, which keep the renderer's copy in sync. */
   #plugins: { readonly [pluginName: string]: FastSheetsPlugin } = {}
 
-  boundWheel: (e: WheelEvent) => void
-  boundRender: () => void
+  #boundWheel: (e: WheelEvent) => void
+  #boundRender: () => void
   resizeObserver: ResizeObserver
 
   constructor(options: RawOptions) {
@@ -110,16 +110,16 @@ export class FastSheets {
     }
     this.renderer = new Renderer(this.state)
 
-    this.boundWheel = this.onWheel.bind(this)
-    this.boundRender = this.renderer.render.bind(this.renderer)
+    this.#boundWheel = this.#onWheel.bind(this)
+    this.#boundRender = this.renderer.render.bind(this.renderer)
     this.resizeObserver = new ResizeObserver(() => {
-      this.onResize()
+      this.#onResize()
     })
 
     this.bindEvents()
   }
 
-  public destroy() {
+  destroy() {
     this.unbindEvents()
     Object.values(this.#plugins).forEach((plugin) => {
       try {
@@ -138,12 +138,12 @@ export class FastSheets {
     removeCreatedByPackage(this.state.options.elCanvasContainer)
   }
 
-  public use(plugin: FastSheetsPlugin) {
+  use(plugin: FastSheetsPlugin) {
     if (this.hasPlugin(plugin.name)) {
       throw new Error(`Plugin "${plugin.name}" is already registered`)
     }
 
-    this.setPlugins({ ...this.#plugins, [plugin.name]: plugin })
+    this.#setPlugins({ ...this.#plugins, [plugin.name]: plugin })
     plugin.setup(this)
   }
 
@@ -151,42 +151,42 @@ export class FastSheets {
    * Unregisters a plugin and repaints without it.
    * Called by the plugin's `destroy()`.
    **/
-  public unregister(pluginName: string) {
-    this.setPlugins(
+  unregister(pluginName: string) {
+    this.#setPlugins(
       Object.fromEntries(Object.entries(this.#plugins).filter(([name]) => name !== pluginName)),
     )
     this.renderer.render()
   }
 
   /** Whether a plugin with this name is registered. */
-  public hasPlugin(pluginName: string) {
+  hasPlugin(pluginName: string) {
     return Object.hasOwn(this.#plugins, pluginName)
   }
 
   /** Replaces the plugins and gives the renderer the new list. The object is never changed in place. */
-  private setPlugins(plugins: { readonly [pluginName: string]: FastSheetsPlugin }) {
+  #setPlugins(plugins: { readonly [pluginName: string]: FastSheetsPlugin }) {
     this.#plugins = plugins
     this.renderer.setPluginHooks(Object.values(plugins))
   }
 
-  public bindEvents = () => {
+  bindEvents = () => {
     const { elContainer, elScroll, elCanvasContainer } = this.state.options
 
-    elContainer.addEventListener('wheel', this.boundWheel, { passive: true })
-    elScroll.addEventListener('scroll', this.boundRender)
+    elContainer.addEventListener('wheel', this.#boundWheel, { passive: true })
+    elScroll.addEventListener('scroll', this.#boundRender)
 
     this.resizeObserver.observe(elCanvasContainer)
   }
 
-  public unbindEvents = () => {
+  unbindEvents = () => {
     const { elContainer, elScroll } = this.state.options
 
     this.resizeObserver.disconnect()
-    elContainer.removeEventListener('wheel', this.boundWheel)
-    elScroll.removeEventListener('scroll', this.boundRender)
+    elContainer.removeEventListener('wheel', this.#boundWheel)
+    elScroll.removeEventListener('scroll', this.#boundRender)
   }
 
-  private onWheel(e: WheelEvent) {
+  #onWheel(e: WheelEvent) {
     const elScroll = this.state.options.elScroll
     if (elScroll) {
       elScroll.scrollTo({
@@ -196,7 +196,7 @@ export class FastSheets {
     }
   }
 
-  private onResize() {
+  #onResize() {
     this.renderer.init()
     this.renderer.renderImmediate()
   }

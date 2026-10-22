@@ -1,33 +1,33 @@
 import type { CanvasSize, Options, Size } from 'lib/core/types.ts'
 
 export class State {
-  public options!: Options
+  options!: Options
 
-  public totalSize: Size = {
+  totalSize: Size = {
     width: 0,
     height: 0,
   }
-  public horizontalOffsets: number[] = []
-  public verticalOffsets: number[] = []
-  public totalWidth = 0
-  public totalHeight = 0
-  public rowHeights: number[] = []
-  public columnWidths: number[] = []
-  public hasHeaderRow: boolean = false
-  public headerRowHeight = 0
-  public numberingColumnWidth = 0 // column with row numbers
-  public canvasSize: CanvasSize = {
+  horizontalOffsets: number[] = []
+  verticalOffsets: number[] = []
+  totalWidth = 0
+  totalHeight = 0
+  rowHeights: number[] = []
+  columnWidths: number[] = []
+  hasHeaderRow: boolean = false
+  headerRowHeight = 0
+  numberingColumnWidth = 0 // column with row numbers
+  canvasSize: CanvasSize = {
     widthWithPixelRatio: 0,
     heightWithPixelRatio: 0,
     width: '0',
     height: '0',
   }
-  public containerSize: Size = {
+  containerSize: Size = {
     width: 0,
     height: 0,
   }
 
-  public viewport = {
+  viewport = {
     top: 0,
     left: 0,
     right: 0,

@@ -24,22 +24,22 @@ interface HighlightedBoxOptions {
 }
 
 export class HighlightedArea {
-  public readonly name: string
-  public readonly container: HTMLDivElement
+  readonly name: string
+  readonly container: HTMLDivElement
 
-  private readonly borderWidth: number
-  private readonly borderStyle: BORDER_STYLE
-  private readonly color: string
+  readonly #borderWidth: number
+  readonly #borderStyle: BORDER_STYLE
+  readonly #color: string
 
-  public readonly borderTop: HTMLDivElement
-  public readonly borderBottom: HTMLDivElement
-  public readonly borderLeft: HTMLDivElement
-  public readonly borderRight: HTMLDivElement
+  readonly borderTop: HTMLDivElement
+  readonly borderBottom: HTMLDivElement
+  readonly borderLeft: HTMLDivElement
+  readonly borderRight: HTMLDivElement
 
   constructor(options: HighlightedBoxOptions) {
-    this.borderWidth = options.borderWidth
-    this.borderStyle = options.borderStyle || BORDER_STYLE.SOLID
-    this.color = options.color
+    this.#borderWidth = options.borderWidth
+    this.#borderStyle = options.borderStyle || BORDER_STYLE.SOLID
+    this.#color = options.color
 
     this.container = document.createElement('div')
     Object.assign(this.container.style, uberlay)
@@ -47,10 +47,10 @@ export class HighlightedArea {
     this.name = options.name
     this.container.setAttribute('data-name', options.name)
 
-    this.borderTop = this.createBorder('top')
-    this.borderBottom = this.createBorder('bottom')
-    this.borderLeft = this.createBorder('left')
-    this.borderRight = this.createBorder('right')
+    this.borderTop = this.#createBorder('top')
+    this.borderBottom = this.#createBorder('bottom')
+    this.borderLeft = this.#createBorder('left')
+    this.borderRight = this.#createBorder('right')
 
     this.container.appendChild(this.borderTop)
     this.container.appendChild(this.borderBottom)
@@ -60,11 +60,11 @@ export class HighlightedArea {
     this.hide()
   }
 
-  public hide() {
+  hide() {
     this.container.style.display = 'none'
   }
 
-  public show(domRect: DomRect) {
+  show(domRect: DomRect) {
     this.container.style.display = 'block'
 
     this.container.style.top = `${domRect.top}px`
@@ -84,7 +84,7 @@ export class HighlightedArea {
     this.borderRight.style.height = `${domRect.height + 2}px`
   }
 
-  public destroy() {
+  destroy() {
     this.borderTop.remove()
     this.borderBottom.remove()
     this.borderLeft.remove()
@@ -92,30 +92,30 @@ export class HighlightedArea {
     this.container.remove()
   }
 
-  private createBorder(type: 'top' | 'right' | 'bottom' | 'left') {
+  #createBorder(type: 'top' | 'right' | 'bottom' | 'left') {
     const elBorder = document.createElement('div')
     Object.assign(elBorder.style, highlightedBoxStyles)
     elBorder.setAttribute('data-name', 'elBorder')
-    elBorder.style.borderColor = this.color
-    elBorder.style.borderStyle = this.borderStyle
+    elBorder.style.borderColor = this.#color
+    elBorder.style.borderStyle = this.#borderStyle
 
     switch (type) {
       case 'top':
         elBorder.style.top = '-1px'
         elBorder.style.left = '-1px'
-        elBorder.style.borderTopWidth = `${this.borderWidth}px`
+        elBorder.style.borderTopWidth = `${this.#borderWidth}px`
         break
       case 'right':
         elBorder.style.top = '-1px'
-        elBorder.style.borderRightWidth = `${this.borderWidth}px`
+        elBorder.style.borderRightWidth = `${this.#borderWidth}px`
         break
       case 'bottom':
         elBorder.style.left = '-1px'
-        elBorder.style.borderBottomWidth = `${this.borderWidth}px`
+        elBorder.style.borderBottomWidth = `${this.#borderWidth}px`
         break
       case 'left':
         elBorder.style.left = '-1px'
-        elBorder.style.borderLeftWidth = `${this.borderWidth}px`
+        elBorder.style.borderLeftWidth = `${this.#borderWidth}px`
         break
     }
 
