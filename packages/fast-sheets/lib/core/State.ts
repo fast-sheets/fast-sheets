@@ -38,9 +38,9 @@ export class State {
     right: 0,
     bottom: 0,
   }
-  /** the registered plugins by name; change them only with `FastSheets.use` and `unuse` */
+  /** the registered plugins by name; change them only with `FastSheets.use` and `unregister` */
   public plugins: { readonly [pluginName: string]: FastSheetsPlugin } = {}
-  /** `plugins` grouped by hook for the renderer; built again by `FastSheets.use` and `unuse` */
+  /** `plugins` grouped by hook for the renderer; built again by `FastSheets.use` and `unregister` */
   public pluginHooks: PluginHooks = createPluginHooks([])
 }
 

@@ -34,7 +34,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
   }
 
   destroy() {
-    this.instance.unuse(this.name)
+    this.instance.unregister(this.name)
   }
 
   private scrollTo(cell: Cell) {

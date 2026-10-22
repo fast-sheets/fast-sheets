@@ -145,7 +145,7 @@ export class FastSheets {
   }
 
   /** Unregisters a plugin and repaints without it. Called by the plugin's `destroy()`. */
-  public unuse(pluginName: string) {
+  public unregister(pluginName: string) {
     this.setPlugins(
       Object.fromEntries(
         Object.entries(this.state.plugins).filter(([name]) => name !== pluginName),
