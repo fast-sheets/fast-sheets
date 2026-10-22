@@ -250,9 +250,10 @@ export class Renderer {
 
   findCellByMouseEvent(e: MouseEvent) {
     const { elScrollInner } = this.#state.options
+    // both relative to the window: page coordinates would add the page scroll a second time
     const { left, top } = elScrollInner.getBoundingClientRect()
-    const x = e.pageX - left
-    const y = e.pageY - top
+    const x = e.clientX - left
+    const y = e.clientY - top
 
     if (x < 0 || y < 0) {
       return undefined
