@@ -23,5 +23,7 @@ export default tsESLint.config(eslint.configs.recommended, tsESLint.configs.reco
     'prefer-promise-reject-errors': 'error',
     'prettier/prettier': 'warn',
     '@typescript-eslint/no-unused-vars': 'error',
+    // Members are public by default and private ones use #, so `public` adds nothing
+    '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
   },
 })

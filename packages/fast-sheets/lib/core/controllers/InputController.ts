@@ -15,29 +15,29 @@ export class InputController {
   elScrollInner?: HTMLElement
   cellInfo: CellInfo | null = null
   onUpdate: (modifiedCell: ModifiedCell) => void
-  onInputKeyDownBound: (event: KeyboardEvent) => void
-  onInputBlurBound: (event: FocusEvent) => void
+  readonly #onInputKeyDownBound: (event: KeyboardEvent) => void
+  readonly #onInputBlurBound: (event: FocusEvent) => void
   // the value last sent with `onUpdate`, so that an unchanged value is not sent again
-  private savedValue = ''
+  #savedValue = ''
 
   constructor(options: InputControllerOptions) {
     this.inputField = new InputField({ name: options.name, font: options.font })
     options.container.appendChild(this.inputField.el)
     this.onUpdate = options.onUpdate
-    this.onInputKeyDownBound = this.onInputKeyDown.bind(this)
-    this.onInputBlurBound = this.onInputBlur.bind(this)
+    this.#onInputKeyDownBound = this.#onInputKeyDown.bind(this)
+    this.#onInputBlurBound = this.#onInputBlur.bind(this)
   }
 
   bindEvents(state: StateInstance) {
     this.elContainer = state.options.elContainer
     this.elScrollInner = state.options.elScrollInner
-    this.inputField.el.addEventListener('keydown', this.onInputKeyDownBound)
-    this.inputField.el.addEventListener('blur', this.onInputBlurBound)
+    this.inputField.el.addEventListener('keydown', this.#onInputKeyDownBound)
+    this.inputField.el.addEventListener('blur', this.#onInputBlurBound)
   }
 
   unbindEvents() {
-    this.inputField.el.removeEventListener('keydown', this.onInputKeyDownBound)
-    this.inputField.el.removeEventListener('blur', this.onInputBlurBound)
+    this.inputField.el.removeEventListener('keydown', this.#onInputKeyDownBound)
+    this.inputField.el.removeEventListener('blur', this.#onInputBlurBound)
   }
 
   destroy() {
@@ -49,7 +49,7 @@ export class InputController {
     const maxWidth = this.getInputMaxWidth(cellInfo)
     const maxHeight = this.getInputMaxHeight(cellInfo)
     this.inputField.show({ cellInfo, maxWidth, maxHeight })
-    this.savedValue = this.getValue()
+    this.#savedValue = this.getValue()
     this.inputField.focus()
     this.inputField.setCaretPosition(this.getValue().length)
   }
@@ -62,7 +62,7 @@ export class InputController {
   /** Saves the value if it changed, then closes the input */
   commitInput() {
     if (this.cellInfo) {
-      this.saveValue(this.getValue())
+      this.#saveValue(this.getValue())
     }
     // cleared before hiding: hiding moves the focus, and the blur that follows must not save again
     this.cellInfo = null
@@ -73,7 +73,7 @@ export class InputController {
     return this.inputField.el.style.display !== 'none'
   }
 
-  onInputKeyDown(e: KeyboardEvent) {
+  #onInputKeyDown(e: KeyboardEvent) {
     // Shift+Enter adds a line, and Enter during IME composition confirms the composed text
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault()
@@ -81,7 +81,7 @@ export class InputController {
     }
   }
 
-  onInputBlur() {
+  #onInputBlur() {
     if (this.cellInfo) {
       this.commitInput()
     }
@@ -95,15 +95,15 @@ export class InputController {
     if (this.cellInfo) {
       this.inputField.value = value
       this.inputField.setCaretPosition(value.length)
-      this.saveValue(value)
+      this.#saveValue(value)
     }
   }
 
-  private saveValue(value: string) {
-    if (!this.cellInfo || value === this.savedValue) {
+  #saveValue(value: string) {
+    if (!this.cellInfo || value === this.#savedValue) {
       return
     }
-    this.savedValue = value
+    this.#savedValue = value
     this.onUpdate({
       rowIndex: this.cellInfo.cell.rowIndex,
       columnIndex: this.cellInfo.cell.columnIndex,
