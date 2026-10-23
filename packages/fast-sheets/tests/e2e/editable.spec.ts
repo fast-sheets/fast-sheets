@@ -210,9 +210,8 @@ test.describe('double tap', () => {
     await page.evaluate(() => {
       const { inputController } = window.fastSheetsEditablePlugin
       const showInput = inputController.showInput.bind(inputController)
-      window.showInputCount = 0
       inputController.showInput = (cellInfo) => {
-        window.showInputCount++
+        window.showInputCount = (window.showInputCount ?? 0) + 1
         showInput(cellInfo)
       }
     })
