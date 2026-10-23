@@ -210,9 +210,9 @@ test.describe('double tap', () => {
     await page.evaluate(() => {
       const { inputController } = window.fastSheetsEditablePlugin
       const showInput = inputController.showInput.bind(inputController)
-      window.showInputCalls = 0
+      window.showInputCount = 0
       inputController.showInput = (cellInfo) => {
-        window.showInputCalls++
+        window.showInputCount++
         showInput(cellInfo)
       }
     })
@@ -222,7 +222,7 @@ test.describe('double tap', () => {
     await page.touchscreen.tap(x + 5, y + 5)
 
     await expect(getInput(page)).toBeFocused()
-    expect(await page.evaluate(() => window.showInputCalls)).toBe(1)
+    expect(await page.evaluate(() => window.showInputCount)).toBe(1)
   })
 })
 
