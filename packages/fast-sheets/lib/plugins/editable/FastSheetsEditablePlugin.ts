@@ -48,8 +48,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   pointerDownTime = 0
   isDoubleTap = false
   doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
-  // the canvas container width at the previous resize: only a new width moves the cells
-  #prevCanvasContainerWidth: number | undefined
 
   #boundDoubleClick: (e: MouseEvent) => void
   #boundMouseDown: (e: MouseEvent) => void
@@ -234,14 +232,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   onResize() {
-    const { width } = this.instance.state.options.elCanvasContainer.getBoundingClientRect()
-    // Column widths follow the grid width, while a new height alone moves no cell:
-    // on phones the height changes whenever the keyboard opens or closes
-    const isWidthChanged = width !== this.#prevCanvasContainerWidth
-    this.#prevCanvasContainerWidth = width
-    if (this.#isInputVisible() && isWidthChanged) {
-      // the input is placed for the old sizes, so save what was typed and close it
-      this.inputController.commitInput()
+    // the cells may have moved, so the editor follows its cell and keeps what was typed
+    const editedCell = this.inputController.cellInfo?.cell
+    if (editedCell && this.#isInputVisible()) {
+      this.inputController.placeInput(getCellInfo({ cell: editedCell, state: this.instance.state }))
     }
     // sizes changed, so draw the selection again at its new place
     this.#endSelection()

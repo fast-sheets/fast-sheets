@@ -618,16 +618,42 @@ test.describe('selected range box', () => {
     expect((await getSelectedRangeBox(page)).display).toBe('none')
   })
 
-  test('a new width saves and closes the cell editor', async ({ page }) => {
+  test('a new width keeps the cell editor open at the new place of its cell', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-    await clickCell({ page, columnIndex: 1, rowIndex: 1 })
-    await page.keyboard.press('x')
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.type('yz')
+    const getInputPlace = () =>
+      page.evaluate(() => {
+        const { state } = window.fastSheets
+        const elInput = document.querySelector<HTMLElement>('[data-name="elInput"]')!
+        return {
+          left: parseFloat(elInput.style.left),
+          minWidth: parseFloat(elInput.style.minWidth),
+          cellLeft: state.horizontalOffsets[1],
+          cellWidth: state.columnWidths[1],
+        }
+      })
+    const before = await getInputPlace()
     await resizeGrid(page, 600)
+    const after = await getInputPlace()
 
-    await expect(page.locator('[data-name="elInput"]')).toBeHidden()
+    // the columns got narrower and the editor followed its cell
+    expect(after.cellWidth).toBeLessThan(before.cellWidth!)
+    expect(after).toEqual({
+      left: after.cellLeft,
+      minWidth: after.cellWidth,
+      cellLeft: after.cellLeft,
+      cellWidth: after.cellWidth,
+    })
+    await expect(page.locator('[data-name="elInput"]')).toBeFocused()
+    await expect(page.locator('[data-name="elInput"]')).toHaveText('r1c1yz')
+    expect(await page.evaluate(() => window.updates)).toEqual([])
+
+    await page.keyboard.press('Enter')
     expect(await page.evaluate(() => window.updates)).toEqual([
-      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1yz' }],
     ])
   })
 

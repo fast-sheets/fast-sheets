@@ -36,7 +36,16 @@ export class InputField {
     this.el.textContent = value
   }
 
-  show({
+  show(options: { cellInfo: CellInfo; maxWidth?: number; maxHeight?: number }) {
+    const borderWidth = 2
+    this.el.style.display = 'block'
+    this.el.style.border = `${borderWidth}px solid ${DEFAULT_SELECTION_COLOR}`
+    this.place(options)
+    this.value = options.cellInfo.text
+  }
+
+  /** Moves and sizes the field to the cell, keeping its text */
+  place({
     cellInfo,
     maxWidth,
     maxHeight,
@@ -45,9 +54,6 @@ export class InputField {
     maxWidth?: number
     maxHeight?: number
   }) {
-    const borderWidth = 2
-    this.el.style.display = 'block'
-    this.el.style.border = `${borderWidth}px solid ${DEFAULT_SELECTION_COLOR}`
     this.el.style.top = `${cellInfo.top - 1}px`
     this.el.style.left = `${cellInfo.left}px`
     this.el.style.minWidth = `${cellInfo.width}px`
@@ -58,7 +64,6 @@ export class InputField {
     if (maxHeight) {
       this.el.style.maxHeight = `${maxHeight}px`
     }
-    this.value = cellInfo.text
   }
 
   setCaretPosition(position: number) {
