@@ -23,6 +23,7 @@ import {
 } from 'lib/core/utils/cell.ts'
 import { parseClipboardText, stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
 import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
+import { TouchDetector } from 'lib/core/utils/touch-detector.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -45,20 +46,20 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   resizeObserver: ResizeObserver
 
-  pointerDownTime = 0
-  isDoubleTap = false
-  doubleTapTimeoutIds = new Set<ReturnType<typeof setTimeout>>()
+  readonly #touchDetector = new TouchDetector()
 
-  #boundDoubleClick: (e: MouseEvent) => void
-  #boundMouseDown: (e: MouseEvent) => void
-  #boundMouseUp: (e: MouseEvent) => void
-  #boundMouseMove: (e: MouseEvent) => void
-  #boundKeyDown: (e: KeyboardEvent) => void
-  #boundKeyUp: (e: KeyboardEvent) => void
-  #boundCopy: (e: ClipboardEvent) => void
-  #boundPaste: (e: ClipboardEvent) => void
-  #boundPointerDown: (e: PointerEvent) => void
-  #boundPointerUp: (e: PointerEvent) => void
+  readonly #boundDoubleClick: (e: MouseEvent) => void
+  readonly #boundMouseDown: (e: MouseEvent) => void
+  readonly #boundMouseUp: (e: MouseEvent) => void
+  readonly #boundMouseMove: (e: MouseEvent) => void
+  readonly #boundKeyDown: (e: KeyboardEvent) => void
+  readonly #boundKeyUp: (e: KeyboardEvent) => void
+  readonly #boundCopy: (e: ClipboardEvent) => void
+  readonly #boundPaste: (e: ClipboardEvent) => void
+  readonly #boundPointerDown: (e: PointerEvent) => void
+  readonly #boundPointerUp: (e: PointerEvent) => void
+  readonly #boundPointerCancel: () => void
+  readonly #boundScroll: (e: Event) => void
 
   constructor(options: RawOptions) {
     this.options = {
@@ -76,6 +77,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.#boundPaste = this.#onPaste.bind(this)
     this.#boundPointerDown = this.#onPointerDown.bind(this)
     this.#boundPointerUp = this.#onPointerUp.bind(this)
+    this.#boundPointerCancel = this.#touchDetector.cancel.bind(this.#touchDetector)
+    this.#boundScroll = this.#touchDetector.saveScroll.bind(this.#touchDetector)
 
     this.resizeObserver = new ResizeObserver(() => {
       this.onResize()
@@ -139,8 +142,6 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   destroy() {
     this.unbindEvents(this.instance)
-    this.doubleTapTimeoutIds.forEach(clearTimeout)
-    this.doubleTapTimeoutIds.clear()
     this.inputController.destroy()
     this.copiedRange.destroy()
     this.focusedCell.destroy()
@@ -173,6 +174,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     // pointer events
     instance.state.options.elContainer.addEventListener('pointerdown', this.#boundPointerDown)
     window.addEventListener('pointerup', this.#boundPointerUp)
+    window.addEventListener('pointercancel', this.#boundPointerCancel)
+    instance.state.options.elScroll.addEventListener('scroll', this.#boundScroll, { passive: true })
     // observables
     this.resizeObserver.observe(this.instance.state.options.elCanvasContainer)
     // input
@@ -194,6 +197,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     // pointer events
     instance.state.options.elContainer.removeEventListener('pointerdown', this.#boundPointerDown)
     window.removeEventListener('pointerup', this.#boundPointerUp)
+    window.removeEventListener('pointercancel', this.#boundPointerCancel)
+    instance.state.options.elScroll.removeEventListener('scroll', this.#boundScroll)
     // observables
     this.resizeObserver.disconnect()
     // input
@@ -276,6 +281,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onDoubleClick(e: MouseEvent) {
+    if (this.#isInInput(e.target) || this.#touchDetector.isGhostMouseEvent(e)) {
+      return
+    }
     const cell = this.instance.renderer.findCellByMouseEvent(e)
     if (cell) {
       const cellInfo = getCellInfo({ cell, state: this.instance.state })
@@ -284,6 +292,17 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onMouseDown(e: MouseEvent) {
+    // Lets the browser handle presses inside the editor, such as placing the caret
+    if (this.#isInInput(e.target)) {
+      return
+    }
+    if (this.#touchDetector.isGhostMouseEvent(e)) {
+      if (this.#isInputVisible()) {
+        // a double tap opened the editor: focusing the grid under the finger would close it
+        e.preventDefault()
+      }
+      return
+    }
     if (!isLeftMouseButton(e)) {
       return
     }
@@ -385,7 +404,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onKeyDown(e: KeyboardEvent) {
-    if (e.target instanceof Node && this.inputController.inputField.el.contains(e.target)) {
+    if (this.#isInInput(e.target)) {
       // the input handles its own keys; an Enter that closed it must not open it again
       return
     }
@@ -473,38 +492,41 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onPointerDown(e: PointerEvent) {
-    // Only trigger on actual touch taps, ignoring mouse clicks
-    if (e.pointerType === 'touch') {
-      const now = new Date().getTime()
-      this.isDoubleTap = now - this.pointerDownTime < 300
-      this.pointerDownTime = now
-      const timeoutId = setTimeout(() => {
-        this.doubleTapTimeoutIds.delete(timeoutId)
-        this.pointerDownTime = 0
-        this.isDoubleTap = false
-      }, 300)
-      this.doubleTapTimeoutIds.add(timeoutId)
+    // only a finger taps; the mouse is handled by the mouse events
+    if (e.pointerType !== 'touch' || !e.isPrimary) {
+      return
     }
+    if (this.#isInInput(e.target)) {
+      this.#touchDetector.cancel()
+      return
+    }
+    // saved off the cells too, so that a tap on the top left corner selects all cells
+    this.#touchDetector.savePointerDown(e, this.instance.renderer.findCellByMouseEvent(e))
   }
 
   #onPointerUp(e: PointerEvent) {
-    if (e.pointerType === 'touch' && this.pointerDownTime) {
-      this.selectedRange.reset()
-      this.rangeSelectionController.reset()
-      this.focusedCell.reset()
-      this.copiedRange.reset()
-      const cell = this.instance.renderer.findCellByMouseEvent(e)
-      if (cell) {
-        this.focusedCell.highlight({ cell, state: this.instance.state })
-        if (this.isDoubleTap) {
-          const cellInfo = getCellInfo({ cell, state: this.instance.state })
-          this.inputController.showInput(cellInfo)
-        }
-      } else if (this.instance.renderer.isTopLeftCorner(e)) {
-        this.selectAllCells()
-      }
-      this.instance.renderer.render()
+    const { isTap, isDoubleTap, targetCell } = this.#touchDetector.getTapInfo(e)
+    if (!isTap) {
+      return
     }
+    this.selectedRange.reset()
+    this.rangeSelectionController.reset()
+    this.focusedCell.reset()
+    this.copiedRange.reset()
+    if (targetCell && isDoubleTap) {
+      this.inputController.showInput(getCellInfo({ cell: targetCell, state: this.instance.state }))
+    } else if (this.#isInputVisible()) {
+      this.inputController.commitInput()
+    } else {
+      // Focuses the grid for keyboard input, since browsers may skip the mouse events of a tap
+      this.instance.state.options.elContainer.focus({ preventScroll: true })
+    }
+    if (targetCell) {
+      this.focusedCell.highlight({ cell: targetCell, state: this.instance.state })
+    } else if (this.instance.renderer.isTopLeftCorner(e)) {
+      this.selectAllCells()
+    }
+    this.instance.renderer.render()
   }
 
   #isInputVisible() {
@@ -540,5 +562,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         state: this.instance.state,
       })
     }
+  }
+
+  #isInInput(target: EventTarget | null) {
+    return this.inputController.inputField.contains(target)
   }
 }

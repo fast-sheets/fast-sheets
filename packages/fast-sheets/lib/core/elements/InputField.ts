@@ -89,6 +89,10 @@ export class InputField {
     this.el.focus()
   }
 
+  contains(target: EventTarget | null) {
+    return target instanceof Node && this.el.contains(target)
+  }
+
   destroy() {
     this.el.remove()
   }
