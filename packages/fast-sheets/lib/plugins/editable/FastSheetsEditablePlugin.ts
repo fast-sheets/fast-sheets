@@ -232,9 +232,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   onResize() {
-    if (this.#isInputVisible()) {
-      // the input is placed for the old sizes, so save what was typed and close it
-      this.inputController.commitInput()
+    // the cells may have moved, so the editor follows its cell and keeps what was typed
+    const editedCell = this.inputController.cellInfo?.cell
+    if (editedCell && this.#isInputVisible()) {
+      this.inputController.placeInput(getCellInfo({ cell: editedCell, state: this.instance.state }))
     }
     // sizes changed, so draw the selection again at its new place
     this.#endSelection()
