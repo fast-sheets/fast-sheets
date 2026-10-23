@@ -318,6 +318,53 @@ test.describe('cell editor', () => {
   })
 })
 
+test.describe('cell editor on a touch screen', () => {
+  test.use({ hasTouch: true })
+
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+  ]
+  const getInput = (page: Page) => page.locator('[data-name="elInput"]')
+
+  const doubleTap = async (page: Page, rowIndex: number, columnIndex: number) => {
+    const { x, y } = await getCellMouseCoords({ page, columnIndex, rowIndex })
+    await page.touchscreen.tap(x + 5, y + 5)
+    await page.touchscreen.tap(x + 5, y + 5)
+  }
+
+  test('opens on a double tap', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await doubleTap(page, 1, 1)
+
+    await expect(getInput(page)).toBeVisible()
+    await expect(getInput(page)).toBeFocused()
+    await expect(getInput(page)).toHaveText('r1c1')
+  })
+
+  test('stays open when the keyboard makes the grid shorter', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await doubleTap(page, 1, 1)
+    await expect(getInput(page)).toBeFocused()
+
+    // a grid sized to the visible part of the page, such as 100dvh, gets shorter on a phone
+    // when the keyboard opens
+    await page.getByTestId('fast-sheets').evaluate((el: HTMLElement) => {
+      el.style.height = '200px'
+    })
+    // let the resize observers run
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    )
+
+    await expect(getInput(page)).toBeVisible()
+    await expect(getInput(page)).toBeFocused()
+    expect(await getUpdates(page)).toEqual([])
+  })
+})
+
 test.describe('row sizes after an edit', () => {
   test('are the same as when every row is measured again', async ({ page }) => {
     await page.goto('/')
@@ -639,6 +686,45 @@ test.describe('selected range box', () => {
     await clickCell({ page, columnIndex: 1, rowIndex: 1 })
 
     expect((await getSelectedRangeBox(page)).display).toBe('none')
+  })
+
+  test('a new width keeps the cell editor open at the new place of its cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.type('yz')
+    const getInputPlace = () =>
+      page.evaluate(() => {
+        const { state } = window.fastSheets
+        const elInput = document.querySelector<HTMLElement>('[data-name="elInput"]')!
+        return {
+          left: parseFloat(elInput.style.left),
+          minWidth: parseFloat(elInput.style.minWidth),
+          cellLeft: state.horizontalOffsets[1],
+          cellWidth: state.columnWidths[1],
+        }
+      })
+    const before = await getInputPlace()
+    await resizeGrid(page, 600)
+    const after = await getInputPlace()
+
+    // the columns got narrower and the editor followed its cell
+    expect(after.cellWidth).toBeLessThan(before.cellWidth!)
+    expect(after).toEqual({
+      left: after.cellLeft,
+      minWidth: after.cellWidth,
+      cellLeft: after.cellLeft,
+      cellWidth: after.cellWidth,
+    })
+    await expect(page.locator('[data-name="elInput"]')).toBeFocused()
+    await expect(page.locator('[data-name="elInput"]')).toHaveText('r1c1yz')
+    expect(await page.evaluate(() => window.updates)).toEqual([])
+
+    await page.keyboard.press('Enter')
+    expect(await page.evaluate(() => window.updates)).toEqual([
+      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1yz' }],
+    ])
   })
 
   test('stays hidden after a resize when nothing is selected', async ({ page }) => {

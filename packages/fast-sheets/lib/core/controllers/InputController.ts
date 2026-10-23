@@ -57,6 +57,17 @@ export class InputController {
     this.inputField.setCaretPosition(this.getValue().length)
   }
 
+  /** Moves the open input to the cell's new place and size, keeping what was typed */
+  placeInput(cellInfo: CellInfo) {
+    if (!this.cellInfo) {
+      return
+    }
+    this.cellInfo = cellInfo
+    const maxWidth = this.getInputMaxWidth(cellInfo)
+    const maxHeight = this.getInputMaxHeight(cellInfo)
+    this.inputField.place({ cellInfo, maxWidth, maxHeight })
+  }
+
   hideInput() {
     this.inputField.hide()
     this.elContainer?.focus()
