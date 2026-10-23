@@ -70,7 +70,7 @@ export class InputController {
 
   hideInput() {
     this.inputField.hide()
-    this.elContainer?.focus()
+    this.elContainer?.focus({ preventScroll: true })
   }
 
   /** Saves the value if it changed, then closes the input */
