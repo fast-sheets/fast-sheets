@@ -720,6 +720,25 @@ test.describe('paste', () => {
     ])
   })
 
+  test('pastes into the open cell editor, not into the cells', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    const input = page.locator('[data-name="elInput"]')
+    await expect(input).toBeFocused()
+
+    await page.evaluate(() => navigator.clipboard.writeText('pasted'))
+    await page.keyboard.press('ControlOrMeta+V')
+
+    await expect(input).toHaveText('r1c1pasted')
+    expect(await getUpdates(page)).toEqual([])
+
+    await page.keyboard.press('Enter')
+    expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'r1c1pasted' }]])
+  })
+
   test('pastes a quoted multi-line cell into one cell', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
