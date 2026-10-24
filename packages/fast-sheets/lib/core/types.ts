@@ -1,4 +1,3 @@
-import type { FastSheets } from 'lib/core/FastSheets.ts'
 import type { Font } from 'lib/core/Font.ts'
 
 export type Data = string[][]
@@ -22,10 +21,6 @@ export interface Column {
 export interface Cell {
   rowIndex: number
   columnIndex: number
-}
-
-export interface CellsMap {
-  [key: string]: Cell
 }
 
 export interface CellInfo {
@@ -108,9 +103,6 @@ export interface Viewport {
   right: number
   bottom: number
 }
-
-/** @deprecated Use `FastSheets` as the type instead. */
-export type FastSheetsInstance = FastSheets
 
 export interface RenderCellBackgroundOptions {
   ctx: CanvasRenderingContext2D
