@@ -186,13 +186,8 @@ export class FastSheets {
     elScroll.removeEventListener('scroll', this.#boundRender)
   }
 
-  /**
-   * Scrolls the grid when the wheel turns over an element on top of the scroll container,
-   * such as the cell editor of a plugin. Inside the scroll container the browser scrolls by itself,
-   * so scrolling here too would move the grid twice as far.
-   */
   #onWheel(e: WheelEvent) {
-    const elScroll = this.state.options.elScroll
+    const { elScroll } = this.state.options
     if (e.target instanceof Node && elScroll.contains(e.target)) {
       return
     }
