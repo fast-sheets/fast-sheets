@@ -187,13 +187,14 @@ export class FastSheets {
   }
 
   #onWheel(e: WheelEvent) {
-    const elScroll = this.state.options.elScroll
-    if (elScroll) {
-      elScroll.scrollTo({
-        top: elScroll.scrollTop + e.deltaY,
-        left: elScroll.scrollLeft + e.deltaX,
-      })
+    const { elScroll } = this.state.options
+    if (e.target instanceof Node && elScroll.contains(e.target)) {
+      return
     }
+    elScroll.scrollTo({
+      top: elScroll.scrollTop + e.deltaY,
+      left: elScroll.scrollLeft + e.deltaX,
+    })
   }
 
   #onResize() {

@@ -276,6 +276,21 @@ test.describe('cell editor', () => {
     await expect(getInput(page)).toBeVisible()
     expect(await getUpdates(page)).toEqual([])
   })
+
+  test('scrolls the grid by the mouse wheel over it', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 1000, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await expect(getInput(page)).toBeVisible()
+    await page.mouse.wheel(0, 100)
+
+    const getScrollTop = () =>
+      page.evaluate(() => window.fastSheets.state.options.elScroll.scrollTop)
+    await expect.poll(getScrollTop).toBeGreaterThan(0)
+    await page.waitForTimeout(300)
+    expect(await getScrollTop()).toBe(100)
+  })
 })
 
 test.describe('cell editor on a touch screen', () => {
