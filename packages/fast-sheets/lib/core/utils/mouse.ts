@@ -1,1 +1,1 @@
-export const isLeftMouseButton = (e: MouseEvent) => e.buttons == 1
+export const isLeftMouseButton = (e: MouseEvent) => e.button === 0
