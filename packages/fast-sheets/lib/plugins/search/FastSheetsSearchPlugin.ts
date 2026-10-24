@@ -1,4 +1,5 @@
-import type { FastSheetsInstance, RenderCellBackgroundOptions, Cell } from 'lib/core/types.ts'
+import type { FastSheets } from 'lib/core/FastSheets.ts'
+import type { RenderCellBackgroundOptions, Cell } from 'lib/core/types.ts'
 import type { Options, RawOptions } from './types.ts'
 import { getCellInfo } from 'lib/core/utils/cell.ts'
 import { renderCellBackground } from 'lib/core/utils/render.ts'
@@ -12,7 +13,7 @@ const DEFAULT_OPTIONS = {
 export class FastSheetsSearchPlugin implements FastSheetsPlugin {
   name = 'search'
 
-  instance!: FastSheetsInstance
+  instance!: FastSheets
 
   options: Options
 
@@ -29,7 +30,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
     }
   }
 
-  setup(instance: FastSheetsInstance) {
+  setup(instance: FastSheets) {
     this.instance = instance
   }
 

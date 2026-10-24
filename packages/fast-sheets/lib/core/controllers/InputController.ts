@@ -1,5 +1,5 @@
 import { InputField } from 'lib/core/elements/InputField.ts'
-import type { StateInstance } from 'lib/core/State.ts'
+import type { State } from 'lib/core/State.ts'
 import type { CellInfo, ModifiedCell } from 'lib/core/types.ts'
 
 interface InputControllerOptions {
@@ -30,7 +30,7 @@ export class InputController {
     this.#onInputBlurBound = this.#onInputBlur.bind(this)
   }
 
-  bindEvents(state: StateInstance) {
+  bindEvents(state: State) {
     this.elContainer = state.options.elContainer
     this.elScrollInner = state.options.elScrollInner
     this.inputField.el.addEventListener('keydown', this.#onInputKeyDownBound)

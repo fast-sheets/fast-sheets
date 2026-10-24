@@ -1,9 +1,4 @@
-import type {
-  Cell,
-  FastSheetsInstance,
-  RenderCellBackgroundOptions,
-  RenderCellTextOptions,
-} from 'lib/core'
+import type { Cell, FastSheets, RenderCellBackgroundOptions, RenderCellTextOptions } from 'lib/core'
 
 export type OptionalHook =
   | 'render'
@@ -27,7 +22,7 @@ export interface PluginHooks {
 
 export interface FastSheetsPlugin {
   name: string
-  setup(instance: FastSheetsInstance): void
+  setup(instance: FastSheets): void
   render?(): void
   getCellBackgroundColor?(cell: Cell, backgroundColor: string): string
   /** The background of a column name in the header row */

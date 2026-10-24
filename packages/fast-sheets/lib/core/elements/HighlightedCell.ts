@@ -1,6 +1,6 @@
 import { HighlightedArea } from './HighlightedArea.ts'
 import { getCellDomRect } from 'lib/core/utils/cell.ts'
-import type { StateInstance } from 'lib/core/State.ts'
+import type { State } from 'lib/core/State.ts'
 import type { Cell } from 'lib/core/types.ts'
 
 interface CellHighlightOptions {
@@ -28,7 +28,7 @@ export class HighlightedCell {
     this.container.appendChild(this.borders.container)
   }
 
-  highlight = ({ cell, state }: { cell: Cell; state: StateInstance }) => {
+  highlight = ({ cell, state }: { cell: Cell; state: State }) => {
     this.cell = cell
     const cellDomRect = getCellDomRect({ cell, state })
     this.borders.show(cellDomRect)

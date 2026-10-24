@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { FastSheets, type Column } from 'fast-sheets'
 import { FastSheetsEditablePlugin } from 'fast-sheets/editable'
 
-let fastSheets: InstanceType<typeof FastSheets>
+let fastSheets: FastSheets
 const elContainer = ref<HTMLDivElement | null>(null)
 
 const generateData = () => {

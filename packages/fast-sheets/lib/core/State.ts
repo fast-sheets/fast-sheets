@@ -30,5 +30,3 @@ export class State {
     bottom: 0,
   }
 }
-
-export type StateInstance = InstanceType<typeof State>

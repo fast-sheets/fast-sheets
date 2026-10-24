@@ -2,8 +2,8 @@
 import { FastSheets, type Column } from 'fast-sheets'
 import { onMounted, onUnmounted, ref } from 'vue'
 
-let fastSheetsPlan: InstanceType<typeof FastSheets>
-let fastSheetsFact: InstanceType<typeof FastSheets>
+let fastSheetsPlan: FastSheets
+let fastSheetsFact: FastSheets
 
 const elContainerPlan = ref<HTMLDivElement | null>(null)
 const elContainerFact = ref<HTMLDivElement | null>(null)
