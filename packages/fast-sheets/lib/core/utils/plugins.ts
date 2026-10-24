@@ -1,4 +1,5 @@
-import type { Cell, FastSheets, RenderCellBackgroundOptions, RenderCellTextOptions } from 'lib/core'
+import type { FastSheets } from 'lib/core/FastSheets.ts'
+import type { Cell, RenderCellBackgroundOptions, RenderCellTextOptions } from 'lib/core/types.ts'
 
 export type OptionalHook =
   | 'render'
