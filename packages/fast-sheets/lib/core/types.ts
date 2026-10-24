@@ -109,7 +109,8 @@ export interface Viewport {
   bottom: number
 }
 
-export type FastSheetsInstance = InstanceType<typeof FastSheets>
+/** @deprecated Use `FastSheets` as the type instead. */
+export type FastSheetsInstance = FastSheets
 
 export interface RenderCellBackgroundOptions {
   ctx: CanvasRenderingContext2D
@@ -127,7 +128,7 @@ export interface RenderCellTextOptions {
   text: string
   x: number
   y: number
-  font?: InstanceType<typeof Font>
+  font?: Font
   fill?: string
   textAlign: CanvasTextAlign
   verticalAlign: 'top' | 'middle' | 'bottom'

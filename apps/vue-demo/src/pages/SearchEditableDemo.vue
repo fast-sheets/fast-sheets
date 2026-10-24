@@ -4,8 +4,8 @@ import { FastSheets, type Column, type Cell } from 'fast-sheets'
 import { FastSheetsEditablePlugin } from 'fast-sheets/editable'
 import { FastSheetsSearchPlugin } from 'fast-sheets/search'
 
-let fastSheets: InstanceType<typeof FastSheets>
-let searchPlugin: InstanceType<typeof FastSheetsSearchPlugin>
+let fastSheets: FastSheets
+let searchPlugin: FastSheetsSearchPlugin
 let generatedData: string[][] = []
 const searchQuery = defineModel<string>()
 const elContainer = ref<HTMLDivElement | null>(null)

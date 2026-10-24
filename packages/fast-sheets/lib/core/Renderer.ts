@@ -10,7 +10,7 @@ import {
   ROW_HEADING_FONT,
 } from 'lib/core/constants.ts'
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
-import type { StateInstance } from 'lib/core/State.ts'
+import type { State } from 'lib/core/State.ts'
 import { Font } from 'lib/core/Font.ts'
 import { getOffsets, renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
 import { getLinesHeight, getLinesCount } from 'lib/core/utils/font.ts'
@@ -18,7 +18,7 @@ import type { Cell, CellsRange } from 'lib/core/types.ts'
 import { createPluginHooks, type FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
 export class Renderer {
-  readonly #state: StateInstance
+  readonly #state: State
   #isRendering = false
   #fonts: { [fontName: string]: Font } = {}
   #animationFrameId: number | null = null
@@ -29,7 +29,7 @@ export class Renderer {
   #pluginHooks = createPluginHooks([])
   #rowHeightsByLinesCount: number[] = [] //  row heights by the number of text lines in the row
 
-  constructor(state: StateInstance) {
+  constructor(state: State) {
     this.#state = state
   }
 

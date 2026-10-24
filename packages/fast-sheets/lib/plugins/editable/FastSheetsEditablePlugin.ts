@@ -1,4 +1,5 @@
-import type { FastSheetsInstance, ModifiedCell, CellsRange, Cell } from 'lib/core/types.ts'
+import type { FastSheets } from 'lib/core/FastSheets.ts'
+import type { ModifiedCell, CellsRange, Cell } from 'lib/core/types.ts'
 import type { Options, RawOptions } from './types.ts'
 import {
   BORDER_STYLE,
@@ -34,15 +35,15 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   options: Options
 
-  instance!: FastSheetsInstance
+  instance!: FastSheets
 
   elEditableContainerFront: HTMLDivElement
   elEditableContainerBack: HTMLDivElement
-  selectedRange: InstanceType<typeof HighlightedRange>
-  copiedRange: InstanceType<typeof HighlightedRange>
-  rangeSelectionController: InstanceType<typeof RangeSelectionController>
-  focusedCell: InstanceType<typeof HighlightedCell>
-  inputController: InstanceType<typeof InputController>
+  selectedRange: HighlightedRange
+  copiedRange: HighlightedRange
+  rangeSelectionController: RangeSelectionController
+  focusedCell: HighlightedCell
+  inputController: InputController
 
   resizeObserver: ResizeObserver
 
@@ -133,7 +134,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   // noinspection JSUnusedGlobalSymbols
-  setup(instance: FastSheetsInstance) {
+  setup(instance: FastSheets) {
     this.instance = instance
 
     this.init(instance)
@@ -151,7 +152,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.instance.unregister(this.name)
   }
 
-  init(instance: FastSheetsInstance) {
+  init(instance: FastSheets) {
     // elEditableContainerBack should be before scroll
     instance.state.options.elScroll.before(this.elEditableContainerBack)
 
@@ -159,7 +160,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     instance.state.options.elScroll.after(this.elEditableContainerFront)
   }
 
-  bindEvents(instance: FastSheetsInstance) {
+  bindEvents(instance: FastSheets) {
     // mouse events
     instance.state.options.elContainer.addEventListener('dblclick', this.#boundDoubleClick)
     window.addEventListener('mouseup', this.#boundMouseUp)
@@ -182,7 +183,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     this.inputController.bindEvents(this.instance.state)
   }
 
-  unbindEvents(instance: FastSheetsInstance) {
+  unbindEvents(instance: FastSheets) {
     // mouse events
     instance.state.options.elContainer.removeEventListener('dblclick', this.#boundDoubleClick)
     window.removeEventListener('mouseup', this.#boundMouseUp)

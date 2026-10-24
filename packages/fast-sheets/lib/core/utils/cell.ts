@@ -1,12 +1,12 @@
-import { type StateInstance } from 'lib/core/State.ts'
+import type { State } from 'lib/core/State.ts'
 import { DEFAULT_FONT, DEFAULT_PADDING } from 'lib/core/constants.ts'
 import type { Cell, CellInfo, CellsRange, DomRect } from 'lib/core/types.ts'
 
-export const getCellText = ({ cell, state }: { cell: Cell; state: StateInstance }): string => {
+export const getCellText = ({ cell, state }: { cell: Cell; state: State }): string => {
   return state.options.data[cell.rowIndex]?.[cell.columnIndex] || ''
 }
 
-export const getCellInfo = ({ cell, state }: { cell: Cell; state: StateInstance }): CellInfo => {
+export const getCellInfo = ({ cell, state }: { cell: Cell; state: State }): CellInfo => {
   const cellDomRect = getCellDomRect({ cell, state })
   return {
     cell,
@@ -21,7 +21,7 @@ export const getCellInfo = ({ cell, state }: { cell: Cell; state: StateInstance 
   }
 }
 
-export const getCellDomRect = ({ cell, state }: { cell: Cell; state: StateInstance }): DomRect => {
+export const getCellDomRect = ({ cell, state }: { cell: Cell; state: State }): DomRect => {
   const { rowIndex, columnIndex } = cell
   return {
     top: state.verticalOffsets[rowIndex] || 0,
@@ -38,7 +38,7 @@ export const getAboveCell = ({ cell }: { cell: Cell }): Cell => {
   }
 }
 
-export const getBelowCell = ({ cell, state }: { cell: Cell; state: StateInstance }): Cell => {
+export const getBelowCell = ({ cell, state }: { cell: Cell; state: State }): Cell => {
   return {
     ...cell,
     rowIndex: Math.min(Math.max(state.options.data.length - 1, 0), cell.rowIndex + 1),
@@ -52,7 +52,7 @@ export const getLeftCell = ({ cell }: { cell: Cell }): Cell => {
   }
 }
 
-export const getRightCell = ({ cell, state }: { cell: Cell; state: StateInstance }): Cell => {
+export const getRightCell = ({ cell, state }: { cell: Cell; state: State }): Cell => {
   return {
     ...cell,
     columnIndex: Math.min((state.options.data[0]?.length || 1) - 1, cell.columnIndex + 1),

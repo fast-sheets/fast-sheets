@@ -10,8 +10,8 @@ const DEFAULT_OPTIONS = {
 }
 
 export class FastSheets {
-  state: InstanceType<typeof State>
-  renderer: InstanceType<typeof Renderer>
+  state: State
+  renderer: Renderer
 
   /** The registered plugins by name. Changed only by `use` and `unregister`, which keep the renderer's copy in sync. */
   #plugins: { readonly [pluginName: string]: FastSheetsPlugin } = {}

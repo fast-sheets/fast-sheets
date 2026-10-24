@@ -2,7 +2,7 @@
 import { FastSheets, type Column } from 'fast-sheets'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
-let fastSheets: InstanceType<typeof FastSheets>
+let fastSheets: FastSheets
 const rowsCount = ref(3000)
 const elContainer = ref<HTMLDivElement>()
 

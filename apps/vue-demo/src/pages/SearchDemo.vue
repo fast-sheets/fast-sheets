@@ -3,8 +3,8 @@ import { FastSheets, type Cell, type Column } from 'fast-sheets'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { FastSheetsSearchPlugin } from 'fast-sheets/search'
 
-let fastSheets: InstanceType<typeof FastSheets>
-let searchPlugin: InstanceType<typeof FastSheetsSearchPlugin>
+let fastSheets: FastSheets
+let searchPlugin: FastSheetsSearchPlugin
 let generatedData: string[][] = []
 const searchQuery = defineModel<string>()
 const elContainer = ref<HTMLDivElement | null>(null)

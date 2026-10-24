@@ -1,5 +1,5 @@
 import { HighlightedArea } from 'lib/core/elements/HighlightedArea.ts'
-import { type StateInstance } from 'lib/core/State.ts'
+import type { State } from 'lib/core/State.ts'
 import { BORDER_STYLE } from 'lib/core/constants.ts'
 import type { Cell, CellsRange, DomRect } from 'lib/core/types.ts'
 
@@ -39,7 +39,7 @@ export class HighlightedRange {
     this.container.appendChild(this.borders.container)
   }
 
-  highlight = ({ range, state }: { range: CellsRange; state: StateInstance }) => {
+  highlight = ({ range, state }: { range: CellsRange; state: State }) => {
     this.range.rowStart = range.rowStart
     this.range.rowEnd = range.rowEnd
     this.range.columnStart = range.columnStart
