@@ -22,7 +22,8 @@ export class InputField {
     this.name = options.name
     this.el = document.createElement('div')
     this.el.setAttribute('data-name', options.name)
-    this.el.setAttribute('contenteditable', 'true')
+    // plain text only, so a paste from a web page or a document doesn't bring its formatting
+    this.el.setAttribute('contenteditable', 'plaintext-only')
     Object.assign(this.el.style, inputField)
     this.el.style.font = options.font
     this.hide()

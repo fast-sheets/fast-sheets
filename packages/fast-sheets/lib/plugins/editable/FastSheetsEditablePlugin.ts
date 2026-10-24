@@ -379,6 +379,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #onPaste(e: ClipboardEvent) {
+    if (this.#isInputVisible()) {
+      // let the browser paste into the cell editor
+      return
+    }
     e.preventDefault()
     this.copiedRange.reset()
     const paste = e.clipboardData?.getData('text')
