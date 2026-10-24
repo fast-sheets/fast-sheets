@@ -65,11 +65,6 @@ export class Renderer {
     this.#state.horizontalOffsets = this.getHorizontalOffsets()
     this.#state.verticalOffsets = this.getVerticalOffsets()
 
-    this.#state.totalSize = {
-      width: this.#state.horizontalOffsets[this.#state.horizontalOffsets.length - 1] || 0,
-      height: this.#state.verticalOffsets[this.#state.verticalOffsets.length - 1] || 0,
-    }
-
     this.#state.containerSize = {
       width: elScrollInner.getBoundingClientRect().width,
       height: elScrollInner.getBoundingClientRect().height,
@@ -166,7 +161,6 @@ export class Renderer {
       offsets[rowIndex] = offsets[rowIndex - 1]! + state.rowHeights[rowIndex - 1]! + borderWidth
     }
     state.totalHeight += heightDelta
-    state.totalSize.height = offsets[offsets.length - 1] || 0
     state.options.elScrollPaneY.style.height = `${state.totalHeight}px`
   }
 

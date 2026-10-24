@@ -3,10 +3,6 @@ import type { CanvasSize, Options, Size } from 'lib/core/types.ts'
 export class State {
   options!: Options
 
-  totalSize: Size = {
-    width: 0,
-    height: 0,
-  }
   horizontalOffsets: number[] = []
   verticalOffsets: number[] = []
   totalWidth = 0
