@@ -4,24 +4,25 @@ import {
   COLUMN_HEADING_FONT,
   DEFAULT_COLUMN_MIN_WIDTH,
   DEFAULT_FONT,
-  DEFAULT_FONT_HEIGHT,
-  DEFAULT_LINE_SPACING,
   DEFAULT_PADDING,
   ROW_HEADING_FONT,
 } from 'lib/core/constants.ts'
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
+import { FontsManager } from 'lib/core/FontsManager.ts'
+import type { Font } from 'lib/core/Font.ts'
 import type { State } from 'lib/core/State.ts'
 import { Font } from 'lib/core/Font.ts'
 import { getOffsets, renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
-import { getLinesHeight, getLinesCount } from 'lib/core/utils/font.ts'
 import type { Cell, CellsRange } from 'lib/core/types.ts'
 import { createPluginHooks, type FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
+import { getLinesCount } from 'lib/core/utils/string.ts'
 
 export class Renderer {
   readonly #state: State
   #isRendering = false
   #fonts: { [fontName: string]: Font } = {}
   #animationFrameId: number | null = null
+  readonly #fontsManager = new FontsManager()
   /**
    * The registered plugins grouped by hook, read for every frame and every cell.
    * Replaced by `setPlugins`, never changed in place, so a frame being drawn keeps the plugins it started with.
@@ -49,7 +50,7 @@ export class Renderer {
     elCanvas.style.width = `${this.#state.canvasSize.width}px`
     elCanvas.style.height = `${this.#state.canvasSize.height}px`
 
-    this.initFonts(ctx)
+    this.#fontsManager.initFonts(ctx)
 
     this.#state.hasHeaderRow = !!columns.find((column) => !!column.name)
 
@@ -85,8 +86,7 @@ export class Renderer {
       return 0
     }
 
-    const fontHeight = this.#fonts[ROW_HEADING_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
-    const linesHeight = getLinesHeight(1, fontHeight, DEFAULT_LINE_SPACING)
+    const linesHeight = this.#fontsManager.getFont(COLUMN_HEADING_FONT).getLinesHeight(1)
     const paddingY = DEFAULT_PADDING.y * 4
     return roundToPixels(linesHeight + paddingY)
   }
@@ -117,8 +117,7 @@ export class Renderer {
   #getRowHeightByLinesCount(linesCount: number) {
     let rowHeight = this.#rowHeightsByLinesCount[linesCount]
     if (rowHeight === undefined) {
-      const fontHeight = this.#fonts[DEFAULT_FONT]?.fontHeight || DEFAULT_FONT_HEIGHT
-      const linesHeight = getLinesHeight(linesCount, fontHeight, DEFAULT_LINE_SPACING)
+      const linesHeight = this.#fontsManager.getFont(DEFAULT_FONT).getLinesHeight(linesCount)
       const paddingY = DEFAULT_PADDING.y * 2
       rowHeight = roundToPixels(linesHeight + paddingY)
       this.#rowHeightsByLinesCount[linesCount] = rowHeight

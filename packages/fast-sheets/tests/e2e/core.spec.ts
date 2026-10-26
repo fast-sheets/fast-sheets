@@ -22,6 +22,31 @@ test.describe('init instance', () => {
   })
 })
 
+test.describe('before the first layout', () => {
+  test('rendering does nothing instead of throwing', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForFunction(() => window.isFixtureReady === true)
+    const error = await page.getByTestId('fast-sheets').evaluate((elContainer: HTMLElement) => {
+      // the resize observer lays the grid out later, so nothing is measured yet
+      const fastSheets = new window.FastSheets({
+        elContainer,
+        data: [['a', 'b']],
+        columns: [{ name: 'A' }, { name: 'B' }],
+      })
+      const searchPlugin = new window.FastSheetsSearchPlugin()
+      fastSheets.use(searchPlugin)
+      try {
+        searchPlugin.highlightResult([{ rowIndex: 0, columnIndex: 0 }])
+        fastSheets.renderer.renderImmediate()
+        return ''
+      } catch (err) {
+        return String(err)
+      }
+    })
+    expect(error).toBe('')
+  })
+})
+
 test.describe('cell borders', () => {
   test('are drawn after scrolling', async ({ page }) => {
     await page.goto('/')
