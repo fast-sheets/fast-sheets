@@ -1,5 +1,5 @@
 import { roundToPixels } from 'lib/core/utils/round-to-pixels.ts'
-import { findLastIndexLessOrEqual } from 'lib/core/utils/array.ts'
+import { findFloorIndex } from 'lib/core/utils/array.ts'
 import {
   COLUMN_HEADING_FONT,
   DEFAULT_COLUMN_MIN_WIDTH,
@@ -231,7 +231,7 @@ export class Renderer {
     if (offsetX > maxX) {
       return -1
     }
-    return findLastIndexLessOrEqual(this.#state.horizontalOffsets, offsetX)
+    return findFloorIndex(this.#state.horizontalOffsets, offsetX)
   }
 
   findRowIndex = (offsetY: number) => {
@@ -239,7 +239,7 @@ export class Renderer {
     if (offsetY > maxY) {
       return -1
     }
-    return findLastIndexLessOrEqual(this.#state.verticalOffsets, offsetY)
+    return findFloorIndex(this.#state.verticalOffsets, offsetY)
   }
 
   findCellByMouseEvent(e: MouseEvent) {
@@ -253,8 +253,8 @@ export class Renderer {
       return undefined
     }
 
-    const columnIndex = this.findColumnIndex(x)
-    const rowIndex = this.findRowIndex(y)
+    const columnIndex = findFloorIndex(state.horizontalOffsets, x)
+    const rowIndex = findFloorIndex(state.verticalOffsets, y)
 
     if (columnIndex < 0 || rowIndex < 0) {
       return undefined
