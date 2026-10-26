@@ -1,8 +1,18 @@
 /**
- * Returns the index of the last element that is `<= value` in an array sorted in ascending order,
- * or -1 if there is no such element. Same result as `arr.findLastIndex((x) => x <= value)`, in O(log n).
+ * Finds the index of the "floor" of a value in a sorted array.
+ * The "floor" is the largest element less than or equal to the given value.
+ * Equivalent to arr.findLastIndex((x) => x <= value), but executes using binary search.
+ *
+ * @param {readonly number[]} sortedArray - The array sorted in ascending order to search within.
+ * @param {number} value - The target value to find the floor of.
+ * @returns {number} The index of the floor element, or -1 if no such element exists.
+ *
+ * @example
+ * const arr = [10, 20, 30];
+ * findFloorIndex(arr, 25); // Returns 1 (index of 20)
+ * findFloorIndex(arr, 5); // Returns -1 (no element is <= 5)
  */
-export const findLastIndexLessOrEqual = (sortedArray: readonly number[], value: number) => {
+export const findFloorIndex = (sortedArray: readonly number[], value: number): number => {
   let low = 0
   let high = sortedArray.length // search in [low, high)
   while (low < high) {

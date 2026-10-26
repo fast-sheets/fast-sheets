@@ -1,8 +1,7 @@
 import type { FastSheets } from 'lib/core/FastSheets.ts'
-import type { RenderCellBackgroundOptions, Cell } from 'lib/core/types.ts'
+import type { Cell, CellStyle } from 'lib/core/types.ts'
 import type { Options, RawOptions } from './types.ts'
-import { getCellInfo } from 'lib/core/utils/cell.ts'
-import { renderCellBackground } from 'lib/core/utils/render.ts'
+import { getCellInfo, isDataCell } from 'lib/core/utils/cell.ts'
 import { DEFAULT_SEARCH_RESULT_COLOR } from 'lib/core/constants.ts'
 import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
@@ -19,7 +18,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
 
   /**
    * Cells found by the search, grouped by row: maps a row index to the column indexes found in it.
-   * Checked for every cell drawn, so a lookup must be fast and must not allocate.
+   * Checked for every cell rendered, so a lookup must be fast and must not allocate.
    */
   searchResult = new Map<number, Set<number>>()
 
@@ -41,7 +40,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
   #scrollTo(cell: Cell) {
     const state = this.instance.state
     const borderWidth = this.instance.state.options.borderWidth
-    const cellInfo = getCellInfo({ cell, state })
+    const cellInfo = getCellInfo(cell, state)
     state.options.elScroll.scrollTo({ top: cellInfo.top - borderWidth, behavior: 'smooth' })
   }
 
@@ -63,23 +62,9 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
     }
   }
 
-  renderCellBackground({
-    ctx,
-    cell,
-    backgroundColor,
-    borderWidth,
-    width,
-    height,
-  }: RenderCellBackgroundOptions) {
-    if (cell && this.searchResult.get(cell.rowIndex)?.has(cell.columnIndex)) {
-      renderCellBackground({
-        ctx,
-        bordersColor: this.options.selectionColor,
-        backgroundColor,
-        borderWidth,
-        width,
-        height,
-      })
+  cellStyle(cell: Readonly<Cell>, style: CellStyle) {
+    if (isDataCell(cell) && this.searchResult.get(cell.rowIndex)?.has(cell.columnIndex)) {
+      style.borderColor = this.options.selectionColor
     }
   }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Renderer } from 'lib/core/Renderer.ts'
 import { createState } from './utils/state'
+import { createMeasuringRenderer } from './utils/renderer'
 
 describe('renderer', () => {
   it('computes row heights correctly', () => {
@@ -13,7 +14,7 @@ describe('renderer', () => {
       hasHeaderRow: true,
       isRowNumberVisible: true,
     })
-    const renderer = new Renderer(state)
+    const renderer = createMeasuringRenderer(state)
 
     const rowHeights = renderer.getRowHeights()
     expect(rowHeights).toHaveLength(4)
@@ -51,7 +52,7 @@ describe('renderer', () => {
       hasHeaderRow: true,
       isRowNumberVisible: true,
     })
-    const renderer = new Renderer(state)
+    const renderer = createMeasuringRenderer(state)
     state.rowHeights = renderer.getRowHeights()
 
     const verticalOffsets = renderer.getVerticalOffsets()
@@ -73,6 +74,8 @@ describe('renderer', () => {
     })
     const renderer = new Renderer(state)
 
+    // the offsets start after the numbering column that the state already holds
+    state.numberingColumnWidth = renderer.getNumberingColumnWidth()
     state.columnWidths = renderer.getColumnWidths()
 
     const horizontalOffsets = renderer.getHorizontalOffsets()
@@ -116,7 +119,7 @@ describe('renderer', () => {
       hasHeaderRow: true,
       isRowNumberVisible: true,
     })
-    const renderer = new Renderer(state)
+    const renderer = createMeasuringRenderer(state)
     state.rowHeights = renderer.getRowHeights()
     state.headerRowHeight = renderer.getHeaderRowHeight()
 
@@ -211,7 +214,7 @@ describe('renderer', () => {
         hasHeaderRow: false,
         isRowNumberVisible: false,
       })
-      const renderer = new Renderer(state)
+      const renderer = createMeasuringRenderer(state)
       state.rowHeights = renderer.getRowHeights()
       state.verticalOffsets = renderer.getVerticalOffsets()
       state.totalHeight = renderer.getTotalHeight()

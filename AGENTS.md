@@ -7,14 +7,14 @@ Guidance for AI coding agents working in this repository.
 
 ## Project overview
 
-`fast-sheets` is a small, dependency-free TypeScript library that renders huge data grids on a `<canvas>`. Only the visible viewport gets drawn. A hidden native scroll container (`elScroll` plus the `elScrollPaneX`/`elScrollPaneY` spacers) supplies the scrollbars and scroll position.
+`fast-sheets` is a small, dependency-free TypeScript library that renders huge data grids on a `<canvas>`. Only the visible viewport gets rendered. A hidden native scroll container (`elScroll` plus the `elScrollPaneX`/`elScrollPaneY` spacers) supplies the scrollbars and scroll position.
 
 It's a **pnpm monorepo**:
 
 | Path | Purpose |
 | --- | --- |
 | `packages/fast-sheets/` | The published library (npm `fast-sheets`) |
-| `packages/fast-sheets/lib/core/` | Core: `FastSheets`, `Renderer`, `State`, `Font`, types, constants, utils |
+| `packages/fast-sheets/lib/core/` | Core: `FastSheets`, `Renderer`, `State`, `Font`, `FontsManager`, types, constants, utils |
 | `packages/fast-sheets/lib/core/controllers/` | Reusable controllers for plugins: `InputController`, `RangeSelectionController` |
 | `packages/fast-sheets/lib/core/elements/` | Reusable DOM overlays for plugins: `InputField`, `HighlightedArea`, `HighlightedCell`, `HighlightedRange` |
 | `packages/fast-sheets/lib/plugins/editable/` | Editable plugin: cell input, range selection, clipboard (`fast-sheets/editable`) |
@@ -71,6 +71,8 @@ pnpm lint && pnpm types:check && pnpm test:lib:unit && pnpm test:lib:e2e
 
 Add or update tests with any behavior change. Use unit tests for pure logic (cell/clipboard utils, renderer sizing math) and e2e tests for interaction (mouse, keyboard, clipboard, scrolling).
 
+jsdom has no canvas, so unit tests that measure rows or fonts create the renderer with `createMeasuringRenderer` (`tests/unit/utils/renderer.ts`), which runs `init()` with a fake canvas context.
+
 ## Code style
 
 - TypeScript in strict mode. Prettier settings: **no semicolons, single quotes, `printWidth: 100`**.
@@ -83,13 +85,16 @@ Add or update tests with any behavior change. Use unit tests for pure logic (cel
 
 ## Architecture notes
 
-- **`FastSheets`** (`lib/core/FastSheets.ts`) creates any DOM elements the caller doesn't pass in (container, canvas, scroll layers), merges options with `DEFAULT_OPTIONS` into `State`, binds wheel, scroll and resize events and registers plugins through `use(plugin)`. It keeps the registered plugins private: plugins call `unregister(name)` from their `destroy()`, other code checks a plugin with `hasPlugin(name)`, and the renderer gets the list through `renderer.setPlugins()`.
+- **`FastSheets`** (`lib/core/FastSheets.ts`) creates any DOM elements the caller doesn't pass in (container, canvas, scroll layers), merges options with `DEFAULT_OPTIONS` into `State`, binds wheel, scroll, resize, mouse, pointer and keyboard events and registers plugins through `use(plugin)`. It passes the events to the plugin hooks and applies data changes through `setCells()`, which runs the `beforeCellsChange` and `afterCellsChange` hooks and writes `data`. It keeps the registered plugins private: plugins call `unregister(name)` from their `destroy()`, other code checks a plugin with `hasPlugin(name)`, and the renderer gets the hooks through `renderer.setPluginHooks()`.
 - **`State`** (`lib/core/State.ts`) is a plain mutable state shared by the renderer and plugins: options, viewport, row/column sizes and offsets, canvas size, `hasHeaderRow` and `numberingColumnWidth`.
-- **`Renderer`** (`lib/core/Renderer.ts`): `render()` throttles through `requestAnimationFrame`, and `renderImmediate()` draws synchronously. The header row and the row-numbering column are drawn separately from the grid cells.
-- **Plugins** implement `FastSheetsPlugin` (`lib/core/utils/plugins.ts`) and build their UI from the core controllers and elements (`lib/core/controllers/`, `lib/core/elements/`).
+- **`Renderer`** (`lib/core/Renderer.ts`): `render()` throttles through `requestAnimationFrame`, and `renderImmediate()` renders synchronously. It does nothing before the first layout (`init()`), which the resize observer starts. A frame renders the corner, the header-row, the numbering-column and the data cells in one pass, then the borders in a second pass, so that they go on top of content that spills outside a cell.
+- **`FontsManager`** (`lib/core/FontsManager.ts`) measures fonts once the first layout gives it a canvas context, and caches them until the next layout. A `cellStyle` hook gets a font for `style.font` through `renderer.getFont()`.
+- **Cells** are `{ rowIndex, columnIndex }`. A column-heading has `rowIndex` -1, a row-numbering cell has `columnIndex` -1, and the top-left corner has both. Use the helpers in `lib/core/utils/cell.ts` (`isDataCell`, `isColumnHeading`, `isRowNumbering`, `isCornerCell`) instead of comparing indexes.
+- **Plugins** implement `FastSheetsPlugin` (`lib/core/utils/plugins.ts`), customize the grid through its hooks and build their UI from the core controllers and elements (`lib/core/controllers/`, `lib/core/elements/`).
+  Hooks run in the order plugins are registered with `use()`, so a later plugin overrides and renders over the earlier ones. Input hooks and `beforeCellsChange` run from the last registered plugin first, and a plugin can call `stop()` on the event to keep it from the plugins below. The style and rendering hooks run for every visible cell in every frame, and the cells and contexts they get are reused, so they're valid only during the call.
   A new plugin needs its own `lib/plugins/<name>/index.ts` entry, a matching entry in `packages/fast-sheets/vite.config.ts` and an `exports` entry in `packages/fast-sheets/package.json`.
 - Plugins must clean up their DOM elements and event listeners in `destroy()`.
-- Performance matters most here. Avoid per-cell allocations and DOM work inside render paths. Draw only what's inside the viewport.
+- Performance and customization matter most here. Avoid per-cell allocations and DOM work inside render paths. Render only what's inside the viewport.
 
 ## Commits and PRs
 

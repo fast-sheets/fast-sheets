@@ -30,7 +30,7 @@ export class HighlightedCell {
 
   highlight = ({ cell, state }: { cell: Cell; state: State }) => {
     this.cell = cell
-    const cellDomRect = getCellDomRect({ cell, state })
+    const cellDomRect = getCellDomRect(cell, state)
     this.borders.show(cellDomRect)
   }
 

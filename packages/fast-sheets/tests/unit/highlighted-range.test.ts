@@ -23,7 +23,7 @@ const createBorderlessState = () => {
 }
 
 describe('HighlightedRange', () => {
-  it('draws a range that starts at offset 0 from 0', () => {
+  it('renders a range that starts at offset 0 from 0', () => {
     const highlightedRange = createHighlightedRange()
     const range = { rowStart: 0, rowEnd: 1, columnStart: 0, columnEnd: 1 }
     highlightedRange.highlight({ range, state: createBorderlessState() })

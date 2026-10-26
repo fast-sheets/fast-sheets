@@ -22,8 +22,33 @@ test.describe('init instance', () => {
   })
 })
 
+test.describe('before the first layout', () => {
+  test('rendering does nothing instead of throwing', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForFunction(() => window.isFixtureReady === true)
+    const error = await page.getByTestId('fast-sheets').evaluate((elContainer: HTMLElement) => {
+      // the resize observer lays the grid out later, so nothing is measured yet
+      const fastSheets = new window.FastSheets({
+        elContainer,
+        data: [['a', 'b']],
+        columns: [{ name: 'A' }, { name: 'B' }],
+      })
+      const searchPlugin = new window.FastSheetsSearchPlugin()
+      fastSheets.use(searchPlugin)
+      try {
+        searchPlugin.highlightResult([{ rowIndex: 0, columnIndex: 0 }])
+        fastSheets.renderer.renderImmediate()
+        return ''
+      } catch (err) {
+        return String(err)
+      }
+    })
+    expect(error).toBe('')
+  })
+})
+
 test.describe('cell borders', () => {
-  test('are drawn after scrolling', async ({ page }) => {
+  test('are rendered after scrolling', async ({ page }) => {
     await page.goto('/')
     const columns = Array.from({ length: 15 }, (_, i) => ({ name: `C${i}`, width: 100 }))
     await initFastSheets({ page, rowsCount: 200, columns, isRowNumberVisible: true })
@@ -41,7 +66,7 @@ test.describe('cell borders', () => {
         return `rgb(${r}, ${g}, ${b})`
       }
 
-      // scroll in small steps, as a wheel does, drawing a frame at each step
+      // scroll in small steps, as a wheel does, rendering a frame at each step
       for (let step = 1; step <= 10; step++) {
         elScroll.scrollTop = step * 23
         elScroll.scrollLeft = step * 17

@@ -9,7 +9,7 @@ const getCellTopBorderPixel = (page: Page, cell: { rowIndex: number; columnIndex
     const { elCanvas } = state.options
     const scale = elCanvas.width / elCanvas.getBoundingClientRect().width
     const x = Math.floor(((state.horizontalOffsets[columnIndex] || 0) + 10) * scale)
-    // the border is drawn right above the cell
+    // the border is rendered right above the cell
     const y = Math.floor(((state.verticalOffsets[rowIndex] || 0) - 0.5) * scale)
     const [r, g, b] = elCanvas.getContext('2d')!.getImageData(x, y, 1, 1).data
     return `rgb(${r}, ${g}, ${b})`
