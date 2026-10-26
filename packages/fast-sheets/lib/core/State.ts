@@ -1,4 +1,4 @@
-import type { CanvasSize, Options, Size } from 'lib/core/types.ts'
+import type { CanvasSize, Options } from 'lib/core/types.ts'
 
 export class State {
   options!: Options
@@ -15,10 +15,6 @@ export class State {
   canvasSize: CanvasSize = {
     widthWithPixelRatio: 0,
     heightWithPixelRatio: 0,
-    width: '0',
-    height: '0',
-  }
-  containerSize: Size = {
     width: 0,
     height: 0,
   }

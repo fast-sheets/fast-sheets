@@ -11,8 +11,8 @@ export const getCanvasSize = ({
   return {
     widthWithPixelRatio: Math.round(containerWidth * devicePixelRatio),
     heightWithPixelRatio: Math.round(containerHeight * devicePixelRatio),
-    width: `${containerWidth}px`,
-    height: `${containerHeight}px`,
+    width: containerWidth,
+    height: containerHeight,
   }
 }
 

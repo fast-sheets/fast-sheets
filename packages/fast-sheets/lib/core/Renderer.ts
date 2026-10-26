@@ -46,8 +46,8 @@ export class Renderer {
     }
 
     this.#state.canvasSize = getCanvasSize(elScrollInner)
-    elCanvas.style.width = this.#state.canvasSize.width
-    elCanvas.style.height = this.#state.canvasSize.height
+    elCanvas.style.width = `${this.#state.canvasSize.width}px`
+    elCanvas.style.height = `${this.#state.canvasSize.height}px`
 
     this.initFonts(ctx)
 
