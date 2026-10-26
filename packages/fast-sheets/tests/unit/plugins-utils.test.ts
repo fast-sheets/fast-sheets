@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createPluginHooks, type FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
+import {
+  createGridEvent,
+  createPluginHooks,
+  dispatchToPlugins,
+  hasLayoutHooks,
+  type FastSheetsPlugin,
+} from 'lib/core/utils/plugins.ts'
 
 const createPlugin = (name: string, hooks: Partial<FastSheetsPlugin> = {}): FastSheetsPlugin => ({
   name,
@@ -10,31 +16,87 @@ const createPlugin = (name: string, hooks: Partial<FastSheetsPlugin> = {}): Fast
 
 describe('createPluginHooks', () => {
   it('groups the plugins by the hooks they have, in registration order', () => {
-    const background = createPlugin('background', {
-      getCellBackgroundColor: (_, color) => color,
-      render() {},
-    })
-    const text = createPlugin('text', { renderCellText() {}, renderCellBackground() {} })
-    const headings = createPlugin('headings', {
-      getColumnHeadingBackgroundColor: (_, color) => color,
-      getRowHeadingBackgroundColor: (_, color) => color,
-    })
+    const style = createPlugin('style', { cellStyle() {}, afterFrameRender() {} })
+    const content = createPlugin('content', { renderCellContent() {}, renderCellBackground() {} })
     const plain = createPlugin('plain')
-    const both = createPlugin('both', { render() {}, renderCellBackground() {} })
+    const both = createPlugin('both', { afterFrameRender() {}, renderCellBackground() {} })
 
-    const hooks = createPluginHooks([background, text, plain, both, headings])
+    const hooks = createPluginHooks([style, content, plain, both])
 
-    expect(hooks.render).toEqual([background, both])
-    expect(hooks.getCellBackgroundColor).toEqual([background])
-    expect(hooks.renderCellBackground).toEqual([text, both])
-    expect(hooks.renderCellText).toEqual([text])
-    expect(hooks.getColumnHeadingBackgroundColor).toEqual([headings])
-    expect(hooks.getRowHeadingBackgroundColor).toEqual([headings])
+    expect(hooks.cellStyle).toEqual([style])
+    expect(hooks.afterFrameRender).toEqual([style, both])
+    expect(hooks.renderCellBackground).toEqual([content, both])
+    expect(hooks.renderCellContent).toEqual([content])
+    expect(hooks.renderCellBorders).toEqual([])
+  })
+
+  it('puts the last registered plugin first for input and beforeCellsChange hooks', () => {
+    const first = createPlugin('first', {
+      onMouseDown() {},
+      onKeyDown() {},
+      beforeCellsChange: (changes) => changes,
+      afterCellsChange() {},
+    })
+    const second = createPlugin('second', {
+      onMouseDown() {},
+      onKeyDown() {},
+      beforeCellsChange: (changes) => changes,
+      afterCellsChange() {},
+    })
+
+    const hooks = createPluginHooks([first, second])
+
+    expect(hooks.onMouseDown).toEqual([second, first])
+    expect(hooks.onKeyDown).toEqual([second, first])
+    expect(hooks.beforeCellsChange).toEqual([second, first])
+    expect(hooks.afterCellsChange).toEqual([first, second])
   })
 
   it('has empty groups without plugins', () => {
     const hooks = createPluginHooks([])
-    expect(hooks.render).toEqual([])
-    expect(hooks.renderCellBackground).toEqual([])
+    expect(hooks.afterFrameRender).toEqual([])
+    expect(hooks.cellStyle).toEqual([])
+    expect(hooks.onMouseDown).toEqual([])
+  })
+})
+
+describe('hasLayoutHooks', () => {
+  it('is true for a plugin that changes sizes', () => {
+    expect(hasLayoutHooks(createPlugin('rows', { getRowHeight: (_, height) => height }))).toBe(true)
+    expect(hasLayoutHooks(createPlugin('columns', { getColumnWidth: (_, width) => width }))).toBe(
+      true,
+    )
+  })
+
+  it('is false for a plugin that only renders', () => {
+    expect(hasLayoutHooks(createPlugin('style', { cellStyle() {}, afterLayout() {} }))).toBe(false)
+  })
+})
+
+describe('createGridEvent', () => {
+  it('keeps the native event and is not stopped until stop() is called', () => {
+    const native = new KeyboardEvent('keydown')
+    const event = createGridEvent(native)
+
+    expect(event.native).toBe(native)
+    expect(event.isStopped).toBe(false)
+    event.stop()
+    expect(event.isStopped).toBe(true)
+  })
+})
+
+describe('dispatchToPlugins', () => {
+  it('calls the plugins in order until one stops the event', () => {
+    const event = createGridEvent(new KeyboardEvent('keydown'))
+    const called: string[] = []
+
+    dispatchToPlugins(['top', 'middle', 'bottom'], event, (plugin) => {
+      called.push(plugin)
+      if (plugin === 'middle') {
+        event.stop()
+      }
+    })
+
+    expect(called).toEqual(['top', 'middle'])
   })
 })

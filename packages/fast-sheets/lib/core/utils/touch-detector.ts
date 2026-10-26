@@ -36,7 +36,10 @@ export interface TapInfo {
   /** Indicates whether the pointer event marks the end of a finger tap (excludes mouse, pen, long-press, or swipe inputs) */
   isTap: boolean
   isDoubleTap: boolean
-  /** The cell targeted by the tap. For the second tap of a double-tap, this returns the first tap's cell. */
+  /**
+   * The cell targeted by the tap, headings and the corner included.
+   * For the second tap of a double-tap, this returns the first tap's cell.
+   */
   targetCell: Cell | undefined
 }
 

@@ -4,39 +4,89 @@ import {
   COLUMN_HEADING_FONT,
   DEFAULT_COLUMN_MIN_WIDTH,
   DEFAULT_FONT,
+  DEFAULT_HEADING_BORDER_COLOR,
   DEFAULT_PADDING,
-  ROW_HEADING_FONT,
+  ROW_NUMBERING_FONT,
 } from 'lib/core/constants.ts'
 import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
 import { FontsManager } from 'lib/core/FontsManager.ts'
 import type { Font } from 'lib/core/Font.ts'
 import type { State } from 'lib/core/State.ts'
-import { Font } from 'lib/core/Font.ts'
-import { getOffsets, renderCellBackground, renderCellText } from 'lib/core/utils/render.ts'
-import type { Cell, CellsRange } from 'lib/core/types.ts'
-import { createPluginHooks, type FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
+import {
+  getOffsets,
+  getTextX,
+  getTextY,
+  renderCellBorders,
+  renderCellText,
+} from 'lib/core/utils/render.ts'
 import { getLinesCount } from 'lib/core/utils/string.ts'
+import type {
+  Cell,
+  CellRenderContext,
+  CellsRange,
+  CellStyle,
+  FrameContext,
+} from 'lib/core/types.ts'
+import { createPluginHooks, type PluginHooks } from 'lib/core/utils/plugins.ts'
+import { getCellText, isDataCell } from 'lib/core/utils/cell.ts'
+
+/** Copies every style field into a style object that is reused for every cell. */
+const copyCellStyle = (target: CellStyle, source: Readonly<CellStyle>) => {
+  target.backgroundColor = source.backgroundColor
+  target.borderColor = source.borderColor
+  target.font = source.font
+  target.color = source.color
+  target.textAlign = source.textAlign
+  target.verticalAlign = source.verticalAlign
+  target.paddingX = source.paddingX
+  target.paddingY = source.paddingY
+}
+
+interface RenderingContext {
+  ctx: CanvasRenderingContext2D
+  range: CellsRange
+  cell: Cell
+  cellIndex: number
+  borderColors: (string | undefined)[]
+  hasDataCellBorders: boolean
+  top: number
+  left: number
+  width: number
+  height: number
+  /** The default style of the area being rendered: column-headings, row-numbering cells, data cells or the corner. */
+  defaultStyle: Readonly<CellStyle>
+  /** The style that cellStyle hooks change, reset from `defaultStyle` for each cell. */
+  style: CellStyle
+}
+
+type RenderingFunction = (renderingContext: RenderingContext) => void
 
 export class Renderer {
   readonly #state: State
   #isRendering = false
-  #fonts: { [fontName: string]: Font } = {}
+  #isInitialized = false
   #animationFrameId: number | null = null
   readonly #fontsManager = new FontsManager()
   /**
    * The registered plugins grouped by hook, read for every frame and every cell.
-   * Replaced by `setPlugins`, never changed in place, so a frame being drawn keeps the plugins it started with.
+   * Replaced by `setPluginHooks`, never changed in place, so a frame being rendered keeps the plugins it started with.
    */
-  #pluginHooks = createPluginHooks([])
-  #rowHeightsByLinesCount: number[] = [] //  row heights by the number of text lines in the row
+  #pluginHooks: PluginHooks = createPluginHooks([])
+
+  #rowHeightsCache: number[] = [] // row heights by the number of text lines in the row
 
   constructor(state: State) {
     this.#state = state
   }
 
-  /** Sets the plugins to call while drawing. Called by `FastSheets` whenever a plugin is added or removed. */
-  setPluginHooks(plugins: readonly FastSheetsPlugin[]) {
-    this.#pluginHooks = createPluginHooks(plugins)
+  /** Sets the plugins to call while rendering. Called by `FastSheets` whenever a plugin is added or removed. */
+  setPluginHooks(pluginHooks: PluginHooks) {
+    this.#pluginHooks = pluginHooks
+  }
+
+  /** Whether the sizes were calculated at least once. */
+  get isInitialized() {
+    return this.#isInitialized
   }
 
   init() {
@@ -54,6 +104,8 @@ export class Renderer {
 
     this.#state.hasHeaderRow = !!columns.find((column) => !!column.name)
 
+    this.#rowHeightsCache = []
+
     this.#state.headerRowHeight = this.getHeaderRowHeight()
     this.#state.numberingColumnWidth = this.getNumberingColumnWidth()
 
@@ -66,19 +118,42 @@ export class Renderer {
     this.#state.horizontalOffsets = this.getHorizontalOffsets()
     this.#state.verticalOffsets = this.getVerticalOffsets()
 
-    this.#state.containerSize = {
-      width: elScrollInner.getBoundingClientRect().width,
-      height: elScrollInner.getBoundingClientRect().height,
-    }
-
     elScrollPaneX.style.width = `${this.#state.totalWidth}px`
     elScrollPaneY.style.height = `${this.#state.totalHeight}px`
+
+    this.#isInitialized = true
+    this.#afterLayout()
   }
 
-  initFonts(ctx: CanvasRenderingContext2D) {
-    this.#fonts[DEFAULT_FONT] = new Font(DEFAULT_FONT, ctx)
-    this.#fonts[ROW_HEADING_FONT] = new Font(ROW_HEADING_FONT, ctx)
-    this.#rowHeightsByLinesCount = []
+  /**
+   * Returns a font for `style.font` in a cellStyle hook, measured once and cached until the next layout.
+   * Get it inside the hook rather than keeping it, because a new layout measures the fonts again.
+   */
+  getFont(font: string): Font {
+    return this.#fontsManager.getFont(font)
+  }
+
+  /**
+   * Creates the default style of a data cell with the current fonts, changed by `overrides`.
+   * The area iterators call it once per frame for the default style of their area.
+   */
+  #createDefaultStyle(overrides?: Partial<CellStyle>): CellStyle {
+    return {
+      backgroundColor: '#fff',
+      font: this.#fontsManager.getFont(DEFAULT_FONT),
+      color: '#000',
+      textAlign: 'left',
+      verticalAlign: 'middle',
+      paddingX: DEFAULT_PADDING.x,
+      paddingY: DEFAULT_PADDING.y,
+      ...overrides,
+    }
+  }
+
+  #afterLayout() {
+    for (const plugin of this.#pluginHooks.afterLayout) {
+      plugin.afterLayout()
+    }
   }
 
   getHeaderRowHeight() {
@@ -88,11 +163,22 @@ export class Renderer {
 
     const linesHeight = this.#fontsManager.getFont(COLUMN_HEADING_FONT).getLinesHeight(1)
     const paddingY = DEFAULT_PADDING.y * 4
-    return roundToPixels(linesHeight + paddingY)
+    let height = roundToPixels(linesHeight + paddingY)
+    for (const plugin of this.#pluginHooks.getHeaderRowHeight) {
+      height = plugin.getHeaderRowHeight(height)
+    }
+    return height
   }
 
   getNumberingColumnWidth() {
-    return this.#state.options.isRowNumberVisible ? 50 : 0
+    if (!this.#state.options.isRowNumberVisible) {
+      return 0
+    }
+    let width = 50
+    for (const plugin of this.#pluginHooks.getNumberingColumnWidth) {
+      width = plugin.getNumberingColumnWidth(width)
+    }
+    return width
   }
 
   getRowHeights() {
@@ -104,23 +190,27 @@ export class Renderer {
     return rowHeights
   }
 
-  /** The height of a row: enough for the cell with the most text lines. */
+  /** The height of a row: enough for the cell with the most text lines, then changed by the getRowHeight hooks. */
   getRowHeight(rowIndex: number) {
     const cellsTexts = this.#state.options.data[rowIndex] || []
     let maxLinesCount = 1
     for (const cellText of cellsTexts) {
       maxLinesCount = Math.max(maxLinesCount, getLinesCount(cellText))
     }
-    return this.#getRowHeightByLinesCount(maxLinesCount)
+    let height = this.#getRowHeightByLinesCount(maxLinesCount)
+    for (const plugin of this.#pluginHooks.getRowHeight) {
+      height = plugin.getRowHeight(rowIndex, height)
+    }
+    return height
   }
 
   #getRowHeightByLinesCount(linesCount: number) {
-    let rowHeight = this.#rowHeightsByLinesCount[linesCount]
+    let rowHeight = this.#rowHeightsCache[linesCount]
     if (rowHeight === undefined) {
       const linesHeight = this.#fontsManager.getFont(DEFAULT_FONT).getLinesHeight(linesCount)
       const paddingY = DEFAULT_PADDING.y * 2
       rowHeight = roundToPixels(linesHeight + paddingY)
-      this.#rowHeightsByLinesCount[linesCount] = rowHeight
+      this.#rowHeightsCache[linesCount] = rowHeight
     }
     return rowHeight
   }
@@ -161,6 +251,7 @@ export class Renderer {
     }
     state.totalHeight += heightDelta
     state.options.elScrollPaneY.style.height = `${state.totalHeight}px`
+    this.#afterLayout()
   }
 
   getColumnWidths() {
@@ -177,10 +268,15 @@ export class Renderer {
     const columnWithAutoWidth = roundToPixels(
       (containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength,
     )
-    return columns.map(
-      (column) =>
-        column.width || Math.max(columnWithAutoWidth, column.minWidth || DEFAULT_COLUMN_MIN_WIDTH),
-    )
+    const hooks = this.#pluginHooks.getColumnWidth
+    return columns.map((column, columnIndex) => {
+      let width =
+        column.width || Math.max(columnWithAutoWidth, column.minWidth || DEFAULT_COLUMN_MIN_WIDTH)
+      for (const plugin of hooks) {
+        width = plugin.getColumnWidth(columnIndex, width)
+      }
+      return width
+    })
   }
 
   getTotalWidth() {
@@ -211,7 +307,7 @@ export class Renderer {
     const { borderWidth } = this.#state.options
     let firstOffset = borderWidth
     if (this.#state.hasHeaderRow) {
-      firstOffset += this.getHeaderRowHeight() + borderWidth
+      firstOffset += this.#state.headerRowHeight + borderWidth
     }
     return getOffsets(this.#state.rowHeights, firstOffset, borderWidth)
   }
@@ -220,7 +316,7 @@ export class Renderer {
     const { borderWidth } = this.#state.options
     let firstOffset = borderWidth
     if (this.#state.options.isRowNumberVisible) {
-      firstOffset += this.getNumberingColumnWidth() + borderWidth
+      firstOffset += this.#state.numberingColumnWidth + borderWidth
     }
     return getOffsets(this.#state.columnWidths, firstOffset, borderWidth)
   }
@@ -241,223 +337,280 @@ export class Renderer {
     return findFloorIndex(this.#state.verticalOffsets, offsetY)
   }
 
-  findCellByMouseEvent(e: MouseEvent) {
-    const { elScrollInner } = this.#state.options
+  /**
+   * Finds the cell of any type under a point given relative to the window, as in `MouseEvent.clientX`.
+   * Returns undefined outside the cells: on the outer border, or past the visible part of the grid.
+   */
+  findCellAtPoint(clientX: number, clientY: number): Cell | undefined {
+    const state = this.#state
+    const { elScrollInner, borderWidth } = state.options
     // both relative to the window: page coordinates would add the page scroll a second time
     const { left, top } = elScrollInner.getBoundingClientRect()
-    const x = e.clientX - left
-    const y = e.clientY - top
-
-    if (x < 0 || y < 0) {
+    const x = clientX - left
+    const y = clientY - top
+    if (x < 0 || y < 0 || x > state.viewport.right || y > state.viewport.bottom) {
       return undefined
     }
 
     const columnIndex = findFloorIndex(state.horizontalOffsets, x)
     const rowIndex = findFloorIndex(state.verticalOffsets, y)
 
-    if (columnIndex < 0 || rowIndex < 0) {
+    // a point is in the numbering-column or header-row (if visible) just before the first column or row
+    const isInNumberingColumn =
+      state.numberingColumnWidth > 0 && x < borderWidth * 2 + state.numberingColumnWidth
+    const isInHeaderRow = state.headerRowHeight > 0 && y < borderWidth * 2 + state.headerRowHeight
+    if ((columnIndex === -1 && !isInNumberingColumn) || (rowIndex === -1 && !isInHeaderRow)) {
       return undefined
     }
 
-    const cell: Cell = { rowIndex, columnIndex }
-    return cell
+    return { rowIndex, columnIndex }
   }
 
-  isTopLeftCorner(e: MouseEvent) {
-    const state = this.#state
-    if (!state.hasHeaderRow || !state.options.isRowNumberVisible) {
-      return false
-    }
-    const { borderWidth, elScrollInner } = state.options
-    const { left, top } = elScrollInner.getBoundingClientRect()
-    const x = e.clientX - left
-    const y = e.clientY - top
-    return (
-      x >= borderWidth &&
-      x < borderWidth + state.numberingColumnWidth &&
-      y >= borderWidth &&
-      y < borderWidth + state.headerRowHeight
-    )
+  findDataCellAtPoint(clientX: number, clientY: number): Cell | undefined {
+    const cell = this.findCellAtPoint(clientX, clientY)
+    return cell && isDataCell(cell) ? cell : undefined
   }
 
-  renderCell(ctx: CanvasRenderingContext2D, cell: Cell, defaultBackgroundColor = '#fff') {
-    const state = this.#state
-    const pluginHooks = this.#pluginHooks
-    const { rowIndex, columnIndex } = cell
-    const { borderWidth } = state.options
-    const width = state.columnWidths[columnIndex] || 0
-    const height = state.rowHeights[rowIndex] || 0
-    setTransform(
-      state.viewport,
-      ctx,
-      state.horizontalOffsets[columnIndex] || 0,
-      state.verticalOffsets[rowIndex] || 0,
-    )
-
-    let backgroundColor = defaultBackgroundColor
-    for (const plugin of pluginHooks.getCellBackgroundColor) {
-      backgroundColor = plugin.getCellBackgroundColor(cell, backgroundColor)
+  getCellTextFormatted(cell: Readonly<Cell>): string {
+    let text = getCellText(cell, this.#state)
+    for (const plugin of this.#pluginHooks.formatCellText) {
+      text = plugin.formatCellText(cell, text)
     }
-
-    renderCellBackground({ ctx, backgroundColor, width, height, borderWidth })
-
-    for (const plugin of pluginHooks.renderCellBackground) {
-      plugin.renderCellBackground({ ctx, cell, backgroundColor, width, height, borderWidth })
-    }
-
-    const text = state.options.data[rowIndex]?.[columnIndex]
-    if (text) {
-      const font = this.#fonts[DEFAULT_FONT]
-      const x = DEFAULT_PADDING.x
-      const y = height / 2
-      renderCellText({ ctx, text, x, y, font, textAlign: 'left', verticalAlign: 'middle' })
-
-      for (const plugin of pluginHooks.renderCellText) {
-        plugin.renderCellText({
-          ctx,
-          cell,
-          text,
-          x,
-          y,
-          font,
-          textAlign: 'left',
-          verticalAlign: 'middle',
-        })
-      }
-    }
+    return text
   }
 
-  renderCells(ctx: CanvasRenderingContext2D, range: CellsRange) {
-    const rowStart = Math.max(0, range.rowStart)
-    const columnStart = Math.max(0, range.columnStart)
-
-    for (let rowIndex = rowStart; rowIndex <= range.rowEnd; rowIndex++) {
-      for (let columnIndex = columnStart; columnIndex <= range.columnEnd; columnIndex++) {
-        const cell = { rowIndex, columnIndex }
-        this.renderCell(ctx, cell)
-      }
+  /**
+   * Renders the cells with their backgrounds and text, and saves their border colors for the border pass.
+   * It also notes whether any data cell has a border, so that the border pass can skip the data cells.
+   */
+  #renderCells(renderingContext: RenderingContext) {
+    if (this.#state.hasHeaderRow && this.#state.options.isRowNumberVisible) {
+      this.#fillCornerContext(renderingContext)
+      this.#renderCell(renderingContext)
     }
-    setTransform(this.#state.viewport, ctx, 0, 0)
-  }
-
-  renderTopLeftCorner(ctx: CanvasRenderingContext2D) {
-    setTransform(
-      this.#state.viewport,
-      ctx,
-      this.#state.options.borderWidth,
-      this.#state.options.borderWidth,
-    )
-
-    renderCellBackground({
-      ctx,
-      backgroundColor: '#fff',
-      bordersColor: '#ccc',
-      width: this.#state.numberingColumnWidth,
-      height: this.#state.headerRowHeight,
-      borderWidth: this.#state.options.borderWidth,
-    })
-  }
-
-  renderHeaderRow(ctx: CanvasRenderingContext2D, range: CellsRange) {
-    if (range.rowStart <= 0) {
-      const columnStart = Math.max(0, range.columnStart)
-      const columnEnd = range.columnEnd
-      for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex++) {
-        this.renderHeaderRowCell(ctx, columnIndex)
-      }
+    if (this.#state.hasHeaderRow && renderingContext.range.rowStart <= 0) {
+      this.#forEachHeaderRow((context) => this.#renderCell(context), renderingContext)
     }
+
+    if (this.#state.options.isRowNumberVisible && renderingContext.range.columnStart <= 0) {
+      this.#forEachNumberingColumn((context) => this.#renderCell(context), renderingContext)
+    }
+
+    renderingContext.hasDataCellBorders = false
+    this.#forEachDataCell((context) => this.#renderCell(context), renderingContext)
   }
 
-  renderHeaderRowCell(ctx: CanvasRenderingContext2D, columnIndex: number) {
-    const { borderWidth } = this.#state.options
+  #fillCornerContext(renderingContext: RenderingContext) {
+    renderingContext.cell.rowIndex = -1
+    renderingContext.cell.columnIndex = -1
+    renderingContext.left = this.#state.options.borderWidth
     // noinspection JSSuspiciousNameCombination
-    const cellTop = borderWidth
-    const cellWidth = this.#state.columnWidths[columnIndex] || 0
-    const cellHeight = this.#state.headerRowHeight
-    const cellLeft = this.#state.horizontalOffsets[columnIndex] || 0
-    setTransform(this.#state.viewport, ctx, cellLeft, cellTop)
-
-    let backgroundColor = '#fff'
-    for (const plugin of this.#pluginHooks.getColumnHeadingBackgroundColor) {
-      backgroundColor = plugin.getColumnHeadingBackgroundColor(columnIndex, backgroundColor)
-    }
-
-    renderCellBackground({
-      ctx,
-      backgroundColor,
-      bordersColor: '#ccc',
-      width: cellWidth,
-      height: cellHeight,
-      borderWidth,
-    })
-
-    const font = this.#fonts[COLUMN_HEADING_FONT]
-    const textX = cellWidth / 2
-    const textY = cellHeight / 2
-    const text = this.#state.options.columns[columnIndex]?.name || ''
-
-    renderCellText({
-      ctx,
-      text,
-      x: textX,
-      y: textY,
-      font,
-      textAlign: 'center',
-      verticalAlign: 'middle',
+    renderingContext.top = this.#state.options.borderWidth
+    renderingContext.width = this.#state.numberingColumnWidth
+    renderingContext.height = this.#state.headerRowHeight
+    renderingContext.defaultStyle = this.#createDefaultStyle({
+      borderColor: DEFAULT_HEADING_BORDER_COLOR,
     })
   }
 
-  renderNumberingColumn(ctx: CanvasRenderingContext2D, range: CellsRange) {
-    if (range.columnStart <= 0) {
-      const rowStart = Math.max(0, range.rowStart)
-      const rowEnd = range.rowEnd
-      for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex++) {
-        this.renderNumberingColumnCell(ctx, rowIndex)
+  #forEachHeaderRow(renderFunction: RenderingFunction, renderingContext: RenderingContext) {
+    renderingContext.cell.rowIndex = -1
+    renderingContext.defaultStyle = this.#createDefaultStyle({
+      borderColor: DEFAULT_HEADING_BORDER_COLOR,
+      font: this.#fontsManager.getFont(COLUMN_HEADING_FONT),
+      textAlign: 'center',
+    })
+    // noinspection JSSuspiciousNameCombination
+    renderingContext.top = this.#state.options.borderWidth
+    renderingContext.height = this.#state.headerRowHeight
+    for (
+      let columnIndex = renderingContext.range.columnStart;
+      columnIndex <= renderingContext.range.columnEnd;
+      columnIndex++
+    ) {
+      renderingContext.cell.columnIndex = columnIndex
+      renderingContext.left = this.#state.horizontalOffsets[columnIndex] || 0
+      renderingContext.width = this.#state.columnWidths[columnIndex] || 0
+      renderFunction(renderingContext)
+    }
+  }
+
+  #forEachNumberingColumn(renderFunction: RenderingFunction, renderingContext: RenderingContext) {
+    renderingContext.cell.columnIndex = -1
+    renderingContext.defaultStyle = this.#createDefaultStyle({
+      borderColor: DEFAULT_HEADING_BORDER_COLOR,
+      font: this.#fontsManager.getFont(ROW_NUMBERING_FONT),
+    })
+    renderingContext.left = this.#state.options.borderWidth
+    renderingContext.width = this.#state.numberingColumnWidth
+    for (
+      let rowIndex = renderingContext.range.rowStart;
+      rowIndex <= renderingContext.range.rowEnd;
+      rowIndex++
+    ) {
+      renderingContext.cell.rowIndex = rowIndex
+      renderingContext.top = this.#state.verticalOffsets[rowIndex] || 0
+      renderingContext.height = this.#state.rowHeights[rowIndex] || 0
+      renderFunction(renderingContext)
+    }
+  }
+
+  #forEachDataCell(renderFunction: RenderingFunction, renderingContext: RenderingContext) {
+    renderingContext.defaultStyle = this.#createDefaultStyle()
+
+    for (
+      let rowIndex = renderingContext.range.rowStart;
+      rowIndex <= renderingContext.range.rowEnd;
+      rowIndex++
+    ) {
+      renderingContext.top = this.#state.verticalOffsets[rowIndex] || 0
+      renderingContext.height = this.#state.rowHeights[rowIndex] || 0
+      for (
+        let columnIndex = renderingContext.range.columnStart;
+        columnIndex <= renderingContext.range.columnEnd;
+        columnIndex++
+      ) {
+        renderingContext.cell.rowIndex = rowIndex
+        renderingContext.cell.columnIndex = columnIndex
+        renderingContext.left = this.#state.horizontalOffsets[columnIndex] || 0
+        renderingContext.width = this.#state.columnWidths[columnIndex] || 0
+        renderFunction(renderingContext)
       }
     }
   }
 
-  renderNumberingColumnCell(ctx: CanvasRenderingContext2D, rowIndex: number) {
-    const { borderWidth } = this.#state.options
-    const cellTop = this.#state.verticalOffsets[rowIndex] || 0
-    const cellWidth = this.#state.numberingColumnWidth
-    const cellHeight = this.#state.rowHeights[rowIndex] || 0
-    // noinspection UnnecessaryLocalVariableJS
-    const cellLeft = borderWidth
-    setTransform(this.#state.viewport, ctx, cellLeft, cellTop)
+  /**
+   * Renders one cell: gets its text and style from the hooks, then renders its background and content.
+   * The cell, its style and its sizes come from `renderingContext`, which is reused for every cell.
+   * It creates the render context only for the render hooks.
+   * Saves the border color of the cell for the border pass.
+   */
+  #renderCell(renderingContext: RenderingContext) {
+    const { ctx, cell, style, top, left, width, height } = renderingContext
+    const hooks = this.#pluginHooks
+    const text = this.getCellTextFormatted(cell)
 
-    let backgroundColor = '#fff'
-    for (const plugin of this.#pluginHooks.getRowHeadingBackgroundColor) {
-      backgroundColor = plugin.getRowHeadingBackgroundColor(rowIndex, backgroundColor)
+    // without style hooks, the default style of the area is used as it is
+    let resolvedStyle: Readonly<CellStyle> = renderingContext.defaultStyle
+    if (hooks.cellStyle.length) {
+      copyCellStyle(style, resolvedStyle)
+      for (const plugin of hooks.cellStyle) {
+        plugin.cellStyle(cell, style)
+      }
+      resolvedStyle = style
+    }
+    const hasRenderHooks = hooks.renderCellBackground.length || hooks.renderCellContent.length
+    const context: CellRenderContext | undefined = hasRenderHooks
+      ? { ctx, cell, style: resolvedStyle, text, width, height }
+      : undefined
+
+    setTransform(this.#state.viewport, ctx, left, top)
+    ctx.fillStyle = resolvedStyle.backgroundColor
+    ctx.fillRect(0, 0, width, height)
+    if (context) {
+      for (const plugin of hooks.renderCellBackground) {
+        plugin.renderCellBackground(context)
+      }
     }
 
-    renderCellBackground({
-      ctx,
-      backgroundColor,
-      bordersColor: '#ccc',
-      width: cellWidth,
-      height: cellHeight,
-      borderWidth,
-    })
+    if (text) {
+      const { font, textAlign, verticalAlign, paddingX, paddingY, color } = resolvedStyle
+      // only bottom alignment needs the height of all lines to place the first one
+      const linesHeight = verticalAlign === 'bottom' ? font.getLinesHeight(getLinesCount(text)) : 0
+      renderCellText({
+        ctx,
+        text,
+        x: getTextX(textAlign, width, paddingX),
+        y: getTextY(verticalAlign, height, paddingY, font.fontHeight, linesHeight),
+        font,
+        fill: color,
+        textAlign,
+        verticalAlign,
+      })
+    }
+    if (context) {
+      for (const plugin of hooks.renderCellContent) {
+        plugin.renderCellContent(context)
+      }
+    }
 
-    const font = this.#fonts[ROW_HEADING_FONT]
-    const textX = DEFAULT_PADDING.x
-    const textY = cellHeight / 2
-    const text = (rowIndex + 1).toString()
+    renderingContext.borderColors[renderingContext.cellIndex] = resolvedStyle.borderColor
+    if (resolvedStyle.borderColor !== undefined) {
+      renderingContext.hasDataCellBorders = true
+    }
+    renderingContext.cellIndex++
+  }
 
-    renderCellText({
+  /**
+   * Renders the borders around the cells after all of them are rendered, so that the borders go on top of
+   * content that spills outside a cell, such as long right-aligned text or a plugin's rendering.
+   * Where two neighbors both have a border, the one rendered later wins: the cell to the right or below.
+   */
+  #renderBorders(renderingContext: RenderingContext) {
+    renderingContext.cellIndex = 0 // reset render index
+
+    if (this.#state.hasHeaderRow && this.#state.options.isRowNumberVisible) {
+      this.#fillCornerContext(renderingContext)
+      this.#renderCellBorder(renderingContext)
+    }
+    if (this.#state.hasHeaderRow && renderingContext.range.rowStart <= 0) {
+      this.#forEachHeaderRow((context) => this.#renderCellBorder(context), renderingContext)
+    }
+
+    if (this.#state.options.isRowNumberVisible && renderingContext.range.columnStart <= 0) {
+      this.#forEachNumberingColumn((context) => this.#renderCellBorder(context), renderingContext)
+    }
+
+    if (renderingContext.hasDataCellBorders || this.#pluginHooks.renderCellBorders.length) {
+      this.#forEachDataCell((context) => this.#renderCellBorder(context), renderingContext)
+    }
+  }
+
+  #renderCellBorder(renderingContext: RenderingContext) {
+    const hooks = this.#pluginHooks.renderCellBorders
+    const { viewport } = this.#state
+    const { borderWidth } = this.#state.options
+    const { ctx, cell, left, top, width, height } = renderingContext
+
+    const borderColor = renderingContext.borderColors[renderingContext.cellIndex]
+    renderingContext.cellIndex++
+    if (borderColor === undefined && !hooks.length) {
+      return
+    }
+    setTransform(viewport, ctx, left, top)
+    if (borderColor !== undefined) {
+      renderCellBorders(ctx, borderColor, width, height, borderWidth)
+    }
+    for (const plugin of hooks) {
+      plugin.renderCellBorders({ ctx, cell, borderColor, width, height, borderWidth })
+    }
+  }
+
+  #afterFrameRender(ctx: CanvasRenderingContext2D, visibleRange: CellsRange) {
+    const hooks = this.#pluginHooks.afterFrameRender
+    if (!hooks.length) {
+      return
+    }
+    const viewport = this.#state.viewport
+    const frame: FrameContext = {
       ctx,
-      text,
-      x: textX,
-      y: textY,
-      font,
-      textAlign: 'left',
-      verticalAlign: 'middle',
-    })
+      viewport,
+      visibleRange,
+      setOrigin: (x, y) => setTransform(viewport, ctx, x, y),
+    }
+    for (const plugin of hooks) {
+      // each plugin starts at the grid origin, whatever the previous one left
+      setTransform(viewport, ctx, 0, 0)
+      plugin.afterFrameRender(frame)
+    }
   }
 
   renderImmediate() {
-    const { elCanvas, elScroll } = this.#state.options
+    // the fonts and sizes come from the first layout, which the resize observer starts
+    if (!this.#isInitialized) {
+      return
+    }
+    const { elCanvas, elScroll, elScrollInner } = this.#state.options
     const ctx = getContext(elCanvas)
     if (!ctx) {
       return
@@ -473,8 +626,11 @@ export class Renderer {
 
     const left = elScroll.scrollLeft || 0
     const top = elScroll.scrollTop || 0
-    const right = left + this.#state.containerSize.width
-    const bottom = top + this.#state.containerSize.height
+    // read once: each read can make the browser lay out the page again
+    const { width, height } = elScrollInner.getBoundingClientRect()
+    const right = left + width
+    const bottom = top + height
+
     this.#state.viewport = { left, top, right, bottom }
 
     const visibleRange: CellsRange = {
@@ -486,16 +642,35 @@ export class Renderer {
 
     clearCanvas(elCanvas, ctx)
 
-    if (this.#state.hasHeaderRow && this.#state.options.isRowNumberVisible) {
-      this.renderTopLeftCorner(ctx)
+    const style = this.#createDefaultStyle()
+    const renderingContext: RenderingContext = {
+      ctx,
+      // A start index is -1 when the viewport begins above the first data row or left of the first column.
+      // The header-row and the numbering-column are rendered separately, so the cell passes start at 0.
+      // It's a copy, so that afterFrameRender hooks get the visible range unchanged.
+      range: {
+        ...visibleRange,
+        rowStart: Math.max(0, visibleRange.rowStart),
+        columnStart: Math.max(0, visibleRange.columnStart),
+      },
+      cell: { rowIndex: -1, columnIndex: -1 },
+      borderColors: [],
+      hasDataCellBorders: false,
+      cellIndex: 0,
+      top: 0,
+      left: 0,
+      width: 0,
+      height: 0,
+      // the area iterators replace it before rendering any cell
+      defaultStyle: style,
+      style,
     }
-    if (this.#state.hasHeaderRow) {
-      this.renderHeaderRow(ctx, visibleRange)
-    }
-    if (this.#state.options.isRowNumberVisible) {
-      this.renderNumberingColumn(ctx, visibleRange)
-    }
-    this.renderCells(ctx, visibleRange)
+
+    this.#renderCells(renderingContext)
+    this.#renderBorders(renderingContext)
+
+    setTransform(this.#state.viewport, ctx, 0, 0)
+    this.#afterFrameRender(ctx, visibleRange)
   }
 
   render() {
@@ -506,10 +681,6 @@ export class Renderer {
     this.#animationFrameId = requestAnimationFrame(() => {
       this.#isRendering = false
       this.renderImmediate()
-
-      for (const plugin of this.#pluginHooks.render) {
-        plugin.render()
-      }
     })
   }
 

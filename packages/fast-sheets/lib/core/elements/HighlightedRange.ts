@@ -61,7 +61,7 @@ export class HighlightedRange {
       widthBottom === undefined ||
       heightRight === undefined
     ) {
-      // an empty range, or one outside the grid, has nothing to draw
+      // an empty range, or one outside the grid, has nothing to render
       this.borders.hide()
       return
     }

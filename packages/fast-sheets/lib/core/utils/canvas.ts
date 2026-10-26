@@ -16,7 +16,7 @@ export const getCanvasSize = ({
   }
 }
 
-/** Fills the whole canvas with the border color, which shows between the cells drawn over it. */
+/** Fills the whole canvas with the border color, which shows between the cells rendered over it. */
 export const clearCanvas = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
   // the previous frame leaves its scale and scroll offset in the transform; without a reset
   // the fill would be shifted and miss the bottom-right part of the canvas

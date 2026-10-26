@@ -89,7 +89,7 @@ Add or update tests with any behavior change. Use unit tests for pure logic (cel
 - **Plugins** implement `FastSheetsPlugin` (`lib/core/utils/plugins.ts`) and build their UI from the core controllers and elements (`lib/core/controllers/`, `lib/core/elements/`).
   A new plugin needs its own `lib/plugins/<name>/index.ts` entry, a matching entry in `packages/fast-sheets/vite.config.ts` and an `exports` entry in `packages/fast-sheets/package.json`.
 - Plugins must clean up their DOM elements and event listeners in `destroy()`.
-- Performance matters most here. Avoid per-cell allocations and DOM work inside render paths. Draw only what's inside the viewport.
+- Performance and customization matter most here. Avoid per-cell allocations and DOM work inside render paths. Draw only what's inside the viewport.
 
 ## Commits and PRs
 

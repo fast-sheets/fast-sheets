@@ -64,12 +64,8 @@ const init = () => {
     })
 
     const editablePlugin = new FastSheetsEditablePlugin({
-      onUpdate(changedCells) {
-        changedCells.forEach(({ rowIndex, columnIndex, value }) => {
-          if (data[rowIndex]) {
-            data[rowIndex][columnIndex] = value
-          }
-        })
+      onUpdate(modifiedCells) {
+        console.log({ modifiedCells })
       },
     })
 
