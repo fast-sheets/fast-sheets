@@ -211,37 +211,23 @@ export class FastSheets {
   }
 
   /**
-   * Writes changes to `data`, measures the changed rows again and renders.
-   * The beforeCellsChange hooks may change or reject the changes first.
-   * Changes to rows that don't exist are passed to the hooks but not written.
-   * Returns the changes that were applied, which are empty if they were rejected.
+   * Writes modified cells to 'data', measures rows, and renders.
    */
-  setCells(changes: readonly ModifiedCell[]): readonly ModifiedCell[] {
-    let applied = changes
-    for (const plugin of this.#hooks.beforeCellsChange) {
-      const result = plugin.beforeCellsChange(applied)
-      if (result === false) {
-        return []
-      }
-      applied = result
-    }
-    if (!applied.length) {
-      return applied
-    }
-
+  updateCells(changes: readonly ModifiedCell[]) {
     const { data } = this.state.options
-    for (const { rowIndex, columnIndex, value } of applied) {
+    const rowIndexes = new Set<number>()
+    for (const { rowIndex, columnIndex, value } of changes) {
       const row = data[rowIndex]
       if (row) {
         row[columnIndex] = value
+        rowIndexes.add(rowIndex)
       }
     }
-    this.layout.updateRows(new Set(applied.map(({ rowIndex }) => rowIndex)))
-    for (const plugin of this.#hooks.afterCellsChange) {
-      plugin.afterCellsChange(applied)
+    if (!rowIndexes.size) {
+      return
     }
+    this.layout.updateRows(rowIndexes)
     this.renderer.render()
-    return applied
   }
 
   #bindEvents() {

@@ -26,6 +26,7 @@ const init = async ({
         window.fastSheetsEditablePlugin = new window.FastSheetsEditablePlugin({
           onUpdate(cells) {
             window.updates.push(cells)
+            window.fastSheets.updateCells(cells)
           },
         })
         window.fastSheets.use(window.fastSheetsEditablePlugin)

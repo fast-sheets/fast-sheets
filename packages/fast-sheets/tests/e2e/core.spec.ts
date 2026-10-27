@@ -172,6 +172,33 @@ test.describe('plugins', () => {
   })
 })
 
+test.describe('updateCells', () => {
+  test('writes the cells, measures their rows again and skips rows that do not exist', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await initFastSheets({ page, rowsCount: 4, columns: COLUMNS, isRowNumberVisible: true })
+    const result = await page.evaluate(() => {
+      const { state } = window.fastSheets
+      const heightBefore = state.rowHeights[1]!
+      window.fastSheets.updateCells([
+        { rowIndex: 1, columnIndex: 0, value: 'three\nline\ntext' },
+        { rowIndex: 99, columnIndex: 0, value: 'no such row' },
+      ])
+      return {
+        heightBefore,
+        heightAfter: state.rowHeights[1]!,
+        value: state.options.data[1]![0],
+        rowsCount: state.options.data.length,
+      }
+    })
+
+    expect(result.value).toBe('three\nline\ntext')
+    expect(result.heightAfter).toBeGreaterThan(result.heightBefore)
+    expect(result.rowsCount).toBe(4)
+  })
+})
+
 test.describe('destroy instance', () => {
   test('removes all elements', async ({ page }) => {
     await page.goto('/')

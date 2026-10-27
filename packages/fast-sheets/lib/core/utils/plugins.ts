@@ -6,7 +6,6 @@ import type {
   CellStyle,
   FrameContext,
   GridEvent,
-  ModifiedCell,
 } from 'lib/core/types.ts'
 
 /**
@@ -59,9 +58,6 @@ export interface FastSheetsPlugin {
   // Data
   /** A cell is editable only if no plugin returns false. */
   canEditCell?(cell: Readonly<Cell>): boolean
-  /** Top first. Returns the changes to apply, possibly modified, or false to reject them all. */
-  beforeCellsChange?(changes: readonly ModifiedCell[]): readonly ModifiedCell[] | false
-  afterCellsChange?(changes: readonly ModifiedCell[]): void
 }
 
 /** Hooks that run from the first registered plugin to the last. */
@@ -79,7 +75,6 @@ const BOTTOM_FIRST_HOOKS = [
   'renderCellBorders',
   'afterFrameRender',
   'canEditCell',
-  'afterCellsChange',
 ] as const
 
 /** Hooks that run from the last registered plugin to the first, so the top plugin can stop the others. */
@@ -93,7 +88,6 @@ const TOP_FIRST_HOOKS = [
   'onPointerCancel',
   'onKeyDown',
   'onKeyUp',
-  'beforeCellsChange',
 ] as const
 
 export type OptionalHook = (typeof BOTTOM_FIRST_HOOKS)[number] | (typeof TOP_FIRST_HOOKS)[number]

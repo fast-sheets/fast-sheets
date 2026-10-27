@@ -65,7 +65,7 @@ const init = () => {
 
     const editablePlugin = new FastSheetsEditablePlugin({
       onUpdate(modifiedCells) {
-        console.log({ modifiedCells })
+        fastSheets.updateCells(modifiedCells)
       },
     })
 
