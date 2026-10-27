@@ -33,7 +33,7 @@ import {
 } from 'lib/core/utils/cell.ts'
 import { parseClipboardText, stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
 import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
-import { TouchDetector } from 'lib/core/utils/touch-detector.ts'
+import { TouchDetector } from 'lib/core/utils/TouchDetector.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,

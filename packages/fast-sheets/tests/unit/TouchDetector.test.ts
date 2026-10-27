@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TouchDetector } from 'lib/core/utils/touch-detector.ts'
+import { TouchDetector } from 'lib/core/utils/TouchDetector.ts'
 import type { Cell } from 'lib/core/types.ts'
 
 /** a pointer event with the given time: a real one would take the current time */
