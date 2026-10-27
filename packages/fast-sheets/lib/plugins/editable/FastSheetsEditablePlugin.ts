@@ -10,7 +10,12 @@ import {
 } from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
 import { mergeOptions } from 'lib/core/utils/options.ts'
-import { isArrowKey, isCharacterKey, isSelectAllShortcut } from 'lib/core/utils/keyboard.ts'
+import {
+  isArrowKey,
+  isCharacterKey,
+  isClearKey,
+  isSelectAllShortcut,
+} from 'lib/core/utils/keyboard.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
 import { HighlightedCell } from 'lib/core/elements/HighlightedCell.ts'
@@ -394,7 +399,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     const hasCommandModifier = e.ctrlKey || e.metaKey || e.altKey
     const isArrow = isArrowKey(e)
     const isMove = (isArrow || e.key === 'Tab') && !hasCommandModifier
-    const isClear = e.key === 'Backspace' && !hasCommandModifier
+    const isClear = isClearKey(e)
     const isEditStart = e.key === 'Enter' && !hasCommandModifier && !e.shiftKey
     const isCharacter = isCharacterKey(e)
     if (!isMove && !isClear && !isEditStart && !isCharacter) {
@@ -425,8 +430,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       }
     }
 
-    if (isClear && this.instance.canEditCell(focusedCell)) {
-      this.onUpdate([{ ...focusedCell, value: '' }])
+    if (isClear) {
+      this.#clearSelectedCells(focusedCell)
     }
 
     const isRangeSelection = e.shiftKey && isArrow && isMove
@@ -449,7 +454,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
     if (isRangeSelection) {
       this.#updateSelection(newFocusedCell)
-    } else {
+    } else if (!isClear) {
+      // the cleared cells stay selected
       this.selectedRange.reset()
       this.rangeSelectionController.reset()
     }
@@ -511,6 +517,25 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
     this.inputController.showInput(getCellInfo(cell, this.instance.state))
     return true
+  }
+
+  /** Empties the selected range, or the focused cell when no range is selected. */
+  #clearSelectedCells(focusedCell: Cell) {
+    const range = this.selectedRange.isEmpty()
+      ? convertCellToRange(focusedCell)
+      : this.selectedRange.range
+    const modifiedCells: ModifiedCell[] = []
+    for (let rowIndex = range.rowStart; rowIndex <= range.rowEnd; rowIndex++) {
+      for (let columnIndex = range.columnStart; columnIndex <= range.columnEnd; columnIndex++) {
+        const modifiedCell = { rowIndex, columnIndex, value: '' }
+        if (this.instance.canEditCell(modifiedCell)) {
+          modifiedCells.push(modifiedCell)
+        }
+      }
+    }
+    if (modifiedCells.length) {
+      this.onUpdate(modifiedCells)
+    }
   }
 
   /** The cell under the pointer (headings included), or undefined outside the cells. */

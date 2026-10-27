@@ -27,3 +27,10 @@ export const isCharacterKey = (e: KeyboardEvent) => {
   const isAltGraph = e.getModifierState('AltGraph')
   return isAltGraph || !(e.ctrlKey || e.metaKey || e.altKey)
 }
+
+/**
+ * Whether the key clears the selected cells: Backspace or Delete, without Ctrl, Cmd or Alt.
+ * On a Mac keyboard the key labeled "delete" sends Backspace, and Fn+delete sends Delete.
+ */
+export const isClearKey = (e: KeyboardEvent) =>
+  (e.key === 'Backspace' || e.key === 'Delete') && !(e.ctrlKey || e.metaKey || e.altKey)
