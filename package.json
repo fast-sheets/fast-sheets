@@ -16,7 +16,7 @@
     "build": "pnpm run build:lib && pnpm run build:demo",
     "lint:lib": "eslint --ext ts ./packages/*/lib",
     "lint:demo": "pnpm -r --filter='./apps/**' --parallel run lint",
-    "lint": "pnpm run lint:lib & pnpm run lint:demo",
+    "lint": "pnpm run lint:lib && pnpm run lint:demo",
     "prettier:lib": "prettier --log-level error --write ./packages/*/lib",
     "prettier:demo": "pnpm -r --filter='./apps/**' --parallel run prettier",
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check",
