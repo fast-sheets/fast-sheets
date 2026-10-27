@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { isArrowKey, isCharacterKey, isSelectAllShortcut } from 'lib/core/utils/keyboard.ts'
+import {
+  isArrowKey,
+  isCharacterKey,
+  isClearKey,
+  isSelectAllShortcut,
+} from 'lib/core/utils/keyboard.ts'
 
 const keydown = (init: KeyboardEventInit) => new KeyboardEvent('keydown', init)
 
@@ -62,5 +67,24 @@ describe('isSelectAllShortcut', () => {
     expect(
       isSelectAllShortcut(keydown({ key: 'A', code: 'KeyA', ctrlKey: true, shiftKey: true })),
     ).toBe(false)
+  })
+})
+
+describe('isClearKey', () => {
+  it('is true for Backspace and Delete', () => {
+    expect(isClearKey(keydown({ key: 'Backspace' }))).toBe(true)
+    expect(isClearKey(keydown({ key: 'Delete' }))).toBe(true)
+  })
+
+  it('is false for other keys', () => {
+    for (const key of ['x', 'Enter', 'Escape', 'Home', 'Clear']) {
+      expect(isClearKey(keydown({ key }))).toBe(false)
+    }
+  })
+
+  it('is false with Ctrl, Cmd or Alt', () => {
+    expect(isClearKey(keydown({ key: 'Backspace', ctrlKey: true }))).toBe(false)
+    expect(isClearKey(keydown({ key: 'Backspace', metaKey: true }))).toBe(false)
+    expect(isClearKey(keydown({ key: 'Delete', altKey: true }))).toBe(false)
   })
 })

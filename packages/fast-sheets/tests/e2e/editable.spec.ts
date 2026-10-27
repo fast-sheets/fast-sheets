@@ -13,6 +13,13 @@ const getUpdates = (page: Page) => page.evaluate(() => window.updates)
 const getFocusedCell = (page: Page) =>
   page.evaluate(() => window.fastSheetsEditablePlugin.focusedCell.cell)
 
+/** the selected range, or undefined while its box is hidden */
+const getSelectedRange = (page: Page) =>
+  page.evaluate(() => {
+    const { range, borders } = window.fastSheetsEditablePlugin.selectedRange
+    return borders.container.style.display === 'none' ? undefined : { ...range }
+  })
+
 test.describe('last row', () => {
   test('the last data row is rendered', async ({ page }) => {
     await page.goto('/')
@@ -79,7 +86,7 @@ test.describe('last row', () => {
       expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'r1c1X' }]])
     })
 
-    for (const key of ['Delete', 'F2', 'F5', 'PageDown', 'CapsLock', 'Home', 'Escape']) {
+    for (const key of ['F2', 'F5', 'PageDown', 'CapsLock', 'Home', 'Escape']) {
       test(`${key} does not write its name into the cell`, async ({ page }) => {
         await page.goto('/')
         const columns = [
@@ -627,13 +634,6 @@ test.describe('select all', () => {
   const allCellsText = '"r0\nc0"\tr0c1\tr0c2\nr1c0\tr1c1\tr1c2\nr2c0\tr2c1\tr2c2'
   const allCellsRange = { rowStart: 0, rowEnd: 2, columnStart: 0, columnEnd: 2 }
 
-  /** the selected range, or undefined while its box is hidden */
-  const getSelectedRange = (page: Page) =>
-    page.evaluate(() => {
-      const { range, borders } = window.fastSheetsEditablePlugin.selectedRange
-      return borders.container.style.display === 'none' ? undefined : { ...range }
-    })
-
   for (const shortcut of ['Control+a', 'Meta+a']) {
     test(`${shortcut} selects all cells and keeps the focused cell`, async ({ page }) => {
       await page.goto('/')
@@ -957,6 +957,102 @@ test.describe('selected range box', () => {
       }
     })
     expect(await getSelectedRangeBox(page)).toEqual(expected)
+  })
+})
+
+test.describe('clear', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+    { name: 'C', width: 100 },
+  ]
+  const getCellValue = (page: Page, rowIndex: number, columnIndex: number) =>
+    page.evaluate(
+      ([rowIndex, columnIndex]) => window.fastSheets.state.options.data[rowIndex!]![columnIndex!],
+      [rowIndex, columnIndex],
+    )
+
+  for (const key of ['Backspace', 'Delete']) {
+    test(`${key} clears the focused cell`, async ({ page }) => {
+      await page.goto('/')
+      await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+      await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+      await page.keyboard.press(key)
+
+      await expect(page.locator('[data-name="elInput"]')).toBeHidden()
+      expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: '' }]])
+      expect(await getCellValue(page, 1, 1)).toBe('')
+      expect(await getCellValue(page, 1, 2)).toBe('r1c2')
+    })
+
+    test(`${key} clears a selected range and keeps it selected`, async ({ page }) => {
+      await page.goto('/')
+      await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+      await clickCell({ page, columnIndex: 1, rowIndex: 1 })
+      // Shift is held across the arrows, as releasing it starts a new selection
+      await page.keyboard.down('Shift')
+      await page.keyboard.press('ArrowRight')
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.up('Shift')
+      await page.keyboard.press(key)
+
+      expect(await getUpdates(page)).toEqual([
+        [
+          { rowIndex: 1, columnIndex: 1, value: '' },
+          { rowIndex: 1, columnIndex: 2, value: '' },
+          { rowIndex: 2, columnIndex: 1, value: '' },
+          { rowIndex: 2, columnIndex: 2, value: '' },
+        ],
+      ])
+      expect(await getCellValue(page, 1, 0)).toBe('r1c0')
+      expect(await getCellValue(page, 3, 1)).toBe('r3c1')
+      expect(await getSelectedRange(page)).toEqual({
+        rowStart: 1,
+        rowEnd: 2,
+        columnStart: 1,
+        columnEnd: 2,
+      })
+    })
+  }
+
+  test('Delete leaves the cells a plugin does not let be edited', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      window.fastSheets.use({
+        name: 'read-only',
+        setup() {},
+        destroy() {},
+        canEditCell: (cell) => cell.columnIndex !== 1,
+      })
+    })
+    await clickCell({ page, columnIndex: 0, rowIndex: 1 })
+    await page.keyboard.down('Shift')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.up('Shift')
+    await page.keyboard.press('Delete')
+
+    expect(await getUpdates(page)).toEqual([
+      [
+        { rowIndex: 1, columnIndex: 0, value: '' },
+        { rowIndex: 1, columnIndex: 2, value: '' },
+      ],
+    ])
+    expect(await getCellValue(page, 1, 1)).toBe('r1c1')
+  })
+
+  test('Delete in the cell editor deletes the next character, not the cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    const { x, y } = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await page.mouse.dblclick(x, y)
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Delete')
+    await page.keyboard.press('Enter')
+
+    await expect(page.locator('[data-name="elInput"]')).toBeHidden()
+    expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: '1c1' }]])
   })
 })
 
