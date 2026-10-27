@@ -23,6 +23,8 @@ It's a **pnpm monorepo**:
 | `packages/fast-sheets/tests/e2e/` | Playwright e2e tests, with their own Vite dev page (`index.html`, `vite.config.ts`) |
 | `apps/*-demo/` | Integration demos (vue, react, vanilla-ts, vanilla-js) that use the lib through `workspace:*` |
 | `scripts/verify-commit.js` | Commit message validator (husky `commit-msg` hook) |
+| `scripts/release.js` | Release script behind `pnpm release <version>` |
+| `scripts/get-npm-dist-tag.js` | Checks a GitHub release against the package version and chooses the npm dist-tag (publish workflow) |
 
 ## Setup and commands
 
@@ -112,3 +114,5 @@ Commit messages follow `.github/commit-convention.md`, and `scripts/verify-commi
 Work on a branch (such as `fix/...` or `feat/...`) and open a PR against `main`. Don't commit `dist/`, `test-results/` or `playwright-report/`.
 
 Version bumps (`release:` commits) and publishing (`.github/workflows/publish.yml`) are the maintainer's job. Don't change `version` fields unless you're asked to.
+
+To release, the maintainer runs `pnpm release <version>` on an up-to-date `main` (add `--dry-run` to only run the checks). It sets the version in both `package.json` files, commits `release: v<version>`, creates the tag `v<version>`, pushes both and prints a link to the GitHub release form. Publishing that release runs the publish workflow, which fails if the tag or the pre-release checkbox doesn't match the version, and publishes pre-release versions such as `2.0.0-beta.1` under the npm `next` tag.
