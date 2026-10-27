@@ -137,6 +137,39 @@ test.describe('plugins', () => {
       afterAll: [],
     })
   })
+
+  test('use does not register a plugin whose setup throws', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheets({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+    const result = await page.evaluate(() => {
+      const fastSheets = window.fastSheets
+      let formatCalls = 0
+      let error = ''
+      try {
+        fastSheets.use({
+          name: 'broken',
+          setup() {
+            throw new Error('setup failed')
+          },
+          destroy() {},
+          formatCellText(_cell, text) {
+            formatCalls++
+            return text
+          },
+        })
+      } catch (err) {
+        error = (err as Error).message
+      }
+      fastSheets.renderer.renderImmediate()
+      return { error, isRegistered: fastSheets.hasPlugin('broken'), formatCalls }
+    })
+
+    expect(result).toEqual({ error: 'setup failed', isRegistered: false, formatCalls: 0 })
+  })
 })
 
 test.describe('destroy instance', () => {
