@@ -3,7 +3,7 @@ export const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 export const isArrowKey = (e: KeyboardEvent) => ARROW_KEYS.includes(e.key)
 
 /**
- * Whether the keys are the "select all" shortcut: Ctrl+A, or Cmd+A on macOS.
+ * Whether the keys are the "select all" shortcut: Ctrl+A or Cmd+A.
  * On a layout without Latin letters (such as Russian) the A key is found by its place on the keyboard.
  */
 export const isSelectAllShortcut = (e: KeyboardEvent) => {
@@ -15,9 +15,8 @@ export const isSelectAllShortcut = (e: KeyboardEvent) => {
 }
 
 /**
- * Whether the key types a character, as opposed to keys such as "Home", "F2" or "CapsLock",
- * whose `key` is a name, and to shortcuts such as Ctrl+C.
- * AltGr (Ctrl+Alt on Windows) still types characters on many layouts.
+ * Whether the key types a character (as opposed to keys like "Home", "F2" or "CapsLock" and shortcuts like Ctrl+C),
+ * AltGr (Ctrl+Alt on Windows) is still used to type characters on many layouts.
  */
 export const isCharacterKey = (e: KeyboardEvent) => {
   // spread to count code points, so an astral character such as an emoji is one character
@@ -29,8 +28,8 @@ export const isCharacterKey = (e: KeyboardEvent) => {
 }
 
 /**
- * Whether the key clears the selected cells: Backspace or Delete, without Ctrl, Cmd or Alt.
- * On a Mac keyboard the key labeled "delete" sends Backspace, and Fn+delete sends Delete.
+ * Whether the key is Backspace or Delete (without Ctrl, Cmd or Alt).
+ * Note: on Mac the key labeled "delete" sends Backspace, and "Fn+delete" sends Delete.
  */
 export const isClearKey = (e: KeyboardEvent) =>
   (e.key === 'Backspace' || e.key === 'Delete') && !(e.ctrlKey || e.metaKey || e.altKey)
