@@ -14,7 +14,7 @@ It's a **pnpm monorepo**:
 | Path | Purpose |
 | --- | --- |
 | `packages/fast-sheets/` | The published library (npm `fast-sheets`) |
-| `packages/fast-sheets/lib/core/` | Core: `FastSheets`, `Renderer`, `State`, `Font`, `FontsManager`, types, constants, utils |
+| `packages/fast-sheets/lib/core/` | Core: `FastSheets`, `Layout`, `Renderer`, `State`, `Font`, `FontsManager`, types, constants, utils |
 | `packages/fast-sheets/lib/core/controllers/` | Reusable controllers for plugins: `InputController`, `RangeSelectionController` |
 | `packages/fast-sheets/lib/core/elements/` | Reusable DOM overlays for plugins: `InputField`, `HighlightedArea`, `HighlightedCell`, `HighlightedRange` |
 | `packages/fast-sheets/lib/plugins/editable/` | Editable plugin: cell input, range selection, clipboard (`fast-sheets/editable`) |
@@ -50,7 +50,7 @@ Run these from the repo root:
 To run a single test, work inside the package:
 
 ```bash
-pnpm --filter fast-sheets exec vitest run tests/unit/renderer.test.ts
+pnpm --filter fast-sheets exec vitest run tests/unit/layout.test.ts
 ```
 
 ```bash
@@ -69,9 +69,9 @@ The husky `pre-commit` hook runs lint-staged, `types:check`, the unit tests and 
 pnpm lint && pnpm types:check && pnpm test:lib:unit && pnpm test:lib:e2e
 ```
 
-Add or update tests with any behavior change. Use unit tests for pure logic (cell/clipboard utils, renderer sizing math) and e2e tests for interaction (mouse, keyboard, clipboard, scrolling).
+Add or update tests with any behavior change. Use unit tests for pure logic (cell/clipboard utils, layout sizing math) and e2e tests for interaction (mouse, keyboard, clipboard, scrolling).
 
-jsdom has no canvas, so unit tests that measure rows or fonts create the renderer with `createMeasuringRenderer` (`tests/unit/utils/renderer.ts`), which runs `init()` with a fake canvas context.
+jsdom has no canvas, so unit tests that measure rows or fonts create the layout with `createMeasuringLayout` (`tests/unit/utils/layout.ts`), which runs `init()` with a fake canvas context.
 
 ## Code style
 
@@ -85,10 +85,11 @@ jsdom has no canvas, so unit tests that measure rows or fonts create the rendere
 
 ## Architecture notes
 
-- **`FastSheets`** (`lib/core/FastSheets.ts`) creates any DOM elements the caller doesn't pass in (container, canvas, scroll layers), merges options with `DEFAULT_OPTIONS` into `State`, binds wheel, scroll, resize, mouse, pointer and keyboard events and registers plugins through `use(plugin)`. It passes the events to the plugin hooks and applies data changes through `setCells()`, which runs the `beforeCellsChange` and `afterCellsChange` hooks and writes `data`. It keeps the registered plugins private: plugins call `unregister(name)` from their `destroy()`, other code checks a plugin with `hasPlugin(name)`, and the renderer gets the hooks through `renderer.setPluginHooks()`.
-- **`State`** (`lib/core/State.ts`) is a plain mutable state shared by the renderer and plugins: options, viewport, row/column sizes and offsets, canvas size, `hasHeaderRow` and `numberingColumnWidth`.
-- **`Renderer`** (`lib/core/Renderer.ts`): `render()` throttles through `requestAnimationFrame`, and `renderImmediate()` renders synchronously. It does nothing before the first layout (`init()`), which the resize observer starts. A frame renders the corner, the header-row, the numbering-column and the data cells in one pass, then the borders in a second pass, so that they go on top of content that spills outside a cell.
-- **`FontsManager`** (`lib/core/FontsManager.ts`) measures fonts once the first layout gives it a canvas context, and caches them until the next layout. A `cellStyle` hook gets a font for `style.font` through `renderer.getFont()`.
+- **`FastSheets`** (`lib/core/FastSheets.ts`) creates any DOM elements the caller doesn't pass in (container, canvas, scroll layers), merges options with `DEFAULT_OPTIONS` into `State`, binds wheel, scroll, resize, mouse, pointer and keyboard events and registers plugins through `use(plugin)`. It passes the events to the plugin hooks and applies data changes through `setCells()`, which runs the `beforeCellsChange` and `afterCellsChange` hooks and writes `data`. It keeps the registered plugins private: plugins call `unregister(name)` from their `destroy()`, other code checks a plugin with `hasPlugin(name)`, and the layout and the renderer get the hooks through their `setPluginHooks()`.
+- **`State`** (`lib/core/State.ts`) is a plain mutable state shared by the layout, the renderer and plugins: options, viewport, row/column sizes and offsets, canvas size, `hasHeaderRow` and `numberingColumnWidth`.
+- **`Layout`** (`lib/core/Layout.ts`) calculates the row and column sizes, the offsets and the total size, stores them in `State`, and sizes the canvas and the scroll panes. `init()` runs on every resize, the first one included, and when a plugin with layout hooks is added or removed. `updateRows()` measures the edited rows again. Before every frame, the renderer calls `updateViewport()`, which reads the scroll position into `state.viewport`, and `getVisibleRange()`. The layout also finds the row, column or cell at a position (`findCellAtPoint()`), within the last viewport.
+- **`Renderer`** (`lib/core/Renderer.ts`): `render()` throttles through `requestAnimationFrame`, and `renderImmediate()` renders synchronously. It does nothing before the first layout (`layout.init()`), which the resize observer starts. A frame renders the corner, the header-row, the numbering-column and the data cells in one pass, then the borders in a second pass, so that they go on top of content that spills outside a cell.
+- **`FontsManager`** (`lib/core/FontsManager.ts`) belongs to the layout. It measures fonts once the first layout gives it a canvas context, and caches them until the next layout. The renderer gets fonts through `layout.getFont()`, and a `cellStyle` hook gets a font for `style.font` through `renderer.getFont()`.
 - **Cells** are `{ rowIndex, columnIndex }`. A column-heading has `rowIndex` -1, a row-numbering cell has `columnIndex` -1, and the top-left corner has both. Use the helpers in `lib/core/utils/cell.ts` (`isDataCell`, `isColumnHeading`, `isRowNumbering`, `isCornerCell`) instead of comparing indexes.
 - **Plugins** implement `FastSheetsPlugin` (`lib/core/utils/plugins.ts`), customize the grid through its hooks and build their UI from the core controllers and elements (`lib/core/controllers/`, `lib/core/elements/`).
   Hooks run in the order plugins are registered with `use()`, so a later plugin overrides and renders over the earlier ones. Input hooks and `beforeCellsChange` run from the last registered plugin first, and a plugin can call `stop()` on the event to keep it from the plugins below. The style and rendering hooks run for every visible cell in every frame, and the cells and contexts they get are reused, so they're valid only during the call.

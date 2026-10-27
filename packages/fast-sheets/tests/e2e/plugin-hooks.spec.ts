@@ -216,7 +216,7 @@ test.describe('input hooks', () => {
           destroy() {},
           onMouseDown(e) {
             const { clientX, clientY } = e.native
-            const cell = window.fastSheets.renderer.findCellAtPoint(clientX, clientY)
+            const cell = window.fastSheets.layout.findCellAtPoint(clientX, clientY)
             window.hookLog.push(`${name}:${cell?.rowIndex}:${cell?.columnIndex}`)
             if (window.shouldStopEvents) {
               e.stop()
@@ -254,7 +254,7 @@ test.describe('input hooks', () => {
         destroy() {},
         onDoubleClick(e) {
           const { clientX, clientY } = e.native
-          if (window.fastSheets.renderer.findCellAtPoint(clientX, clientY)?.columnIndex === 0) {
+          if (window.fastSheets.layout.findCellAtPoint(clientX, clientY)?.columnIndex === 0) {
             e.stop()
           }
         },

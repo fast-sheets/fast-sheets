@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import { Renderer } from 'lib/core/Renderer.ts'
+import { Layout } from 'lib/core/Layout.ts'
 import type { State } from 'lib/core/State.ts'
 
 /** The height the fake context gives every font: the default font height the tests were written for. */
@@ -16,15 +16,15 @@ const createFakeContext = () =>
   }) as unknown as RenderingContext
 
 /**
- * Creates a renderer with measured fonts, so that it can measure rows.
+ * Creates a layout with measured fonts, so that it can measure rows.
  * It runs `init()` once with a fake canvas context, which also sets the sizes in the state.
  */
-export const createMeasuringRenderer = (state: State) => {
-  const renderer = new Renderer(state)
+export const createMeasuringLayout = (state: State) => {
+  const layout = new Layout(state)
   const getContext = vi
     .spyOn(state.options.elCanvas, 'getContext')
     .mockReturnValue(createFakeContext())
-  renderer.init()
+  layout.init()
   getContext.mockRestore()
-  return renderer
+  return layout
 }
