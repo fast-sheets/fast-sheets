@@ -1,4 +1,5 @@
 import type { Cell, ModifiedCell, RawOptions } from 'lib/core/types.ts'
+import { Layout } from 'lib/core/Layout.ts'
 import { Renderer } from 'lib/core/Renderer.ts'
 import { State } from 'lib/core/State.ts'
 import { markAsCreatedByPackage, removeCreatedByPackage } from 'lib/core/utils/dom.ts'
@@ -18,6 +19,7 @@ const DEFAULT_OPTIONS = {
 
 export class FastSheets {
   state: State
+  layout: Layout
   renderer: Renderer
 
   /** The registered plugins by name, in registration order. Changed only by `use` and `unregister`. */
@@ -115,7 +117,8 @@ export class FastSheets {
       elScrollPaneY,
       columns,
     }
-    this.renderer = new Renderer(this.state)
+    this.layout = new Layout(this.state)
+    this.renderer = new Renderer(this.state, this.layout)
 
     this.resizeObserver = new ResizeObserver(() => {
       this.#onResize()
@@ -156,8 +159,8 @@ export class FastSheets {
     this.#plugins.set(plugin.name, plugin)
     this.#updateHooks()
     plugin.setup(this)
-    if (hasLayoutHooks(plugin) && this.renderer.isInitialized) {
-      this.renderer.init()
+    if (hasLayoutHooks(plugin) && this.layout.isInitialized) {
+      this.layout.init()
       this.renderer.render()
     }
   }
@@ -173,8 +176,8 @@ export class FastSheets {
     }
     this.#plugins.delete(pluginName)
     this.#updateHooks()
-    if (hasLayoutHooks(plugin) && this.renderer.isInitialized) {
-      this.renderer.init()
+    if (hasLayoutHooks(plugin) && this.layout.isInitialized) {
+      this.layout.init()
     }
     this.renderer.render()
   }
@@ -184,9 +187,10 @@ export class FastSheets {
     return this.#plugins.has(pluginName)
   }
 
-  /** Groups the plugins by hook again and gives the renderer the new groups. */
+  /** Groups the plugins by hook again and gives the layout and the renderer the new groups. */
   #updateHooks() {
     this.#hooks = createPluginHooks([...this.#plugins.values()])
+    this.layout.setPluginHooks(this.#hooks)
     this.renderer.setPluginHooks(this.#hooks)
   }
 
@@ -226,7 +230,7 @@ export class FastSheets {
         row[columnIndex] = value
       }
     }
-    this.renderer.updateRows(new Set(applied.map(({ rowIndex }) => rowIndex)))
+    this.layout.updateRows(new Set(applied.map(({ rowIndex }) => rowIndex)))
     for (const plugin of this.#hooks.afterCellsChange) {
       plugin.afterCellsChange(applied)
     }
@@ -302,7 +306,7 @@ export class FastSheets {
   }
 
   #onResize() {
-    this.renderer.init()
+    this.layout.init()
     this.renderer.renderImmediate()
   }
 

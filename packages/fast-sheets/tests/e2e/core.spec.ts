@@ -54,7 +54,7 @@ test.describe('cell borders', () => {
     await initFastSheets({ page, rowsCount: 200, columns, isRowNumberVisible: true })
 
     const borders = await page.evaluate(() => {
-      const { state, renderer } = window.fastSheets
+      const { state, layout, renderer } = window.fastSheets
       const { elCanvas, elScroll } = state.options
       const ctx = elCanvas.getContext('2d')!
       const scale = elCanvas.width / elCanvas.getBoundingClientRect().width
@@ -74,8 +74,8 @@ test.describe('cell borders', () => {
       }
 
       // near the bottom-right corner: the part a clear shifted by the scroll position misses
-      const rowIndex = renderer.findRowIndex(state.viewport.bottom) - 1
-      const columnIndex = renderer.findColumnIndex(state.viewport.right) - 1
+      const rowIndex = layout.findRowIndex(state.viewport.bottom) - 1
+      const columnIndex = layout.findColumnIndex(state.viewport.right) - 1
       const top = state.verticalOffsets[rowIndex]!
       const left = state.horizontalOffsets[columnIndex]!
       return {

@@ -1,24 +1,15 @@
-import { roundToPixels } from 'lib/core/utils/round-to-pixels.ts'
-import { findFloorIndex } from 'lib/core/utils/array.ts'
 import {
   COLUMN_HEADING_FONT,
-  DEFAULT_COLUMN_MIN_WIDTH,
   DEFAULT_FONT,
   DEFAULT_HEADING_BORDER_COLOR,
   DEFAULT_PADDING,
   ROW_NUMBERING_FONT,
 } from 'lib/core/constants.ts'
-import { clearCanvas, getContext, getCanvasSize, setTransform } from 'lib/core/utils/canvas.ts'
-import { FontsManager } from 'lib/core/FontsManager.ts'
+import { clearCanvas, getContext, setTransform } from 'lib/core/utils/canvas.ts'
 import type { Font } from 'lib/core/Font.ts'
+import type { Layout } from 'lib/core/Layout.ts'
 import type { State } from 'lib/core/State.ts'
-import {
-  getOffsets,
-  getTextX,
-  getTextY,
-  renderCellBorders,
-  renderCellText,
-} from 'lib/core/utils/render.ts'
+import { getTextX, getTextY, renderCellBorders, renderCellText } from 'lib/core/utils/render.ts'
 import { getLinesCount } from 'lib/core/utils/string.ts'
 import type {
   Cell,
@@ -28,7 +19,7 @@ import type {
   FrameContext,
 } from 'lib/core/types.ts'
 import { createPluginHooks, type PluginHooks } from 'lib/core/utils/plugins.ts'
-import { getCellText, isDataCell } from 'lib/core/utils/cell.ts'
+import { getCellText } from 'lib/core/utils/cell.ts'
 
 /** Copies every style field into a style object that is reused for every cell. */
 const copyCellStyle = (target: CellStyle, source: Readonly<CellStyle>) => {
@@ -63,20 +54,18 @@ type RenderingFunction = (renderingContext: RenderingContext) => void
 
 export class Renderer {
   readonly #state: State
+  readonly #layout: Layout
   #isRendering = false
-  #isInitialized = false
   #animationFrameId: number | null = null
-  readonly #fontsManager = new FontsManager()
   /**
    * The registered plugins grouped by hook, read for every frame and every cell.
    * Replaced by `setPluginHooks`, never changed in place, so a frame being rendered keeps the plugins it started with.
    */
   #pluginHooks: PluginHooks = createPluginHooks([])
 
-  #rowHeightsCache: number[] = [] // row heights by the number of text lines in the row
-
-  constructor(state: State) {
+  constructor(state: State, layout: Layout) {
     this.#state = state
+    this.#layout = layout
   }
 
   /** Sets the plugins to call while rendering. Called by `FastSheets` whenever a plugin is added or removed. */
@@ -84,53 +73,12 @@ export class Renderer {
     this.#pluginHooks = pluginHooks
   }
 
-  /** Whether the sizes were calculated at least once. */
-  get isInitialized() {
-    return this.#isInitialized
-  }
-
-  init() {
-    const { elCanvas, elScrollInner, elScrollPaneX, elScrollPaneY, columns } = this.#state.options
-    const ctx = getContext(elCanvas)
-    if (!ctx) {
-      return
-    }
-
-    this.#state.canvasSize = getCanvasSize(elScrollInner)
-    elCanvas.style.width = `${this.#state.canvasSize.width}px`
-    elCanvas.style.height = `${this.#state.canvasSize.height}px`
-
-    this.#fontsManager.initFonts(ctx)
-
-    this.#state.hasHeaderRow = !!columns.find((column) => !!column.name)
-
-    this.#rowHeightsCache = []
-
-    this.#state.headerRowHeight = this.getHeaderRowHeight()
-    this.#state.numberingColumnWidth = this.getNumberingColumnWidth()
-
-    this.#state.rowHeights = this.getRowHeights()
-    this.#state.columnWidths = this.getColumnWidths()
-
-    this.#state.totalWidth = this.getTotalWidth()
-    this.#state.totalHeight = this.getTotalHeight()
-
-    this.#state.horizontalOffsets = this.getHorizontalOffsets()
-    this.#state.verticalOffsets = this.getVerticalOffsets()
-
-    elScrollPaneX.style.width = `${this.#state.totalWidth}px`
-    elScrollPaneY.style.height = `${this.#state.totalHeight}px`
-
-    this.#isInitialized = true
-    this.#afterLayout()
-  }
-
   /**
    * Returns a font for `style.font` in a cellStyle hook, measured once and cached until the next layout.
    * Get it inside the hook rather than keeping it, because a new layout measures the fonts again.
    */
   getFont(font: string): Font {
-    return this.#fontsManager.getFont(font)
+    return this.#layout.getFont(font)
   }
 
   /**
@@ -140,7 +88,7 @@ export class Renderer {
   #createDefaultStyle(overrides?: Partial<CellStyle>): CellStyle {
     return {
       backgroundColor: '#fff',
-      font: this.#fontsManager.getFont(DEFAULT_FONT),
+      font: this.#layout.getFont(DEFAULT_FONT),
       color: '#000',
       textAlign: 'left',
       verticalAlign: 'middle',
@@ -148,227 +96,6 @@ export class Renderer {
       paddingY: DEFAULT_PADDING.y,
       ...overrides,
     }
-  }
-
-  #afterLayout() {
-    for (const plugin of this.#pluginHooks.afterLayout) {
-      plugin.afterLayout()
-    }
-  }
-
-  getHeaderRowHeight() {
-    if (!this.#state.hasHeaderRow) {
-      return 0
-    }
-
-    const linesHeight = this.#fontsManager.getFont(COLUMN_HEADING_FONT).getLinesHeight(1)
-    const paddingY = DEFAULT_PADDING.y * 4
-    let height = roundToPixels(linesHeight + paddingY)
-    for (const plugin of this.#pluginHooks.getHeaderRowHeight) {
-      height = plugin.getHeaderRowHeight(height)
-    }
-    return height
-  }
-
-  getNumberingColumnWidth() {
-    if (!this.#state.options.isRowNumberVisible) {
-      return 0
-    }
-    let width = 50
-    for (const plugin of this.#pluginHooks.getNumberingColumnWidth) {
-      width = plugin.getNumberingColumnWidth(width)
-    }
-    return width
-  }
-
-  getRowHeights() {
-    const rowsCount = this.#state.options.data.length
-    const rowHeights = new Array<number>(rowsCount)
-    for (let rowIndex = 0; rowIndex < rowsCount; rowIndex++) {
-      rowHeights[rowIndex] = this.getRowHeight(rowIndex)
-    }
-    return rowHeights
-  }
-
-  /** The height of a row: enough for the cell with the most text lines, then changed by the getRowHeight hooks. */
-  getRowHeight(rowIndex: number) {
-    const cellsTexts = this.#state.options.data[rowIndex] || []
-    let maxLinesCount = 1
-    for (const cellText of cellsTexts) {
-      maxLinesCount = Math.max(maxLinesCount, getLinesCount(cellText))
-    }
-    let height = this.#getRowHeightByLinesCount(maxLinesCount)
-    for (const plugin of this.#pluginHooks.getRowHeight) {
-      height = plugin.getRowHeight(rowIndex, height)
-    }
-    return height
-  }
-
-  #getRowHeightByLinesCount(linesCount: number) {
-    let rowHeight = this.#rowHeightsCache[linesCount]
-    if (rowHeight === undefined) {
-      const linesHeight = this.#fontsManager.getFont(DEFAULT_FONT).getLinesHeight(linesCount)
-      const paddingY = DEFAULT_PADDING.y * 2
-      rowHeight = roundToPixels(linesHeight + paddingY)
-      this.#rowHeightsCache[linesCount] = rowHeight
-    }
-    return rowHeight
-  }
-
-  updateRows(rowIndexes: Iterable<number>) {
-    const state = this.#state
-    const rowsCount = state.options.data.length
-    if (rowsCount !== state.rowHeights.length) {
-      this.init()
-      return
-    }
-
-    let firstChangedRowIndex = rowsCount
-    let heightDelta = 0
-    for (const rowIndex of rowIndexes) {
-      const oldHeight = state.rowHeights[rowIndex]
-      if (oldHeight === undefined) {
-        continue
-      }
-      const newHeight = this.getRowHeight(rowIndex)
-      if (newHeight !== oldHeight) {
-        state.rowHeights[rowIndex] = newHeight
-        heightDelta += newHeight - oldHeight
-        firstChangedRowIndex = Math.min(firstChangedRowIndex, rowIndex)
-      }
-    }
-    if (firstChangedRowIndex === rowsCount) {
-      // no row changed its height
-      return
-    }
-
-    // The first changed row keeps its offset, so only the rows below it would move.
-    // Each starts at the previous row's offset + rowHeight + borderWidth
-    const { borderWidth } = state.options
-    const offsets = state.verticalOffsets
-    for (let rowIndex = firstChangedRowIndex + 1; rowIndex < rowsCount; rowIndex++) {
-      offsets[rowIndex] = offsets[rowIndex - 1]! + state.rowHeights[rowIndex - 1]! + borderWidth
-    }
-    state.totalHeight += heightDelta
-    state.options.elScrollPaneY.style.height = `${state.totalHeight}px`
-    this.#afterLayout()
-  }
-
-  getColumnWidths() {
-    const { columns, borderWidth, elScrollInner, isRowNumberVisible } = this.#state.options
-    let containerWidth = elScrollInner.offsetWidth - borderWidth * 2
-    if (isRowNumberVisible) {
-      containerWidth -= this.#state.numberingColumnWidth
-    }
-    const columnsWithSizeTotalWidth = columns.reduce(
-      (total, { width }) => total + (width ? width + borderWidth : 0),
-      0,
-    )
-    const columnsWithoutWidthLength = columns.filter((column) => !column.width).length
-    const columnWithAutoWidth = roundToPixels(
-      (containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength,
-    )
-    const hooks = this.#pluginHooks.getColumnWidth
-    return columns.map((column, columnIndex) => {
-      let width =
-        column.width || Math.max(columnWithAutoWidth, column.minWidth || DEFAULT_COLUMN_MIN_WIDTH)
-      for (const plugin of hooks) {
-        width = plugin.getColumnWidth(columnIndex, width)
-      }
-      return width
-    })
-  }
-
-  getTotalWidth() {
-    const { columns, borderWidth } = this.#state.options
-    const verticalBordersCount = columns.length - 1
-    return (
-      this.#state.numberingColumnWidth +
-      (this.#state.numberingColumnWidth > 0 ? borderWidth : 0) +
-      this.#state.columnWidths.reduce((a, b) => a + b, 0) +
-      verticalBordersCount * borderWidth
-    )
-  }
-
-  getTotalHeight() {
-    const { borderWidth } = this.#state.options
-    const rowsLength = this.#state.rowHeights.length
-    const horizontalBordersCount = rowsLength - 1
-    return (
-      this.#state.headerRowHeight +
-      (this.#state.headerRowHeight > 0 ? borderWidth : 0) +
-      this.#state.rowHeights.reduce((a, b) => a + b, 0) +
-      horizontalBordersCount * borderWidth +
-      borderWidth
-    )
-  }
-
-  getVerticalOffsets() {
-    const { borderWidth } = this.#state.options
-    let firstOffset = borderWidth
-    if (this.#state.hasHeaderRow) {
-      firstOffset += this.#state.headerRowHeight + borderWidth
-    }
-    return getOffsets(this.#state.rowHeights, firstOffset, borderWidth)
-  }
-
-  getHorizontalOffsets() {
-    const { borderWidth } = this.#state.options
-    let firstOffset = borderWidth
-    if (this.#state.options.isRowNumberVisible) {
-      firstOffset += this.#state.numberingColumnWidth + borderWidth
-    }
-    return getOffsets(this.#state.columnWidths, firstOffset, borderWidth)
-  }
-
-  findColumnIndex = (offsetX: number) => {
-    const maxX = this.#state.viewport.right
-    if (offsetX > maxX) {
-      return -1
-    }
-    return findFloorIndex(this.#state.horizontalOffsets, offsetX)
-  }
-
-  findRowIndex = (offsetY: number) => {
-    const maxY = this.#state.viewport.bottom
-    if (offsetY > maxY) {
-      return -1
-    }
-    return findFloorIndex(this.#state.verticalOffsets, offsetY)
-  }
-
-  /**
-   * Finds the cell of any type under a point given relative to the window, as in `MouseEvent.clientX`.
-   * Returns undefined outside the cells: on the outer border, or past the visible part of the grid.
-   */
-  findCellAtPoint(clientX: number, clientY: number): Cell | undefined {
-    const state = this.#state
-    const { elScrollInner, borderWidth } = state.options
-    // both relative to the window: page coordinates would add the page scroll a second time
-    const { left, top } = elScrollInner.getBoundingClientRect()
-    const x = clientX - left
-    const y = clientY - top
-    if (x < 0 || y < 0 || x > state.viewport.right || y > state.viewport.bottom) {
-      return undefined
-    }
-
-    const columnIndex = findFloorIndex(state.horizontalOffsets, x)
-    const rowIndex = findFloorIndex(state.verticalOffsets, y)
-
-    // a point is in the numbering-column or header-row (if visible) just before the first column or row
-    const isInNumberingColumn =
-      state.numberingColumnWidth > 0 && x < borderWidth * 2 + state.numberingColumnWidth
-    const isInHeaderRow = state.headerRowHeight > 0 && y < borderWidth * 2 + state.headerRowHeight
-    if ((columnIndex === -1 && !isInNumberingColumn) || (rowIndex === -1 && !isInHeaderRow)) {
-      return undefined
-    }
-
-    return { rowIndex, columnIndex }
-  }
-
-  findDataCellAtPoint(clientX: number, clientY: number): Cell | undefined {
-    const cell = this.findCellAtPoint(clientX, clientY)
-    return cell && isDataCell(cell) ? cell : undefined
   }
 
   getCellTextFormatted(cell: Readonly<Cell>): string {
@@ -417,7 +144,7 @@ export class Renderer {
     renderingContext.cell.rowIndex = -1
     renderingContext.defaultStyle = this.#createDefaultStyle({
       borderColor: DEFAULT_HEADING_BORDER_COLOR,
-      font: this.#fontsManager.getFont(COLUMN_HEADING_FONT),
+      font: this.#layout.getFont(COLUMN_HEADING_FONT),
       textAlign: 'center',
     })
     // noinspection JSSuspiciousNameCombination
@@ -439,7 +166,7 @@ export class Renderer {
     renderingContext.cell.columnIndex = -1
     renderingContext.defaultStyle = this.#createDefaultStyle({
       borderColor: DEFAULT_HEADING_BORDER_COLOR,
-      font: this.#fontsManager.getFont(ROW_NUMBERING_FONT),
+      font: this.#layout.getFont(ROW_NUMBERING_FONT),
     })
     renderingContext.left = this.#state.options.borderWidth
     renderingContext.width = this.#state.numberingColumnWidth
@@ -607,38 +334,17 @@ export class Renderer {
 
   renderImmediate() {
     // the fonts and sizes come from the first layout, which the resize observer starts
-    if (!this.#isInitialized) {
+    if (!this.#layout.isInitialized) {
       return
     }
-    const { elCanvas, elScroll, elScrollInner } = this.#state.options
+    const { elCanvas } = this.#state.options
     const ctx = getContext(elCanvas)
     if (!ctx) {
       return
     }
 
-    const { widthWithPixelRatio, heightWithPixelRatio } = this.#state.canvasSize
-    if (elCanvas.width !== widthWithPixelRatio) {
-      elCanvas.width = widthWithPixelRatio
-    }
-    if (elCanvas.height !== heightWithPixelRatio) {
-      elCanvas.height = heightWithPixelRatio
-    }
-
-    const left = elScroll.scrollLeft || 0
-    const top = elScroll.scrollTop || 0
-    // read once: each read can make the browser lay out the page again
-    const { width, height } = elScrollInner.getBoundingClientRect()
-    const right = left + width
-    const bottom = top + height
-
-    this.#state.viewport = { left, top, right, bottom }
-
-    const visibleRange: CellsRange = {
-      rowStart: this.findRowIndex(this.#state.viewport.top), // first visible row index
-      rowEnd: this.findRowIndex(this.#state.viewport.bottom), // last visible row index
-      columnStart: this.findColumnIndex(this.#state.viewport.left), // first visible column index
-      columnEnd: this.findColumnIndex(this.#state.viewport.right), // last visible column index
-    }
+    this.#layout.updateViewport()
+    const visibleRange = this.#layout.getVisibleRange()
 
     clearCanvas(elCanvas, ctx)
 

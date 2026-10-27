@@ -29,7 +29,7 @@ test.describe('last row', () => {
       fastSheets.renderer.renderImmediate()
       return {
         rowsCount: state.rowHeights.length,
-        lastVisibleRowIndex: fastSheets.renderer.findRowIndex(state.viewport.bottom),
+        lastVisibleRowIndex: fastSheets.layout.findRowIndex(state.viewport.bottom),
       }
     })
 
@@ -540,14 +540,14 @@ test.describe('row sizes after an edit', () => {
     await pasteFromClipboard(page, '"three\nline\ntext"\tb\none')
 
     const sizes = await page.evaluate(() => {
-      const { state, renderer } = window.fastSheets
+      const { state, layout } = window.fastSheets
       const pick = () => ({
         rowHeights: [...state.rowHeights],
         verticalOffsets: [...state.verticalOffsets],
         totalHeight: state.totalHeight,
       })
       const afterEdit = pick()
-      renderer.init()
+      layout.init()
       return { afterEdit, measuredAgain: pick() }
     })
     expect(sizes.afterEdit.rowHeights[2]).toBeGreaterThan(sizes.afterEdit.rowHeights[1]!)

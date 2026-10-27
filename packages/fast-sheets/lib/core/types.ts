@@ -158,7 +158,7 @@ export interface FrameContext {
 
 /**
  * A DOM event wrapped for the input hooks, so that a plugin can stop the plugins below it.
- * To find the cell under a mouse or pointer event, call `instance.renderer.findCellAtPoint(e.native.clientX, e.native.clientY)`.
+ * To find the cell under a mouse or pointer event, call `instance.layout.findCellAtPoint(e.native.clientX, e.native.clientY)`.
  */
 export interface GridEvent<E extends Event = Event> {
   readonly native: E

@@ -517,12 +517,12 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   /** The cell under the pointer (headings included), or undefined outside the cells. */
   #findCell(e: MouseEvent) {
-    return this.instance.renderer.findCellAtPoint(e.clientX, e.clientY)
+    return this.instance.layout.findCellAtPoint(e.clientX, e.clientY)
   }
 
   /** A data cell under the pointer, or undefined over a heading or outside the cells. */
   #findDataCell(e: MouseEvent) {
-    return this.instance.renderer.findDataCellAtPoint(e.clientX, e.clientY)
+    return this.instance.layout.findDataCellAtPoint(e.clientX, e.clientY)
   }
 
   #isInputVisible() {
