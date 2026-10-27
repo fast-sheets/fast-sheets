@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { compareVersions, isPrerelease, isValidVersion } from './utils/version.js'
 
-// Releases a new version of fast-sheets.
+// Releases a new version.
 // It sets the version in both package.json files, commits and tags them, pushes the commit and the tag,
 // and prints a link to the GitHub form for the release.
 // Publishing the GitHub release starts .github/workflows/publish.yml, which publishes the package to npm.
