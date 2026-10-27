@@ -24,6 +24,7 @@ jobs:
         with:
           sparse-checkout: |
             ./packages/fast-sheets
+            ./scripts
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -43,7 +44,11 @@ jobs:
       - name: Build
         run: pnpm build:lib
 
+      - name: Choose the npm dist-tag
+        id: dist-tag
+        run: node scripts/get-npm-dist-tag.js
+
       - name: Publish to npm with Provenance
-        run: pnpm stage publish --filter=fast-sheets --provenance --access public
+        run: pnpm stage publish --filter=fast-sheets --provenance --access public --tag ${{ steps.dist-tag.outputs.tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
