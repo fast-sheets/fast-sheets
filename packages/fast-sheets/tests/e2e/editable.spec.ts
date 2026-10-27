@@ -60,7 +60,7 @@ test.describe('last row', () => {
   })
 
   test.describe('keyboard', () => {
-    test('a printable key starts editing', async ({ page }) => {
+    test('a printable key starts editing and replaces the cell text', async ({ page }) => {
       await page.goto('/')
       const columns = [
         { name: 'A', width: 100 },
@@ -70,10 +70,10 @@ test.describe('last row', () => {
       await clickCell({ page, columnIndex: 1, rowIndex: 1 })
       await page.keyboard.press('x')
 
-      expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }]])
+      expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'x' }]])
     })
 
-    test('a shifted key starts editing with that character', async ({ page }) => {
+    test('a shifted key replaces the cell text with that character', async ({ page }) => {
       await page.goto('/')
       const columns = [
         { name: 'A', width: 100 },
@@ -83,7 +83,7 @@ test.describe('last row', () => {
       await clickCell({ page, columnIndex: 1, rowIndex: 1 })
       await page.keyboard.press('Shift+X')
 
-      expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'r1c1X' }]])
+      expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'X' }]])
     })
 
     for (const key of ['F2', 'F5', 'PageDown', 'CapsLock', 'Home', 'Escape']) {
@@ -180,8 +180,8 @@ test.describe('cell editor', () => {
 
     await expect(getInput(page)).toBeHidden()
     expect(await getUpdates(page)).toEqual([
-      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
-      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1xyz' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'xyz' }],
     ])
   })
 
@@ -195,8 +195,8 @@ test.describe('cell editor', () => {
 
     await expect(getInput(page)).toBeHidden()
     expect(await getUpdates(page)).toEqual([
-      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
-      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1xy' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'xy' }],
     ])
   })
 
@@ -238,7 +238,7 @@ test.describe('cell editor', () => {
 
     await expect(getInput(page)).toBeHidden()
     expect(await getUpdates(page)).toEqual([
-      [{ rowIndex: 1, columnIndex: 1, value: 'r1c1x' }],
+      [{ rowIndex: 1, columnIndex: 1, value: 'x' }],
       [{ rowIndex: 1, columnIndex: 1, value: 'r1c1' }],
     ])
   })

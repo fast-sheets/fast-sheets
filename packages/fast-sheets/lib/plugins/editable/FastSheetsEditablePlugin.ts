@@ -442,7 +442,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
 
     if ((isEditStart || isCharacter) && this.#startEditing(focusedCell) && isCharacter) {
-      this.inputController.setValue(this.inputController.getValue() + e.key)
+      this.inputController.setValue(e.key)
     }
 
     if (
