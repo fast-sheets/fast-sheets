@@ -148,8 +148,8 @@ export class FastSheets {
   }
 
   /**
-   * Registers a plugin and calls its `setup`.
-   * Plugins run in registration order, so a plugin registered later sits on top of the earlier ones.
+   * Registers a plugin.
+   * Plugins run in registration order.
    */
   use(plugin: FastSheetsPlugin) {
     if (this.hasPlugin(plugin.name)) {
@@ -158,7 +158,13 @@ export class FastSheets {
 
     this.#plugins.set(plugin.name, plugin)
     this.#updateHooks()
-    plugin.setup(this)
+    try {
+      plugin.setup(this)
+    } catch (err) {
+      this.#plugins.delete(plugin.name)
+      this.#updateHooks()
+      throw err
+    }
     if (hasLayoutHooks(plugin) && this.layout.isInitialized) {
       this.layout.init()
       this.renderer.render()
