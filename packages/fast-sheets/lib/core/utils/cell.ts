@@ -93,7 +93,7 @@ export const getLeftCell = (cell: Readonly<Cell>): Cell => {
 export const getRightCell = (cell: Readonly<Cell>, state: Readonly<State>): Cell => {
   return {
     ...cell,
-    columnIndex: Math.min((state.options.data[0]?.length || 1) - 1, cell.columnIndex + 1),
+    columnIndex: Math.min(Math.max(state.options.columns.length - 1, 0), cell.columnIndex + 1),
   }
 }
 

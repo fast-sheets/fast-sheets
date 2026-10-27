@@ -54,6 +54,20 @@ describe('getRightCell', () => {
     expect(getRightCell({ rowIndex: 1, columnIndex: 3 }, state).columnIndex).toBe(2)
   })
 
+  it('stops at the last column when the rows have more values than columns', () => {
+    const state = createState({
+      rowsCount: 1,
+      columns: [
+        { name: 'A', width: 100 },
+        { name: 'B', width: 100 },
+      ],
+      hasHeaderRow: true,
+      isRowNumberVisible: true,
+    })
+    state.options.data = [['a', 'b', 'c', 'd']]
+    expect(getRightCell({ rowIndex: 0, columnIndex: 1 }, state).columnIndex).toBe(1)
+  })
+
   it('stays on row 0 for empty data', () => {
     const state = createState({
       rowsCount: 0,

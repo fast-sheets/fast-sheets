@@ -305,7 +305,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
   }
 
-  async #onCopy(e: ClipboardEvent) {
+  #onCopy(e: ClipboardEvent) {
     if (this.#isInputVisible()) {
       // let the browser copy the selected text of the cell editor
       return
@@ -334,13 +334,13 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       e.preventDefault()
       this.copiedRange.highlight({ range, state })
     } else if (navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(text)
-        this.copiedRange.highlight({ range, state })
-      } catch {
-        // eslint-disable-next-line no-console
-        console.error(`Unable to copy, navigator.clipboard is not available`)
-      }
+      navigator.clipboard.writeText(text).then(
+        () => this.copiedRange.highlight({ range, state }),
+        () => {
+          // eslint-disable-next-line no-console
+          console.error(`Unable to copy, navigator.clipboard is not available`)
+        },
+      )
     }
   }
 
@@ -434,15 +434,18 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       this.#clearSelectedCells()
     }
 
-    const isRangeSelection = e.shiftKey && isArrow && isMove
+    const isRangeSelection = e.shiftKey && isArrow
     if (isRangeSelection && !this.rangeSelectionController.hasStarted) {
       this.selectedRange.reset()
       this.rangeSelectionController.reset()
       this.#startSelection(focusedCell)
     }
 
-    if ((isEditStart || isCharacter) && this.#startEditing(focusedCell) && isCharacter) {
-      this.inputController.setValue(e.key)
+    if (isEditStart || isCharacter) {
+      const isEditing = this.#startEditing(focusedCell)
+      if (isEditing && isCharacter) {
+        this.inputController.setValue(e.key)
+      }
     }
 
     if (
@@ -554,7 +557,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   }
 
   #isInputVisible() {
-    return this.inputController && this.inputController.isInputFieldVisible()
+    return this.inputController.isInputFieldVisible()
   }
 
   #updateContainerPosition() {
