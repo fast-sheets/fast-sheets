@@ -37,6 +37,7 @@ import { TouchDetector } from 'lib/core/utils/touch-detector.ts'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
+  canEditCell: () => true,
 }
 
 export class FastSheetsEditablePlugin implements FastSheetsPlugin {
@@ -360,7 +361,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
             rowIndex: focusedCell.rowIndex + rowIndex,
             columnIndex: focusedCell.columnIndex + columnIndex,
           }
-          if (this.instance.canEditCell(cell)) {
+          if (this.options.canEditCell(cell)) {
             modifiedCells.push({ ...cell, value })
           }
         })
@@ -511,10 +512,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   /**
    * Opens the cell editor.
-   * Returns false when a plugin doesn't let the cell be edited.
+   * Returns false when the canEditCell option doesn't let the cell be edited.
    */
   #startEditing(cell: Cell) {
-    if (!this.instance.canEditCell(cell)) {
+    if (!this.options.canEditCell(cell)) {
       return false
     }
     this.inputController.showInput(getCellInfo(cell, this.instance.state))
@@ -535,7 +536,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     for (let rowIndex = range.rowStart; rowIndex <= range.rowEnd; rowIndex++) {
       for (let columnIndex = range.columnStart; columnIndex <= range.columnEnd; columnIndex++) {
         const modifiedCell = { rowIndex, columnIndex, value: '' }
-        if (this.instance.canEditCell(modifiedCell)) {
+        if (this.options.canEditCell(modifiedCell)) {
           modifiedCells.push(modifiedCell)
         }
       }

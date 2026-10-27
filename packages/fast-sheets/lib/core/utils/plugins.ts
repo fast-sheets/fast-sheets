@@ -54,10 +54,6 @@ export interface FastSheetsPlugin {
   onPointerCancel?(e: GridEvent<PointerEvent>): void
   onKeyDown?(e: GridEvent<KeyboardEvent>): void
   onKeyUp?(e: GridEvent<KeyboardEvent>): void
-
-  // Data
-  /** A cell is editable only if no plugin returns false. */
-  canEditCell?(cell: Readonly<Cell>): boolean
 }
 
 /** Hooks that run from the first registered plugin to the last. */
@@ -74,7 +70,6 @@ const BOTTOM_FIRST_HOOKS = [
   'renderCellContent',
   'renderCellBorders',
   'afterFrameRender',
-  'canEditCell',
 ] as const
 
 /** Hooks that run from the last registered plugin to the first, so the top plugin can stop the others. */
