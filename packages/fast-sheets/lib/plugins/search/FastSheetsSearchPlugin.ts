@@ -2,6 +2,7 @@ import type { FastSheets } from 'lib/core/FastSheets.ts'
 import type { Cell, CellStyle } from 'lib/core/types.ts'
 import type { Options, RawOptions } from './types.ts'
 import { getCellInfo, isDataCell } from 'lib/core/utils/cell.ts'
+import { mergeOptions } from 'lib/core/utils/options.ts'
 import { DEFAULT_SEARCH_RESULT_COLOR } from 'lib/core/constants.ts'
 import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 
@@ -23,10 +24,7 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
   searchResult = new Map<number, Set<number>>()
 
   constructor(options: RawOptions = {}) {
-    this.options = {
-      ...DEFAULT_OPTIONS,
-      ...options,
-    }
+    this.options = mergeOptions(DEFAULT_OPTIONS, options)
   }
 
   setup(instance: FastSheets) {

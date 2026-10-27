@@ -9,6 +9,7 @@ import {
   DEFAULT_SELECTION_COLOR,
 } from 'lib/core/constants.ts'
 import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
+import { mergeOptions } from 'lib/core/utils/options.ts'
 import { isArrowKey, isCharacterKey, isSelectAllShortcut } from 'lib/core/utils/keyboard.ts'
 import { RangeSelectionController } from 'lib/core/controllers/RangeSelectionController.ts'
 import { HighlightedRange } from 'lib/core/elements/HighlightedRange.ts'
@@ -54,10 +55,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   readonly #boundPaste: (e: ClipboardEvent) => void
 
   constructor(options: RawOptions) {
-    this.options = {
-      ...DEFAULT_OPTIONS,
-      ...options,
-    }
+    this.options = mergeOptions(DEFAULT_OPTIONS, options)
 
     this.#boundCopy = this.#onCopy.bind(this)
     this.#boundPaste = this.#onPaste.bind(this)

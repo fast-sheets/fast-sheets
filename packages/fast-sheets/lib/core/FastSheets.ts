@@ -3,6 +3,7 @@ import { Layout } from 'lib/core/Layout.ts'
 import { Renderer } from 'lib/core/Renderer.ts'
 import { State } from 'lib/core/State.ts'
 import { markAsCreatedByPackage, removeCreatedByPackage } from 'lib/core/utils/dom.ts'
+import { mergeOptions } from 'lib/core/utils/options.ts'
 import {
   createGridEvent,
   createPluginHooks,
@@ -107,8 +108,7 @@ export class FastSheets {
 
     this.state = new State()
     this.state.options = {
-      ...DEFAULT_OPTIONS,
-      ...options,
+      ...mergeOptions(DEFAULT_OPTIONS, options),
       elCanvasContainer,
       elCanvas,
       elScroll,
