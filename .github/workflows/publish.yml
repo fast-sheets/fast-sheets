@@ -38,15 +38,19 @@ jobs:
           node-version: '26'
           registry-url: 'https://registry.npmjs.org'
 
+      # Runs before the install and the build, so that a release with the wrong version fails early.
+      - name: Check the release and choose the npm dist-tag
+        id: dist-tag
+        run: node scripts/get-npm-dist-tag.js
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_IS_PRERELEASE: ${{ github.event.release.prerelease }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build:lib
-
-      - name: Choose the npm dist-tag
-        id: dist-tag
-        run: node scripts/get-npm-dist-tag.js
 
       - name: Publish to npm with Provenance
         run: pnpm stage publish --filter=fast-sheets --provenance --access public --tag ${{ steps.dist-tag.outputs.tag }}

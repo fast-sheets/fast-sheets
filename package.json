@@ -22,7 +22,8 @@
     "types:check": "pnpm -r --filter='./packages/**' --parallel run types:check",
     "test:lib:unit": "pnpm -r --filter='./packages/**' --parallel run test:unit",
     "test:lib:e2e": "pnpm -r --filter='./packages/**' --parallel run test:e2e",
-    "test:lib:e2e:ui": "pnpm -r --filter='./packages/**' --parallel run test:e2e --ui"
+    "test:lib:e2e:ui": "pnpm -r --filter='./packages/**' --parallel run test:e2e --ui",
+    "release": "node scripts/release.js"
   },
   "lint-staged": {
     "apps/**/*.{js,ts,tsx,vue}": [
