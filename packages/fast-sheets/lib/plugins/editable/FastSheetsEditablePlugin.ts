@@ -217,11 +217,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
   }
 
-  /** Applies edits through the core, which runs the data hooks, then reports the applied ones. */
+  /** Reports edits to the app, which applies accepted changes using `instance.updateCells()`. */
   onUpdate(modifiedCells: ModifiedCell[]) {
-    const appliedCells = this.instance.setCells(modifiedCells)
-    if (appliedCells.length) {
-      this.options.onUpdate([...appliedCells])
+    if (modifiedCells.length) {
+      this.options.onUpdate([...modifiedCells])
     }
   }
 

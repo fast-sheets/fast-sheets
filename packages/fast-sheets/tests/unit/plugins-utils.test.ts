@@ -30,26 +30,15 @@ describe('createPluginHooks', () => {
     expect(hooks.renderCellBorders).toEqual([])
   })
 
-  it('puts the last registered plugin first for input and beforeCellsChange hooks', () => {
-    const first = createPlugin('first', {
-      onMouseDown() {},
-      onKeyDown() {},
-      beforeCellsChange: (changes) => changes,
-      afterCellsChange() {},
-    })
-    const second = createPlugin('second', {
-      onMouseDown() {},
-      onKeyDown() {},
-      beforeCellsChange: (changes) => changes,
-      afterCellsChange() {},
-    })
+  it('puts the last registered plugin first for input hooks', () => {
+    const first = createPlugin('first', { onMouseDown() {}, onKeyDown() {}, afterLayout() {} })
+    const second = createPlugin('second', { onMouseDown() {}, onKeyDown() {}, afterLayout() {} })
 
     const hooks = createPluginHooks([first, second])
 
     expect(hooks.onMouseDown).toEqual([second, first])
     expect(hooks.onKeyDown).toEqual([second, first])
-    expect(hooks.beforeCellsChange).toEqual([second, first])
-    expect(hooks.afterCellsChange).toEqual([first, second])
+    expect(hooks.afterLayout).toEqual([first, second])
   })
 
   it('has empty groups without plugins', () => {

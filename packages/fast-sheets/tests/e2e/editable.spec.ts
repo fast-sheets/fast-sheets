@@ -528,6 +528,41 @@ test.describe('cell editor on a touch screen', () => {
   })
 })
 
+test.describe('edits', () => {
+  test('change data only when the app calls updateCells, as the app changes them', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      // the app rejects one value and changes the others before it writes them
+      window.fastSheetsEditablePlugin.options.onUpdate = (cells) => {
+        window.updates.push(cells)
+        if (cells.some(({ value }) => value === 'reject')) {
+          return
+        }
+        window.fastSheets.updateCells(
+          cells.map((cell) => ({ ...cell, value: cell.value.toUpperCase() })),
+        )
+      }
+    })
+    const getFirstValue = () => page.evaluate(() => window.fastSheets.state.options.data[0]![0])
+
+    await clickCell({ page, rowIndex: 0, columnIndex: 0 })
+    await pasteFromClipboard(page, 'abc')
+    expect(await getUpdates(page)).toEqual([[{ rowIndex: 0, columnIndex: 0, value: 'abc' }]])
+    expect(await getFirstValue()).toBe('ABC')
+
+    await pasteFromClipboard(page, 'reject')
+    expect(await getUpdates(page)).toHaveLength(2)
+    expect(await getFirstValue()).toBe('ABC')
+  })
+})
+
 test.describe('row sizes after an edit', () => {
   test('are the same as when every row is measured again', async ({ page }) => {
     await page.goto('/')
@@ -536,13 +571,6 @@ test.describe('row sizes after an edit', () => {
       { name: 'B', width: 100 },
     ]
     await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
-    await page.evaluate(() => {
-      window.fastSheetsEditablePlugin.options.onUpdate = (cells) => {
-        for (const { rowIndex, columnIndex, value } of cells) {
-          window.fastSheets.state.options.data[rowIndex]![columnIndex] = value
-        }
-      }
-    })
     await clickCell({ page, columnIndex: 1, rowIndex: 2 })
     await pasteFromClipboard(page, '"three\nline\ntext"\tb\none')
 

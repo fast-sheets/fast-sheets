@@ -305,44 +305,6 @@ test.describe('data hooks', () => {
       ],
     ])
   })
-
-  test('beforeCellsChange can change or reject edits', async ({ page }) => {
-    await page.goto('/')
-    await initFastSheetsWithEditable({
-      page,
-      rowsCount: 4,
-      columns: COLUMNS,
-      isRowNumberVisible: true,
-    })
-    await page.evaluate(() => {
-      window.hookLog = []
-      window.fastSheets.use({
-        name: 'upper-case',
-        setup() {},
-        destroy() {},
-        beforeCellsChange(changes) {
-          if (changes.some(({ value }) => value === 'reject')) {
-            return false
-          }
-          return changes.map((change) => ({ ...change, value: change.value.toUpperCase() }))
-        },
-        afterCellsChange(changes) {
-          window.hookLog.push(...changes.map(({ value }) => value))
-        },
-      })
-    })
-    const getFirstValue = () => page.evaluate(() => window.fastSheets.state.options.data[0]![0])
-
-    await clickCell({ page, rowIndex: 0, columnIndex: 0 })
-    await pasteFromClipboard(page, 'abc')
-    expect(await getUpdates(page)).toEqual([[{ rowIndex: 0, columnIndex: 0, value: 'ABC' }]])
-    expect(await getFirstValue()).toBe('ABC')
-    expect(await page.evaluate(() => window.hookLog)).toEqual(['ABC'])
-
-    await pasteFromClipboard(page, 'reject')
-    expect(await getUpdates(page)).toHaveLength(1)
-    expect(await getFirstValue()).toBe('ABC')
-  })
 })
 
 test.describe('layout hooks', () => {
