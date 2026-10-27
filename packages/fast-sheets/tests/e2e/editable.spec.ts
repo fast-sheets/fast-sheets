@@ -561,6 +561,35 @@ test.describe('edits', () => {
     expect(await getUpdates(page)).toHaveLength(2)
     expect(await getFirstValue()).toBe('ABC')
   })
+
+  test('skip the cells canEditCell does not let be edited', async ({ page }) => {
+    await page.goto('/')
+    const columns = [
+      { name: 'A', width: 100 },
+      { name: 'B', width: 100 },
+      { name: 'C', width: 100 },
+    ]
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await page.evaluate(() => {
+      window.fastSheetsEditablePlugin.options.canEditCell = (cell) => cell.columnIndex !== 1
+    })
+
+    const point = await getCellMouseCoords({ page, rowIndex: 0, columnIndex: 1 })
+    await page.mouse.dblclick(point.x, point.y)
+    await expect(page.locator('[data-name="elInput"]')).toBeHidden()
+    await page.keyboard.press('x')
+    await page.keyboard.press('Backspace')
+    expect(await getUpdates(page)).toEqual([])
+
+    await clickCell({ page, rowIndex: 0, columnIndex: 0 })
+    await pasteFromClipboard(page, 'a\tb\tc')
+    expect(await getUpdates(page)).toEqual([
+      [
+        { rowIndex: 0, columnIndex: 0, value: 'a' },
+        { rowIndex: 0, columnIndex: 2, value: 'c' },
+      ],
+    ])
+  })
 })
 
 test.describe('row sizes after an edit', () => {
@@ -1043,16 +1072,11 @@ test.describe('clear', () => {
     })
   }
 
-  test('Delete leaves the cells a plugin does not let be edited', async ({ page }) => {
+  test('Delete leaves the cells canEditCell does not let be edited', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
     await page.evaluate(() => {
-      window.fastSheets.use({
-        name: 'read-only',
-        setup() {},
-        destroy() {},
-        canEditCell: (cell) => cell.columnIndex !== 1,
-      })
+      window.fastSheetsEditablePlugin.options.canEditCell = (cell) => cell.columnIndex !== 1
     })
     await clickCell({ page, columnIndex: 0, rowIndex: 1 })
     await page.keyboard.down('Shift')

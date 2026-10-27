@@ -1,4 +1,4 @@
-import type { Cell, ModifiedCell, RawOptions } from 'lib/core/types.ts'
+import type { ModifiedCell, RawOptions } from 'lib/core/types.ts'
 import { Layout } from 'lib/core/Layout.ts'
 import { Renderer } from 'lib/core/Renderer.ts'
 import { State } from 'lib/core/State.ts'
@@ -198,16 +198,6 @@ export class FastSheets {
     this.#hooks = createPluginHooks([...this.#plugins.values()])
     this.layout.setPluginHooks(this.#hooks)
     this.renderer.setPluginHooks(this.#hooks)
-  }
-
-  /** Whether a cell can be edited: no plugin returns false from canEditCell. */
-  canEditCell(cell: Readonly<Cell>) {
-    for (const plugin of this.#hooks.canEditCell) {
-      if (!plugin.canEditCell(cell)) {
-        return false
-      }
-    }
-    return true
   }
 
   /**

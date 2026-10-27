@@ -1,7 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 import { initFastSheets, initFastSheetsWithEditable } from 'tests/e2e/utils/instance.ts'
 import { clickCell, getCellMouseCoords } from 'tests/e2e/utils/cell.ts'
-import { pasteFromClipboard } from 'tests/e2e/utils/clipboard.ts'
 
 const COLUMNS = [
   { name: 'A', width: 100 },
@@ -35,8 +34,6 @@ const getCellInnerPoint = (page: Page, cell: { rowIndex: number; columnIndex: nu
       y: (state.verticalOffsets[rowIndex] || 0) + 4,
     }
   }, cell)
-
-const getUpdates = (page: Page) => page.evaluate(() => window.updates)
 
 const getInput = (page: Page) => page.locator('[data-name="elInput"]')
 
@@ -268,42 +265,6 @@ test.describe('input hooks', () => {
     const otherPoint = await getCellMouseCoords({ page, rowIndex: 1, columnIndex: 1 })
     await page.mouse.dblclick(otherPoint.x, otherPoint.y)
     await expect(getInput(page)).toBeVisible()
-  })
-})
-
-test.describe('data hooks', () => {
-  test('canEditCell keeps cells from being edited', async ({ page }) => {
-    await page.goto('/')
-    await initFastSheetsWithEditable({
-      page,
-      rowsCount: 4,
-      columns: COLUMNS,
-      isRowNumberVisible: true,
-    })
-    await page.evaluate(() => {
-      window.fastSheets.use({
-        name: 'read-only',
-        setup() {},
-        destroy() {},
-        canEditCell: (cell) => cell.columnIndex !== 1,
-      })
-    })
-
-    const point = await getCellMouseCoords({ page, rowIndex: 0, columnIndex: 1 })
-    await page.mouse.dblclick(point.x, point.y)
-    await expect(getInput(page)).toBeHidden()
-    await page.keyboard.press('x')
-    await page.keyboard.press('Backspace')
-    expect(await getUpdates(page)).toEqual([])
-
-    await clickCell({ page, rowIndex: 0, columnIndex: 0 })
-    await pasteFromClipboard(page, 'a\tb\tc')
-    expect(await getUpdates(page)).toEqual([
-      [
-        { rowIndex: 0, columnIndex: 0, value: 'a' },
-        { rowIndex: 0, columnIndex: 2, value: 'c' },
-      ],
-    ])
   })
 })
 
