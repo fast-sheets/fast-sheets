@@ -28,7 +28,7 @@ export class FastSheets {
   /** The registered plugins grouped by hook. Replaced whenever a plugin is added or removed. */
   #hooks: PluginHooks = createPluginHooks([])
 
-  resizeObserver: ResizeObserver
+  readonly #resizeObserver: ResizeObserver
 
   constructor(options: RawOptions) {
     const elContainer = options.elContainer
@@ -120,15 +120,15 @@ export class FastSheets {
     this.layout = new Layout(this.state)
     this.renderer = new Renderer(this.state, this.layout)
 
-    this.resizeObserver = new ResizeObserver(() => {
+    this.#resizeObserver = new ResizeObserver(() => {
       this.#onResize()
     })
 
-    this.bindEvents()
+    this.#bindEvents()
   }
 
   destroy() {
-    this.unbindEvents()
+    this.#unbindEvents()
     // a copy, because each plugin removes itself from the map
     for (const plugin of [...this.#plugins.values()]) {
       try {
@@ -244,7 +244,7 @@ export class FastSheets {
     return applied
   }
 
-  bindEvents = () => {
+  #bindEvents() {
     const { elContainer, elScroll, elCanvasContainer } = this.state.options
 
     /**
@@ -257,7 +257,7 @@ export class FastSheets {
      * Plugins event listeners
      */
     // observables
-    this.resizeObserver.observe(elCanvasContainer)
+    this.#resizeObserver.observe(elCanvasContainer)
     // mouse events
     elContainer.addEventListener('mousedown', this.#onMouseDown)
     window.addEventListener('mousemove', this.#onMouseMove)
@@ -272,7 +272,7 @@ export class FastSheets {
     elContainer.addEventListener('keyup', this.#onKeyUp)
   }
 
-  unbindEvents = () => {
+  #unbindEvents() {
     const { elContainer, elScroll } = this.state.options
 
     /**
@@ -285,7 +285,7 @@ export class FastSheets {
      * Plugins event listeners
      */
     // observables
-    this.resizeObserver.disconnect()
+    this.#resizeObserver.disconnect()
     // mouse events
     elContainer.removeEventListener('dblclick', this.#onDoubleClick)
     elContainer.removeEventListener('mousedown', this.#onMouseDown)
