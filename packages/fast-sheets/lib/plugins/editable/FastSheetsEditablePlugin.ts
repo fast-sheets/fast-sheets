@@ -431,7 +431,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
 
     if (isClear) {
-      this.#clearSelectedCells(focusedCell)
+      this.#clearSelectedCells()
     }
 
     const isRangeSelection = e.shiftKey && isArrow && isMove
@@ -519,11 +519,16 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     return true
   }
 
-  /** Empties the selected range, or the focused cell when no range is selected. */
-  #clearSelectedCells(focusedCell: Cell) {
+  /** Empties the selected range or the focused cell when no range is selected. */
+  #clearSelectedCells() {
+    if (!this.focusedCell.cell) {
+      return
+    }
+
     const range = this.selectedRange.isEmpty()
-      ? convertCellToRange(focusedCell)
+      ? convertCellToRange(this.focusedCell.cell)
       : this.selectedRange.range
+
     const modifiedCells: ModifiedCell[] = []
     for (let rowIndex = range.rowStart; rowIndex <= range.rowEnd; rowIndex++) {
       for (let columnIndex = range.columnStart; columnIndex <= range.columnEnd; columnIndex++) {
