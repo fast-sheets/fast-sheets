@@ -202,23 +202,31 @@ export class Layout {
   }
 
   getColumnWidths() {
-    const { columns, borderWidth, elScrollInner, isRowNumberVisible } = this.#state.options
-    let containerWidth = elScrollInner.offsetWidth - borderWidth * 2
+    const { columns, borderWidth, isRowNumberVisible } = this.#state.options
+    // The grid fits the container when the columns, the numbering-column, and all borders fit.
+    // This includes a border:
+    // 1. BEFORE each column
+    // 2. AFTER the last column
+    // 3. AFTER the numbering-column
+    let availableWidth = this.#state.canvasSize.width - borderWidth * (columns.length + 1)
     if (isRowNumberVisible) {
-      containerWidth -= this.#state.numberingColumnWidth
+      availableWidth -= this.#state.numberingColumnWidth + borderWidth
     }
-    const columnsWithSizeTotalWidth = columns.reduce(
-      (total, { width }) => total + (width ? width + borderWidth : 0),
-      0,
-    )
-    const columnsWithoutWidthLength = columns.filter((column) => !column.width).length
-    const columnWithAutoWidth = roundToPixels(
-      (containerWidth - columnsWithSizeTotalWidth) / columnsWithoutWidthLength,
-    )
+    availableWidth -= columns.reduce((sum, column) => sum + (column.width || 0), 0)
+    const autoWidthColumnsCount = columns.filter((column) => !column.width).length
+    const lastAutoWidthColumnIndex = columns.findLastIndex((column) => !column.width)
+    const autoWidth = roundToPixels(availableWidth / autoWidthColumnsCount)
+    const roundingRemainder = availableWidth - autoWidth * autoWidthColumnsCount
     const hooks = this.#pluginHooks.getColumnWidth
     return columns.map((column, columnIndex) => {
-      let width =
-        column.width || Math.max(columnWithAutoWidth, column.minWidth || DEFAULT_COLUMN_MIN_WIDTH)
+      let width = column.width
+      if (!width) {
+        let fittingWidth = autoWidth
+        if (columnIndex === lastAutoWidthColumnIndex) {
+          fittingWidth += roundingRemainder
+        }
+        width = Math.max(fittingWidth, column.minWidth || DEFAULT_COLUMN_MIN_WIDTH)
+      }
       for (const plugin of hooks) {
         width = plugin.getColumnWidth(columnIndex, width)
       }
@@ -226,12 +234,14 @@ export class Layout {
     })
   }
 
+  /** The width of the whole grid with all its borders, the outer ones included. */
   getTotalWidth() {
     const { columns, borderWidth } = this.#state.options
-    const verticalBordersCount = columns.length - 1
+    const { numberingColumnWidth } = this.#state
+    const verticalBordersCount = columns.length + 1
     return (
-      this.#state.numberingColumnWidth +
-      (this.#state.numberingColumnWidth > 0 ? borderWidth : 0) +
+      numberingColumnWidth +
+      (numberingColumnWidth > 0 ? borderWidth : 0) +
       this.#state.columnWidths.reduce((a, b) => a + b, 0) +
       verticalBordersCount * borderWidth
     )

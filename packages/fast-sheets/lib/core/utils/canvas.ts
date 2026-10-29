@@ -3,10 +3,10 @@ import { DEFAULT_BORDER_COLOR } from 'lib/core/constants.ts'
 
 export const getDevicePixelRatio = () => Math.max(window.devicePixelRatio, 1)
 
-export const getCanvasSize = ({
-  offsetWidth: containerWidth,
-  offsetHeight: containerHeight,
-}: HTMLElement): CanvasSize => {
+export const getCanvasSize = (el: HTMLElement): CanvasSize => {
+  let { width: containerWidth, height: containerHeight } = el.getBoundingClientRect()
+  containerWidth = Math.floor(containerWidth)
+  containerHeight = Math.floor(containerHeight)
   const devicePixelRatio = getDevicePixelRatio()
   return {
     widthWithPixelRatio: Math.round(containerWidth * devicePixelRatio),

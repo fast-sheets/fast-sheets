@@ -100,13 +100,51 @@ describe('layout', () => {
     state.numberingColumnWidth = layout.getNumberingColumnWidth()
 
     const widthsSum = state.columnWidths.reduce((a, b) => a + b, 0)
-    // 2 columns + numbering column -> 1 border between them + 1 closing border
+    // numbering-column + 2 columns -> 2 borders between them + the left and right outer borders
     expect(layout.getTotalWidth()).toBe(
-      widthsSum +
-        state.numberingColumnWidth +
-        state.options.borderWidth +
-        state.options.borderWidth,
+      widthsSum + state.numberingColumnWidth + state.options.borderWidth * 4,
     )
+  })
+
+  describe('columns without a width', () => {
+    const createAutoWidthState = (isRowNumberVisible: boolean, columns = [{}, {}, {}]) => {
+      const state = createState({
+        rowsCount: 1,
+        columns: columns.map((column, i) => ({ name: `C${i}`, ...column })),
+        hasHeaderRow: true,
+        isRowNumberVisible,
+      })
+      // the width init() measures, as jsdom doesn't lay out elements
+      state.canvasSize.width = 361
+      const layout = new Layout(state)
+      state.numberingColumnWidth = layout.getNumberingColumnWidth()
+      state.columnWidths = layout.getColumnWidths()
+      return { state, layout }
+    }
+
+    it('fill the container exactly with the numbering-column and all the borders', () => {
+      const { state, layout } = createAutoWidthState(true)
+
+      // 361 - numbering-column 50 - 5 borders = 306
+      expect(state.columnWidths).toEqual([102, 102, 102])
+      expect(layout.getTotalWidth()).toBe(361)
+    })
+
+    it('fill the container exactly without the numbering-column', () => {
+      const { state, layout } = createAutoWidthState(false)
+
+      // 361 - 4 borders = 357
+      expect(state.columnWidths).toEqual([119, 119, 119])
+      expect(layout.getTotalWidth()).toBe(361)
+    })
+
+    it('give the pixels left after rounding to the last column without a width', () => {
+      const { state, layout } = createAutoWidthState(false, [{}, {}, { width: 100 }, {}])
+
+      // 361 - 5 borders - 100 = 256
+      expect(state.columnWidths).toEqual([85, 85, 100, 86])
+      expect(layout.getTotalWidth()).toBe(361)
+    })
   })
 
   it('computes total height correctly', () => {
