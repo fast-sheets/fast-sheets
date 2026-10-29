@@ -3,10 +3,8 @@
 <template>
   <div class="container">
     <nav>
-      <RouterLink to="/">Home</RouterLink>
-      <RouterLink to="/editable">Editable</RouterLink>
+      <RouterLink to="/">Basic</RouterLink>
       <RouterLink to="/multiple">Multiple</RouterLink>
-      <RouterLink to="/search">Search</RouterLink>
       <RouterLink to="/search-editable">Search & Editable</RouterLink>
     </nav>
     <div class="content">
@@ -18,6 +16,10 @@
 <style scoped>
 .container {
   display: flex;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 }
 nav {
   display: flex;
@@ -26,8 +28,10 @@ nav {
   max-width: 20vw;
 
   @media (max-width: 768px) {
-    padding-left: 10px;
-    padding-right: 10px;
+    flex-direction: row;
+    max-width: none;
+    padding: 5px 10px 0;
+    gap: 10px;
   }
 }
 .content {
@@ -36,7 +40,7 @@ nav {
   padding-right: 100px;
 
   @media (max-width: 768px) {
-    padding-right: 0;
+    padding: 0 10px;
   }
 }
 </style>
