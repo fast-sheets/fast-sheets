@@ -88,6 +88,41 @@ test.describe('cell borders', () => {
     const borderColor = 'rgb(233, 233, 233)' // DEFAULT_BORDER_COLOR
     expect(borders).toEqual({ horizontal: borderColor, vertical: borderColor })
   })
+
+  test('fit columns without a width, with the right border of the last column', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    // the widths 361px leaves to the columns don't divide evenly without counting the borders
+    await page.getByTestId('fast-sheets').evaluate((el: HTMLElement) => (el.style.width = '361px'))
+    const columns = [{ name: 'A' }, { name: 'B' }, { name: 'C' }]
+    await initFastSheets({ page, rowsCount: 20, columns, isRowNumberVisible: true })
+
+    const result = await page.evaluate(() => {
+      const { state, renderer } = window.fastSheets
+      const { elCanvas, elScroll, elScrollInner } = state.options
+      renderer.renderImmediate()
+      const ctx = elCanvas.getContext('2d')!
+      const scale = elCanvas.width / elCanvas.getBoundingClientRect().width
+      const getPixel = (x: number, y: number) => {
+        const [r, g, b] = ctx.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data
+        return `rgb(${r}, ${g}, ${b})`
+      }
+      const top = state.verticalOffsets[1]! + 10
+      return {
+        horizontalOverflow: elScroll.scrollWidth - elScroll.clientWidth,
+        totalWidth: state.totalWidth,
+        containerWidth: elScrollInner.offsetWidth,
+        rightBorder: getPixel(elScrollInner.offsetWidth - 0.5, top),
+        lastCell: getPixel(elScrollInner.offsetWidth - 1.5, top),
+      }
+    })
+
+    expect(result.horizontalOverflow).toBe(0)
+    expect(result.totalWidth).toBe(result.containerWidth)
+    expect(result.rightBorder).toBe('rgb(233, 233, 233)') // DEFAULT_BORDER_COLOR
+    expect(result.lastCell).not.toBe('rgb(233, 233, 233)')
+  })
 })
 
 test.describe('mouse wheel', () => {
