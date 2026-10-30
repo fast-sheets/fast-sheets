@@ -64,6 +64,20 @@ const init = () => {
     })
 
     const editablePlugin = new FastSheetsEditablePlugin({
+      canAddRows: true,
+      canAddColumns: true,
+      onInsertRows(index, count) {
+        fastSheets.insertRows(index, count)
+      },
+      onRemoveRows(index, count) {
+        fastSheets.removeRows(index, count)
+      },
+      onInsertColumns(index, count) {
+        fastSheets.insertColumns(index, count)
+      },
+      onRemoveColumns(index, count) {
+        fastSheets.removeColumns(index, count)
+      },
       onUpdate(modifiedCells) {
         fastSheets.updateCells(modifiedCells)
       },

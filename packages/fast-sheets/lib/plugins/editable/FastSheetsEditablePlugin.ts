@@ -1,6 +1,6 @@
 import type { FastSheets } from 'lib/core/FastSheets.ts'
 import type { ModifiedCell, CellsRange, Cell, CellStyle, GridEvent } from 'lib/core/types.ts'
-import type { Options, RawOptions } from './types.ts'
+import type { ContextMenuLabels, Options, RawOptions } from './types.ts'
 import {
   BORDER_STYLE,
   DEFAULT_INPUT_FONT,
@@ -35,6 +35,14 @@ import {
 import { parseClipboardText, stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
 import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 import { TouchDetector } from 'lib/core/utils/TouchDetector.ts'
+import { ContextMenu, type ContextMenuItem } from 'lib/core/elements/ContextMenu.ts'
+import { formatNounWithNumber } from 'lib/core/utils/string.ts'
+import {
+  getCellAfterColumnInsertion,
+  getCellAfterColumnRemoval,
+  getCellAfterRowInsertion,
+  getCellAfterRowRemoval,
+} from 'lib/core/utils/rows-and-columns.ts'
 
 /** What a selection by mouse covers: a range of cells, or whole columns or rows picked by their headings. */
 type SelectionType = 'cells' | 'columns' | 'rows'
@@ -42,6 +50,17 @@ type SelectionType = 'cells' | 'columns' | 'rows'
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
   canEditCell: () => true,
+  canAddRows: false,
+  canAddColumns: false,
+}
+
+const DEFAULT_CONTEXT_MENU_LABELS: ContextMenuLabels = {
+  insertRowsAbove: (count) => `Insert ${formatNounWithNumber(count, 'row', 'rows')} above`,
+  insertRowsBelow: (count) => `Insert ${formatNounWithNumber(count, 'row', 'rows')} below`,
+  deleteRows: (count) => `Delete ${formatNounWithNumber(count, 'row', 'rows')}`,
+  insertColumnsLeft: (count) => `Insert ${formatNounWithNumber(count, 'column', 'columns')} left`,
+  insertColumnsRight: (count) => `Insert ${formatNounWithNumber(count, 'column', 'columns')} right`,
+  deleteColumns: (count) => `Delete ${formatNounWithNumber(count, 'column', 'columns')}`,
 }
 
 export class FastSheetsEditablePlugin implements FastSheetsPlugin {
@@ -58,6 +77,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   rangeSelectionController: RangeSelectionController
   focusedCell: HighlightedCell
   inputController: InputController
+  contextMenu: ContextMenu
 
   readonly #touchDetector = new TouchDetector()
 
@@ -67,7 +87,13 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   readonly #boundPaste: (e: ClipboardEvent) => void
 
   constructor(options: RawOptions) {
-    this.options = mergeOptions(DEFAULT_OPTIONS, options)
+    this.options = {
+      ...mergeOptions(DEFAULT_OPTIONS, options),
+      // merged one by one, so that an app can replace only some of the texts
+      labels: {
+        contextMenu: mergeOptions(DEFAULT_CONTEXT_MENU_LABELS, options.labels?.contextMenu ?? {}),
+      },
+    }
 
     this.#boundCopy = this.#onCopy.bind(this)
     this.#boundPaste = this.#onPaste.bind(this)
@@ -118,6 +144,14 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         this.onUpdate([modifiedCell])
       },
     })
+
+    // context menu
+    this.contextMenu = new ContextMenu({
+      name: 'elContextMenu',
+      onClose: () => {
+        this.instance?.state.options.elContainer.focus({ preventScroll: true })
+      },
+    })
   }
 
   // noinspection JSUnusedGlobalSymbols
@@ -130,6 +164,7 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
 
   destroy() {
     this.unbindEvents(this.instance)
+    this.contextMenu.destroy()
     this.inputController.destroy()
     this.copiedRange.destroy()
     this.focusedCell.destroy()
@@ -222,6 +257,70 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     if (this.focusedCell.cell) {
       this.focusedCell.highlight({ cell: this.focusedCell.cell, state: this.instance.state })
     }
+  }
+
+  afterInsertRow(index: number) {
+    this.#placeCells(
+      getCellAfterRowInsertion(this.inputController.cellInfo?.cell, index),
+      getCellAfterRowInsertion(this.focusedCell.cell, index),
+    )
+  }
+
+  afterRemoveRow(index: number) {
+    this.#placeCells(
+      getCellAfterRowRemoval(this.inputController.cellInfo?.cell, index),
+      getCellAfterRowRemoval(this.focusedCell.cell, index),
+    )
+  }
+
+  afterInsertColumn(index: number) {
+    this.#placeCells(
+      getCellAfterColumnInsertion(this.inputController.cellInfo?.cell, index),
+      getCellAfterColumnInsertion(this.focusedCell.cell, index),
+    )
+  }
+
+  afterRemoveColumn(index: number) {
+    this.#placeCells(
+      getCellAfterColumnRemoval(this.inputController.cellInfo?.cell, index),
+      getCellAfterColumnRemoval(this.focusedCell.cell, index),
+    )
+  }
+
+  /**
+   * Moves the open editor and the focus to their new cells, after a row or column was inserted or removed.
+   * An undefined cell was removed: the editor closes, and the focus goes to the cell that took its place.
+   * The selection may no longer cover the same cells, so it is cleared.
+   */
+  #placeCells(newEditedCell: Cell | undefined, newFocusedCell: Cell | undefined) {
+    const { data, columns } = this.instance.state.options
+    const editedCellInfo = this.inputController.cellInfo
+    if (editedCellInfo) {
+      if (newEditedCell) {
+        editedCellInfo.cell = newEditedCell
+      } else {
+        // the edited cell is gone, so is what was typed into it
+        this.inputController.cellInfo = null
+        this.inputController.hideInput()
+      }
+    }
+    const focusedCell = this.focusedCell.cell
+    if (focusedCell) {
+      const cell = newFocusedCell || {
+        // the row or column that took the place of the removed one, or the last one
+        rowIndex: Math.min(focusedCell.rowIndex, data.length - 1),
+        columnIndex: Math.min(focusedCell.columnIndex, columns.length - 1),
+      }
+      if (cell.rowIndex < 0 || cell.columnIndex < 0) {
+        this.focusedCell.reset()
+      } else {
+        // highlighted after the new layout
+        this.focusedCell.cell = cell
+      }
+    }
+    this.selectedRange.reset()
+    this.rangeSelectionController.reset()
+    this.copiedRange.reset()
   }
 
   /** Reports edits to the app, which applies accepted changes using `instance.updateCells()`. */
@@ -477,6 +576,118 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       this.rangeSelectionController.reset()
     }
     this.instance.renderer.render()
+  }
+
+  onContextMenu(event: GridEvent<MouseEvent>) {
+    const e = event.native
+    const { canAddRows, canAddColumns } = this.options
+    // the browser menu stays for the cell editor, so that its text can be cut, copied and pasted
+    if ((!canAddRows && !canAddColumns) || this.#isInInput(e.target)) {
+      return
+    }
+    const cell = this.#findCell(e)
+    if (!cell || isCornerCell(cell)) {
+      return
+    }
+    if (this.#isInputVisible()) {
+      this.inputController.commitInput()
+    }
+    // like a left click, a right click outside the selection selects the cell, column or row under it
+    if (!this.#isInSelection(cell)) {
+      this.selectedRange.reset()
+      this.rangeSelectionController.reset()
+      this.focusedCell.reset()
+      if (isDataCell(cell)) {
+        this.focusedCell.highlight({ cell, state: this.instance.state })
+      } else {
+        this.#startHeadingSelection(cell)
+        this.#endSelection()
+      }
+    }
+    this.instance.renderer.render()
+
+    const items = this.#getContextMenuItems(cell)
+    if (!items.length) {
+      return
+    }
+    e.preventDefault()
+    event.stop()
+    this.contextMenu.show({ items, clientX: e.clientX, clientY: e.clientY })
+  }
+
+  /** Whether the cell is the focused cell, or a selected cell, column or row. */
+  #isInSelection(cell: Cell) {
+    if (isColumnHeading(cell)) {
+      return this.#isColumnSelected(cell.columnIndex)
+    }
+    if (isRowNumbering(cell)) {
+      return this.#isRowSelected(cell.rowIndex)
+    }
+    const focusedCell = this.focusedCell.cell
+    return (
+      (focusedCell?.rowIndex === cell.rowIndex && focusedCell.columnIndex === cell.columnIndex) ||
+      (!this.rangeSelectionController.isEmpty() &&
+        this.rangeSelectionController.isCellSelected(cell))
+    )
+  }
+
+  /**
+   * The items to insert or delete the rows and the columns of the selection, or of the focused cell.
+   * Each item reports to the app, which applies the change, see the `onInsertRows` option and the like.
+   * A column-heading has only the column items, and a row-numbering cell only the row items.
+   */
+  #getContextMenuItems(cell: Cell): ContextMenuItem[] {
+    const focusedCell = this.focusedCell.cell
+    if (!focusedCell) {
+      return []
+    }
+    const range = this.selectedRange.isEmpty()
+      ? convertCellToRange(focusedCell)
+      : this.selectedRange.range
+    const { data, columns } = this.instance.state.options
+    const labels = this.options.labels.contextMenu
+    const items: ContextMenuItem[] = []
+
+    if (this.options.canAddRows && !isColumnHeading(cell)) {
+      const count = range.rowEnd - range.rowStart + 1
+      items.push(
+        {
+          label: labels.insertRowsAbove(count),
+          action: () => this.options.onInsertRows?.(range.rowStart, count),
+        },
+        {
+          label: labels.insertRowsBelow(count),
+          action: () => this.options.onInsertRows?.(range.rowEnd + 1, count),
+        },
+        {
+          label: labels.deleteRows(count),
+          action: () => this.options.onRemoveRows?.(range.rowStart, count),
+          // the grid keeps at least one row, so that a menu can open on it
+          isDisabled: count >= data.length,
+        },
+      )
+    }
+
+    if (this.options.canAddColumns && !isRowNumbering(cell)) {
+      const count = range.columnEnd - range.columnStart + 1
+      items.push(
+        {
+          label: labels.insertColumnsLeft(count),
+          action: () => this.options.onInsertColumns?.(range.columnStart, count),
+        },
+        {
+          label: labels.insertColumnsRight(count),
+          action: () => this.options.onInsertColumns?.(range.columnEnd + 1, count),
+        },
+        {
+          label: labels.deleteColumns(count),
+          action: () => this.options.onRemoveColumns?.(range.columnStart, count),
+          // the grid keeps at least one column, so that a menu can open on it
+          isDisabled: count >= columns.length,
+        },
+      )
+    }
+    return items
   }
 
   onPointerDown({ native: e }: GridEvent<PointerEvent>) {

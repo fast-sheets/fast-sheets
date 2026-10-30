@@ -60,6 +60,54 @@ export class FastSheetsSearchPlugin implements FastSheetsPlugin {
     }
   }
 
+  /** Moves the found cells at or below the inserted row down by one. */
+  afterInsertRow(index: number) {
+    const searchResult = new Map<number, Set<number>>()
+    for (const [rowIndex, columnIndexes] of this.searchResult) {
+      searchResult.set(rowIndex < index ? rowIndex : rowIndex + 1, columnIndexes)
+    }
+    this.searchResult = searchResult
+  }
+
+  /** Forgets the found cells of the removed row, and moves the ones below it up by one. */
+  afterRemoveRow(index: number) {
+    const searchResult = new Map<number, Set<number>>()
+    for (const [rowIndex, columnIndexes] of this.searchResult) {
+      if (rowIndex !== index) {
+        searchResult.set(rowIndex < index ? rowIndex : rowIndex - 1, columnIndexes)
+      }
+    }
+    this.searchResult = searchResult
+  }
+
+  /** Moves the found cells at or right of the inserted column right by one. */
+  afterInsertColumn(index: number) {
+    for (const [rowIndex, columnIndexes] of this.searchResult) {
+      const newColumnIndexes = new Set<number>()
+      for (const columnIndex of columnIndexes) {
+        newColumnIndexes.add(columnIndex < index ? columnIndex : columnIndex + 1)
+      }
+      this.searchResult.set(rowIndex, newColumnIndexes)
+    }
+  }
+
+  /** Forgets the found cells of the removed column, and moves the ones right of it left by one. */
+  afterRemoveColumn(index: number) {
+    for (const [rowIndex, columnIndexes] of this.searchResult) {
+      const newColumnIndexes = new Set<number>()
+      for (const columnIndex of columnIndexes) {
+        if (columnIndex !== index) {
+          newColumnIndexes.add(columnIndex < index ? columnIndex : columnIndex - 1)
+        }
+      }
+      if (newColumnIndexes.size) {
+        this.searchResult.set(rowIndex, newColumnIndexes)
+      } else {
+        this.searchResult.delete(rowIndex)
+      }
+    }
+  }
+
   cellStyle(cell: Readonly<Cell>, style: CellStyle) {
     if (isDataCell(cell) && this.searchResult.get(cell.rowIndex)?.has(cell.columnIndex)) {
       style.borderColor = this.options.selectionColor

@@ -2,6 +2,8 @@ interface Window {
   isFixtureReady?: boolean
   data: import('lib/core/types').Data
   updates: import('lib/plugins/editable/types').ModifiedCell[][]
+  /** the calls of the editable plugin's onInsertRows, onRemoveRows, onInsertColumns and onRemoveColumns */
+  rowsAndColumnsCalls: { callback: string; index: number; count: number }[]
   showInputCount?: number
   /** what the test plugins of the hook tests saw, in order */
   hookLog: string[]

@@ -12,6 +12,15 @@ import {
   type FastSheetsPlugin,
   type PluginHooks,
 } from 'lib/core/utils/plugins.ts'
+import {
+  clampInsertion,
+  clampRemoval,
+  insertColumn,
+  insertRow,
+  isValidIndexAndCount,
+  removeColumn,
+  removeRow,
+} from 'lib/core/utils/rows-and-columns.ts'
 
 const DEFAULT_OPTIONS = {
   borderWidth: 1,
@@ -220,6 +229,101 @@ export class FastSheets {
     this.renderer.render()
   }
 
+  /**
+   * Inserts empty rows into 'data' before the row at `index`, lays the grid out again, and renders.
+   * An `index` past the last row adds the rows at the end.
+   * Does nothing unless `index` and `count` are integers and `count` is positive.
+   */
+  insertRows(index: number, count = 1) {
+    const { data, columns } = this.state.options
+    if (!isValidIndexAndCount(index, count)) {
+      return
+    }
+    const insertion = clampInsertion(index, count, data.length)
+    for (let i = 0; i < insertion.count; i++) {
+      insertRow(data, columns, insertion.index)
+      for (const plugin of this.#hooks.afterInsertRow) {
+        plugin.afterInsertRow(insertion.index)
+      }
+    }
+    this.#layoutAndRender()
+  }
+
+  /**
+   * Removes rows from 'data', starting with the row at `index`, lays the grid out again, and renders.
+   * Rows past the last one are skipped.
+   * Does nothing unless `index` and `count` are integers and `count` is positive.
+   */
+  removeRows(index: number, count = 1) {
+    const { data } = this.state.options
+    if (!isValidIndexAndCount(index, count)) {
+      return
+    }
+    const removal = clampRemoval(index, count, data.length)
+    if (!removal.count) {
+      return
+    }
+    for (let i = 0; i < removal.count; i++) {
+      removeRow(data, removal.index)
+      for (const plugin of this.#hooks.afterRemoveRow) {
+        plugin.afterRemoveRow(removal.index)
+      }
+    }
+    this.#layoutAndRender()
+  }
+
+  /**
+   * Inserts empty columns into 'data' and 'columns' before the column at `index`, lays the grid out again, and renders.
+   * An `index` past the last column adds the columns at the end.
+   * Does nothing unless `index` and `count` are integers and `count` is positive.
+   * A new column copies the size of the column it's inserted before (or of the last one), without its name.
+   */
+  insertColumns(index: number, count = 1) {
+    const { data, columns } = this.state.options
+    if (!isValidIndexAndCount(index, count)) {
+      return
+    }
+    const insertion = clampInsertion(index, count, columns.length)
+    for (let i = 0; i < insertion.count; i++) {
+      insertColumn(data, columns, insertion.index)
+      for (const plugin of this.#hooks.afterInsertColumn) {
+        plugin.afterInsertColumn(insertion.index)
+      }
+    }
+    this.#layoutAndRender()
+  }
+
+  /**
+   * Removes columns from 'data' and 'columns', starting with the column at `index`, lays the grid out again, and renders.
+   * Columns past the last one are skipped.
+   * Does nothing unless `index` and `count` are integers and `count` is positive.
+   */
+  removeColumns(index: number, count = 1) {
+    const { data, columns } = this.state.options
+    if (!isValidIndexAndCount(index, count)) {
+      return
+    }
+    const removal = clampRemoval(index, count, columns.length)
+    if (!removal.count) {
+      return
+    }
+    for (let i = 0; i < removal.count; i++) {
+      removeColumn(data, columns, removal.index)
+      for (const plugin of this.#hooks.afterRemoveColumn) {
+        plugin.afterRemoveColumn(removal.index)
+      }
+    }
+    this.#layoutAndRender()
+  }
+
+  /** Calculates all sizes again after rows or columns were inserted or removed, and renders. */
+  #layoutAndRender() {
+    if (this.layout.isInitialized) {
+      this.layout.init()
+    }
+    this.renderer.render()
+  }
+
   #bindEvents() {
     const { elContainer, elScroll, elCanvasContainer } = this.state.options
 
@@ -239,6 +343,7 @@ export class FastSheets {
     window.addEventListener('mousemove', this.#onMouseMove)
     window.addEventListener('mouseup', this.#onMouseUp)
     elContainer.addEventListener('dblclick', this.#onDoubleClick)
+    elContainer.addEventListener('contextmenu', this.#onContextMenu)
     // pointer events
     elContainer.addEventListener('pointerdown', this.#onPointerDown)
     window.addEventListener('pointerup', this.#onPointerUp)
@@ -264,6 +369,7 @@ export class FastSheets {
     this.#resizeObserver.disconnect()
     // mouse events
     elContainer.removeEventListener('dblclick', this.#onDoubleClick)
+    elContainer.removeEventListener('contextmenu', this.#onContextMenu)
     elContainer.removeEventListener('mousedown', this.#onMouseDown)
     window.removeEventListener('mousemove', this.#onMouseMove)
     window.removeEventListener('mouseup', this.#onMouseUp)
@@ -328,6 +434,14 @@ export class FastSheets {
     if (plugins.length) {
       const event = createGridEvent(e)
       dispatchToPlugins(plugins, event, (plugin) => plugin.onDoubleClick(event))
+    }
+  }
+
+  readonly #onContextMenu = (e: MouseEvent) => {
+    const plugins = this.#hooks.onContextMenu
+    if (plugins.length) {
+      const event = createGridEvent(e)
+      dispatchToPlugins(plugins, event, (plugin) => plugin.onContextMenu(event))
     }
   }
 
