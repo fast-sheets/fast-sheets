@@ -51,6 +51,26 @@ test.describe('search results', () => {
     )
   })
 
+  test('move with their cells when rows and columns are inserted or removed', async ({ page }) => {
+    await initWithSearchResult(page)
+    await page.evaluate(() => {
+      window.fastSheets.insertRows(0, 2)
+      window.fastSheets.removeColumns(0)
+    })
+
+    expect(
+      await page.evaluate(() => [...window.fastSheetsSearchPlugin.searchResult.get(3)!]),
+    ).toEqual([0])
+    expect(await getCellTopBorderPixel(page, { rowIndex: 3, columnIndex: 0 })).toBe(
+      'rgb(8, 197, 0)',
+    )
+
+    await page.evaluate(() => {
+      window.fastSheets.removeRows(3)
+    })
+    expect(await page.evaluate(() => window.fastSheetsSearchPlugin.searchResult.size)).toBe(0)
+  })
+
   test('are no longer outlined after the plugin is destroyed', async ({ page }) => {
     await initWithSearchResult(page, { selectionColor: 'rgb(255, 0, 0)' })
     expect(await getCellTopBorderPixel(page, { rowIndex: 1, columnIndex: 1 })).toBe(

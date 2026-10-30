@@ -24,6 +24,14 @@ export interface FastSheetsPlugin {
   afterLayout?(): void
   /** Runs on every scroll of the grid before the next frame is rendered. */
   onScroll?(e: Event): void
+  /**
+   * Run once for each row or column that `insertRows()`, `removeRows()`, `insertColumns()` and `removeColumns()`
+   * insert or remove, with its index, before the new layout, so that a plugin can move the cells it keeps to their new indexes.
+   */
+  afterInsertRow?(index: number): void
+  afterRemoveRow?(index: number): void
+  afterInsertColumn?(index: number): void
+  afterRemoveColumn?(index: number): void
 
   // Layout: runs when sizes are calculated, never once per frame
   getColumnWidth?(columnIndex: number, width: number): number
@@ -49,6 +57,8 @@ export interface FastSheetsPlugin {
   onMouseMove?(e: GridEvent<MouseEvent>): void
   onMouseUp?(e: GridEvent<MouseEvent>): void
   onDoubleClick?(e: GridEvent<MouseEvent>): void
+  /** The `contextmenu` event: a right click, a long press or the menu key. */
+  onContextMenu?(e: GridEvent<MouseEvent>): void
   onPointerDown?(e: GridEvent<PointerEvent>): void
   onPointerUp?(e: GridEvent<PointerEvent>): void
   onPointerCancel?(e: GridEvent<PointerEvent>): void
@@ -60,6 +70,10 @@ export interface FastSheetsPlugin {
 const BOTTOM_FIRST_HOOKS = [
   'afterLayout',
   'onScroll',
+  'afterInsertRow',
+  'afterRemoveRow',
+  'afterInsertColumn',
+  'afterRemoveColumn',
   'getColumnWidth',
   'getRowHeight',
   'getHeaderRowHeight',
@@ -78,6 +92,7 @@ const TOP_FIRST_HOOKS = [
   'onMouseMove',
   'onMouseUp',
   'onDoubleClick',
+  'onContextMenu',
   'onPointerDown',
   'onPointerUp',
   'onPointerCancel',
