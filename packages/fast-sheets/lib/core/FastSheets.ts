@@ -246,7 +246,7 @@ export class FastSheets {
         plugin.afterInsertRow(insertion.index)
       }
     }
-    this.#layOutAgain()
+    this.#layoutAndRender()
   }
 
   /**
@@ -269,7 +269,7 @@ export class FastSheets {
         plugin.afterRemoveRow(removal.index)
       }
     }
-    this.#layOutAgain()
+    this.#layoutAndRender()
   }
 
   /**
@@ -290,7 +290,7 @@ export class FastSheets {
         plugin.afterInsertColumn(insertion.index)
       }
     }
-    this.#layOutAgain()
+    this.#layoutAndRender()
   }
 
   /**
@@ -313,11 +313,11 @@ export class FastSheets {
         plugin.afterRemoveColumn(removal.index)
       }
     }
-    this.#layOutAgain()
+    this.#layoutAndRender()
   }
 
   /** Calculates all sizes again after rows or columns were inserted or removed, and renders. */
-  #layOutAgain() {
+  #layoutAndRender() {
     if (this.layout.isInitialized) {
       this.layout.init()
     }
