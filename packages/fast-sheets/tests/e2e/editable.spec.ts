@@ -482,7 +482,7 @@ test.describe('cell editor on a touch screen', () => {
     expect(await getFocusedCell(page)).toEqual({ rowIndex: 4, columnIndex: 0 })
   })
 
-  test('a tap on a column name saves and closes the editor', async ({ page }) => {
+  test('a tap on a column name saves the editor and selects the column', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
     await doubleTap(page, 1, 1)
@@ -493,7 +493,28 @@ test.describe('cell editor on a touch screen', () => {
 
     await expect(getInput(page)).toBeHidden()
     expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: typed }]])
-    expect(await getFocusedCell(page)).toBeUndefined()
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 0, columnIndex: 0 })
+    expect(await getSelectedRange(page)).toEqual({
+      rowStart: 0,
+      rowEnd: 5,
+      columnStart: 0,
+      columnEnd: 0,
+    })
+  })
+
+  test('a tap on a row number selects the row', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 6, columns, isRowNumberVisible: true })
+    const { y } = await getCellMouseCoords({ page, columnIndex: 0, rowIndex: 2 })
+    await page.touchscreen.tap(5, y + 5)
+
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 2, columnIndex: 0 })
+    expect(await getSelectedRange(page)).toEqual({
+      rowStart: 2,
+      rowEnd: 2,
+      columnStart: 0,
+      columnEnd: 1,
+    })
   })
 
   test('a tap on the top left corner selects all cells', async ({ page }) => {
@@ -649,9 +670,7 @@ test.describe('copy', () => {
     expect((await copyToClipboard(page)).text).toBe('r1c1\tr1c2\nr2c1\tr2c2\nr3c1\tr3c2')
   })
 
-  test('does not touch the clipboard when nothing is focused or a header is focused', async ({
-    page,
-  }) => {
+  test('does not touch the clipboard when nothing is focused', async ({ page }) => {
     await page.goto('/')
     const columns = [
       { name: 'A', width: 100 },
@@ -659,9 +678,6 @@ test.describe('copy', () => {
       { name: 'C', width: 100 },
     ]
     await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
-    expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
-
-    await clickHeaderCell({ page, columnIndex: 1 })
     expect(await copyToClipboard(page)).toEqual({ text: '', defaultPrevented: false })
   })
 
@@ -731,15 +747,6 @@ test.describe('select all', () => {
     expect((await copyToClipboard(page)).text).toBe(allCellsText)
   })
 
-  test('a click on a column name does not select all cells', async ({ page }) => {
-    await page.goto('/')
-    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
-    await clickHeaderCell({ page, columnIndex: 1 })
-
-    expect(await getSelectedRange(page)).toBeUndefined()
-    expect(await getFocusedCell(page)).toBeUndefined()
-  })
-
   test('Ctrl+A in the cell editor selects its text, not the cells', async ({ page }) => {
     await page.goto('/')
     await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
@@ -751,6 +758,122 @@ test.describe('select all', () => {
 
     expect(await getSelectedRange(page)).toBeUndefined()
     expect(await getUpdates(page)).toEqual([[{ rowIndex: 1, columnIndex: 1, value: 'new' }]])
+  })
+})
+
+test.describe('select columns and rows', () => {
+  const columns = [
+    { name: 'A', width: 100 },
+    { name: 'B', width: 100 },
+    { name: 'C', width: 100 },
+  ]
+
+  /** a point inside the column name */
+  const getColumnNamePoint = async (page: Page, columnIndex: number) => {
+    const { x } = await getCellMouseCoords({ page, columnIndex, rowIndex: 0 })
+    return { x: x + 5, y: 5 }
+  }
+
+  /** a point inside the row number */
+  const getRowNumberPoint = async (page: Page, rowIndex: number) => {
+    const { y } = await getCellMouseCoords({ page, columnIndex: 0, rowIndex })
+    return { x: 5, y: y + 5 }
+  }
+
+  const drag = async (page: Page, from: { x: number; y: number }, to: { x: number; y: number }) => {
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 6 })
+    await page.mouse.up()
+  }
+
+  test('a click on a column name selects the column and focuses its first cell', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await clickHeaderCell({ page, columnIndex: 1 })
+
+    expect(await getSelectedRange(page)).toEqual({
+      rowStart: 0,
+      rowEnd: 2,
+      columnStart: 1,
+      columnEnd: 1,
+    })
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 0, columnIndex: 1 })
+    expect((await copyToClipboard(page)).text).toBe('r0c1\nr1c1\nr2c1')
+  })
+
+  test('a click on a row number selects the row and focuses its first cell', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    const { x, y } = await getRowNumberPoint(page, 1)
+    await page.mouse.click(x, y)
+
+    expect(await getSelectedRange(page)).toEqual({
+      rowStart: 1,
+      rowEnd: 1,
+      columnStart: 0,
+      columnEnd: 2,
+    })
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 0 })
+    expect((await copyToClipboard(page)).text).toBe('r1c0\tr1c1\tr1c2')
+  })
+
+  test('dragging over the column names selects several columns', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    await drag(page, await getColumnNamePoint(page, 2), await getColumnNamePoint(page, 1))
+
+    expect(await getSelectedRange(page)).toEqual({
+      rowStart: 0,
+      rowEnd: 2,
+      columnStart: 1,
+      columnEnd: 2,
+    })
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 0, columnIndex: 2 })
+  })
+
+  test('dragging from a column name over the cells selects whole columns', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 3, columns, isRowNumberVisible: true })
+    const to = await getCellMouseCoords({ page, columnIndex: 1, rowIndex: 1 })
+    await drag(page, await getColumnNamePoint(page, 0), { x: to.x + 5, y: to.y + 5 })
+
+    expect(await getSelectedRange(page)).toEqual({
+      rowStart: 0,
+      rowEnd: 2,
+      columnStart: 0,
+      columnEnd: 1,
+    })
+  })
+
+  test('dragging over the row numbers selects several rows', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 4, columns, isRowNumberVisible: true })
+    await drag(page, await getRowNumberPoint(page, 1), await getRowNumberPoint(page, 2))
+
+    expect(await getSelectedRange(page)).toEqual({
+      rowStart: 1,
+      rowEnd: 2,
+      columnStart: 0,
+      columnEnd: 2,
+    })
+    expect(await getFocusedCell(page)).toEqual({ rowIndex: 1, columnIndex: 0 })
+  })
+
+  test('Delete clears the selected column', async ({ page }) => {
+    await page.goto('/')
+    await initFastSheetsWithEditable({ page, rowsCount: 2, columns, isRowNumberVisible: true })
+    await clickHeaderCell({ page, columnIndex: 2 })
+    await page.keyboard.press('Delete')
+
+    expect(await getUpdates(page)).toEqual([
+      [
+        { rowIndex: 0, columnIndex: 2, value: '' },
+        { rowIndex: 1, columnIndex: 2, value: '' },
+      ],
+    ])
   })
 })
 

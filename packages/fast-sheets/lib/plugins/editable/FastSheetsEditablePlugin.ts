@@ -8,7 +8,7 @@ import {
   DEFAULT_SELECTION_BACKGROUND_COLOR,
   DEFAULT_SELECTION_COLOR,
 } from 'lib/core/constants.ts'
-import { isLeftMouseButton } from 'lib/core/utils/mouse.ts'
+import { isLeftMouseButton, isScrollbarHovered } from 'lib/core/utils/mouse.ts'
 import { mergeOptions } from 'lib/core/utils/options.ts'
 import {
   isArrowKey,
@@ -30,10 +30,14 @@ import {
   isColumnHeading,
   isCornerCell,
   isDataCell,
+  isRowNumbering,
 } from 'lib/core/utils/cell.ts'
 import { parseClipboardText, stringifyCellsRange } from 'lib/core/utils/clipboard.ts'
 import type { FastSheetsPlugin } from 'lib/core/utils/plugins.ts'
 import { TouchDetector } from 'lib/core/utils/TouchDetector.ts'
+
+/** What a selection by mouse covers: a range of cells, or whole columns or rows picked by their headings. */
+type SelectionType = 'cells' | 'columns' | 'rows'
 
 const DEFAULT_OPTIONS = {
   selectionColor: DEFAULT_SELECTION_COLOR,
@@ -56,6 +60,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
   inputController: InputController
 
   readonly #touchDetector = new TouchDetector()
+
+  #selectionType: SelectionType = 'cells'
 
   readonly #boundCopy: (e: ClipboardEvent) => void
   readonly #boundPaste: (e: ClipboardEvent) => void
@@ -271,6 +277,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     if (!isLeftMouseButton(e)) {
       return
     }
+    // a press on a scrollbar only scrolls, so the selection stays
+    if (isScrollbarHovered(e, this.instance.state.options.elScroll)) {
+      return
+    }
     this.selectedRange.reset()
     this.rangeSelectionController.reset()
     this.focusedCell.reset()
@@ -284,6 +294,9 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
         }
       } else if (isCornerCell(cell)) {
         this.selectAllCells()
+      } else {
+        // dragging over the other headings selects more columns or rows
+        this.#startHeadingSelection(cell)
       }
     }
     this.instance.renderer.render()
@@ -293,7 +306,8 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     if (!this.rangeSelectionController.hasStarted) {
       return
     }
-    const cell = this.#findDataCell(e)
+    // whole columns or rows follow the pointer over the headings too
+    const cell = this.#selectionType === 'cells' ? this.#findDataCell(e) : this.#findCell(e)
     if (cell && this.#updateSelection(cell)) {
       this.instance.renderer.render()
     }
@@ -502,6 +516,10 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
       this.focusedCell.highlight({ cell: targetCell, state: this.instance.state })
     } else if (isTapCornerCell) {
       this.selectAllCells()
+    } else if (targetCell) {
+      // a column-heading or a row-numbering cell
+      this.#startHeadingSelection(targetCell)
+      this.#endSelection()
     }
     this.instance.renderer.render()
   }
@@ -571,11 +589,48 @@ export class FastSheetsEditablePlugin implements FastSheetsPlugin {
     }
   }
 
-  #startSelection(cell: Cell) {
+  #startSelection(cell: Cell, type: SelectionType = 'cells') {
+    this.#selectionType = type
     this.rangeSelectionController.selectionStart(cell)
   }
 
+  /**
+   * Selects the whole column of a column-heading or the whole row of a row-numbering cell,
+   * and focuses its first cell.
+   */
+  #startHeadingSelection(cell: Cell) {
+    const state = this.instance.state
+    if (!state.rowHeights.length || !state.columnWidths.length) {
+      return
+    }
+    const isColumn = isColumnHeading(cell)
+    const firstCell: Cell = isColumn
+      ? { rowIndex: 0, columnIndex: cell.columnIndex }
+      : { rowIndex: cell.rowIndex, columnIndex: 0 }
+    this.focusedCell.highlight({ cell: firstCell, state })
+    this.#startSelection(firstCell, isColumn ? 'columns' : 'rows')
+    this.#updateSelection(cell)
+  }
+
+  /**
+   * Extends the selection to the cell.
+   * Selecting columns or rows, it extends them to the column or the row of the cell, if it has one.
+   */
   #updateSelection(cell: Cell) {
+    const state = this.instance.state
+    if (this.#selectionType === 'columns') {
+      if (isRowNumbering(cell) || isCornerCell(cell)) {
+        return false
+      }
+      // the pivot is in the first row, so the range covers all rows
+      cell = { rowIndex: state.rowHeights.length - 1, columnIndex: cell.columnIndex }
+    } else if (this.#selectionType === 'rows') {
+      if (isColumnHeading(cell) || isCornerCell(cell)) {
+        return false
+      }
+      // the pivot is in the first column, so the range covers all columns
+      cell = { rowIndex: cell.rowIndex, columnIndex: state.columnWidths.length - 1 }
+    }
     return this.rangeSelectionController.selectionUpdate(cell)
   }
 
